@@ -1,0 +1,268 @@
+# ReqIF Tool Suite - Python Dependencies
+# ===========================================
+# 
+# This file specifies all required Python packages for the ReqIF Tool Suite.
+# Install with: pip install -r requirements.txt
+#
+# For development dependencies, see: requirements-dev.txt
+# For building executables, see: requirements-build.txt
+
+# Core XML Processing
+# -------------------
+# Primary XML library with XPath support and robust parsing
+lxml>=4.9.0,<5.0.0
+
+# Alternative XML processing (fallback when lxml not available)
+# xml.etree.ElementTree is built-in, no additional requirement needed
+
+# GUI Framework
+# -------------
+# Tkinter is built-in with Python, no additional requirement needed
+# ttk (themed widgets) is part of tkinter
+
+# Enhanced GUI Components (Optional)
+# ----------------------------------
+# Uncomment if you want enhanced GUI features
+# pillow>=9.0.0,<11.0.0          # Image processing for icons and themes
+# tkinter-tooltip>=2.0.0,<3.0.0  # Enhanced tooltips
+
+# File Processing
+# ---------------
+# Built-in modules used:
+# - zipfile (for .reqifz files)
+# - tempfile (for temporary file handling)
+# - pathlib (for path operations)
+# - os (for file system operations)
+
+# Text Processing and Comparison
+# ------------------------------
+# Built-in modules used:
+# - difflib (for text comparison)
+# - filecmp (for file comparison)
+# - re (for regular expressions)
+
+# Data Structures and Utilities
+# ------------------------------
+# Built-in modules used:
+# - collections (for defaultdict, OrderedDict)
+# - json (for JSON serialization)
+# - csv (for CSV export)
+# - datetime (for timestamps)
+
+# Configuration Management
+# -------------------------
+# Built-in modules used:
+# - configparser (for configuration files)
+# - json (for JSON configuration)
+
+# Logging
+# -------
+# Built-in modules used:
+# - logging (for application logging)
+# - logging.handlers (for log rotation)
+
+# Export Functionality
+# --------------------
+# Excel export support
+openpyxl>=3.0.0,<4.0.0
+
+# PDF export support
+reportlab>=3.6.0,<5.0.0
+
+# Advanced CSV handling (optional, csv module is built-in)
+# pandas>=1.5.0,<3.0.0  # Uncomment for advanced data manipulation
+
+# Enhanced Excel export with formatting
+xlsxwriter>=3.0.0,<4.0.0
+
+# Statistics and Analytics
+# -------------------------
+# Built-in modules used:
+# - statistics (for basic statistical functions)
+
+# Optional: Advanced analytics
+# numpy>=1.21.0,<2.0.0    # Uncomment for numerical computations
+# scipy>=1.7.0,<2.0.0     # Uncomment for advanced statistics
+
+# Plugin System Support
+# ----------------------
+# Built-in modules used:
+# - importlib (for dynamic imports)
+# - pkgutil (for package utilities)
+# - inspect (for code introspection)
+
+# Network and Web (Future Features)
+# ----------------------------------
+# Uncomment when web interface is added
+# flask>=2.0.0,<3.0.0           # Web framework
+# flask-cors>=3.0.0,<5.0.0      # CORS support
+# requests>=2.28.0,<3.0.0       # HTTP requests
+
+# Database Support (Future Features)
+# -----------------------------------
+# Uncomment when database support is added
+# sqlalchemy>=1.4.0,<3.0.0      # ORM
+# sqlite3 is built-in              # SQLite support
+
+# Testing Dependencies
+# --------------------
+# These are in requirements-dev.txt for development installations
+# pytest>=7.0.0,<8.0.0
+# pytest-cov>=4.0.0,<5.0.0
+# pytest-qt>=4.0.0,<5.0.0
+
+# Version Control Integration (Future)
+# -------------------------------------
+# gitpython>=3.1.0,<4.0.0       # Git integration
+
+# Performance Monitoring (Optional)
+# ----------------------------------
+# psutil>=5.9.0,<6.0.0          # System monitoring
+# memory-profiler>=0.60.0,<1.0.0 # Memory usage profiling
+
+# Internationalization (Future)
+# ------------------------------
+# babel>=2.10.0,<3.0.0          # i18n support
+
+# Security and Encryption (Future)
+# ---------------------------------
+# cryptography>=3.4.0,<42.0.0   # File encryption
+
+# Documentation Generation (Development)
+# ---------------------------------------
+# sphinx>=5.0.0,<8.0.0          # Documentation
+# sphinx-rtd-theme>=1.0.0,<2.0.0 # Documentation theme
+
+# Code Quality (Development)
+# ---------------------------
+# These are in requirements-dev.txt
+# black>=22.0.0,<24.0.0         # Code formatting
+# flake8>=5.0.0,<7.0.0          # Linting
+# mypy>=0.991,<2.0.0            # Type checking
+
+# Minimum Python version check
+# -----------------------------
+# This project requires Python 3.8+
+# The version check is handled in main.py
+
+# Platform-specific dependencies
+# -------------------------------
+# Windows-specific
+# pywin32>=227; platform_system=="Windows"  # Windows API access
+
+# macOS-specific  
+# pyobjc-core>=9.0; platform_system=="Darwin"  # macOS API access
+
+# Linux-specific
+# python3-tk; platform_system=="Linux"      # Tkinter on some Linux distros
+
+# Build and Distribution
+# ----------------------
+# These are in requirements-build.txt
+# pyinstaller>=5.0.0,<7.0.0     # Executable building
+# setuptools>=65.0.0,<69.0.0    # Package building
+# wheel>=0.37.0,<1.0.0          # Wheel building
+
+# Runtime Version Constraints
+# ----------------------------
+# Ensure compatibility with Python 3.8+
+# All dependencies should support Python 3.8 as minimum version
+
+# Optional Performance Enhancements
+# ----------------------------------
+# Uncomment for better performance with large files
+# cython>=0.29.0,<1.0.0         # C extensions compilation
+# numba>=0.56.0,<1.0.0          # JIT compilation
+
+# Memory Management
+# -----------------
+# gc module is built-in for garbage collection
+# tracemalloc is built-in for memory profiling
+
+# Concurrency and Threading
+# --------------------------
+# threading module is built-in
+# concurrent.futures is built-in
+# multiprocessing module is built-in
+
+# Error Handling and Debugging
+# -----------------------------
+# traceback module is built-in
+# pdb module is built-in for debugging
+# warnings module is built-in
+
+# File Format Validation
+# ----------------------
+# Built-in modules used:
+# - mimetypes (for file type detection)
+# - magic numbers detection through file headers
+
+# Backup and Recovery
+# -------------------
+# shutil module is built-in for file operations
+# backup functionality uses built-in modules
+
+# Configuration File Formats
+# ---------------------------
+# Built-in support for:
+# - JSON (json module)
+# - INI files (configparser module)
+# - YAML support would require: pyyaml>=6.0,<7.0
+
+# Text Encoding and Unicode
+# --------------------------
+# codecs module is built-in
+# unicodedata module is built-in
+# UTF-8 support is built-in
+
+# Regular Expressions
+# -------------------
+# re module is built-in for pattern matching
+
+# URL and Path Handling  
+# ----------------------
+# urllib module is built-in
+# pathlib module is built-in (Python 3.4+)
+# os.path module is built-in
+
+# Compression and Archives
+# ------------------------
+# zipfile module is built-in (.reqifz support)
+# tarfile module is built-in
+# gzip module is built-in
+
+# Mathematical Operations
+# -----------------------
+# math module is built-in
+# decimal module is built-in for precise calculations
+# fractions module is built-in
+
+# Random Number Generation
+# -------------------------
+# random module is built-in
+# secrets module is built-in for cryptographic randomness
+
+# System Information
+# ------------------
+# sys module is built-in
+# platform module is built-in
+# socket module is built-in
+
+# Process and Signal Handling
+# ----------------------------
+# signal module is built-in
+# subprocess module is built-in
+
+# Development and Debug Tools
+# ----------------------------
+# pprint module is built-in for pretty printing
+# timeit module is built-in for performance measurement
+
+# Notes:
+# ------
+# 1. This requirements.txt focuses on minimal dependencies for core functionality
+# 2. Many features use Python's extensive standard library
+# 3. Optional dependencies are commented out and can be enabled as needed
+# 4. Version ranges ensure compatibility while allowing updates
+# 5. Platform-specific dependencies are conditionally included
+# 6. Development and build dependencies are in separate files

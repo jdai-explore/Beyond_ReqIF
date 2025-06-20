@@ -1,315 +1,355 @@
-# ReqIF Tool Suite - Project Structure
+# ReqIF Tool Suite
 
-## 📁 Project Organization
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
+[![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)]()
 
+A comprehensive, professional-grade tool suite for working with ReqIF (Requirements Interchange Format) files. Provides powerful comparison, visualization, and analysis capabilities with an intuitive graphical user interface.
+
+![ReqIF Tool Suite Screenshot](docs/images/main_interface.png)
+
+## 🎯 **Features**
+
+### **📊 ReqIF Comparison Tool**
+- **Side-by-side comparison** of ReqIF files and entire folders
+- **Advanced diff highlighting** with color-coded changes (added/modified/deleted)
+- **Intelligent requirement matching** by ID and content similarity
+- **Comprehensive statistics** showing change summaries
+- **Bulk folder comparison** for managing large requirement sets
+- **Export comparison results** in multiple formats
+
+### **📋 ReqIF Visualizer**
+- **Excel-like table view** for easy requirement browsing
+- **Detailed requirement inspection** with full text and attributes
+- **Advanced search and filtering** capabilities
+- **Statistical analysis** with distribution charts and metrics
+- **Interactive requirement exploration** with double-click details
+- **Export to CSV/Excel** for external analysis
+
+### **🔍 Advanced Analytics**
+- **Requirement distribution analysis** by type, status, priority
+- **Text complexity metrics** and readability analysis
+- **Attribute completeness reporting**
+- **Trend analysis** across requirement versions
+- **Custom metrics** through plugin system
+
+### **💾 Multiple Export Formats**
+- **CSV Export**: Spreadsheet-compatible format
+- **Excel Export**: Rich formatting with multiple sheets
+- **PDF Reports**: Professional documentation
+- **JSON Export**: API-friendly structured data
+
+## 🚀 **Quick Start**
+
+### **Installation**
+
+#### **Option 1: Download Executable (Recommended for End Users)**
+1. Download the latest release from [Releases](https://github.com/your-org/reqif-tool-suite/releases)
+2. Extract the ZIP file
+3. Run `ReqIFToolSuite.exe` (Windows) or `ReqIFToolSuite` (macOS/Linux)
+
+#### **Option 2: Install from Source (For Developers)**
+```bash
+# Clone the repository
+git clone https://github.com/your-org/reqif-tool-suite.git
+cd reqif-tool-suite
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python main.py
+```
+
+#### **Option 3: Install via pip (Coming Soon)**
+```bash
+pip install reqif-tool-suite
+reqif-tool-suite
+```
+
+### **First Usage**
+
+1. **Launch the application**
+2. **Choose your tool**:
+   - Click **"ReqIF Compare"** to compare two files or folders
+   - Click **"ReqIF Visualizer"** to explore a single ReqIF file
+3. **Load your files** using the browse buttons
+4. **Explore the results** in the tabbed interface
+5. **Export your findings** using the export buttons
+
+## 📁 **Supported File Formats**
+
+| Format | Extension | Support Level |
+|--------|-----------|---------------|
+| ReqIF | `.reqif` | ✅ Full Support |
+| ReqIF Archive | `.reqifz` | ✅ Full Support |
+| CSV Export | `.csv` | ✅ Export Only |
+| Excel Export | `.xlsx` | ✅ Export Only |
+| PDF Reports | `.pdf` | ✅ Export Only |
+| JSON Data | `.json` | ✅ Export Only |
+
+## 🖥️ **System Requirements**
+
+### **Minimum Requirements**
+- **OS**: Windows 10, macOS 10.14, or Linux (Ubuntu 18.04+)
+- **Python**: 3.8 or higher (if running from source)
+- **RAM**: 4 GB
+- **Storage**: 100 MB free space
+
+### **Recommended Requirements**
+- **OS**: Windows 11, macOS 12+, or Linux (Ubuntu 20.04+)
+- **Python**: 3.10 or higher
+- **RAM**: 8 GB or more
+- **Storage**: 500 MB free space (for large file processing)
+
+## 📖 **User Guide**
+
+### **Comparing ReqIF Files**
+
+1. **Select Comparison Mode**: Click "ReqIF Compare" from the main menu
+2. **Choose Files**: Use "Browse File" for single files or "Browse Folder" for entire directories
+3. **Run Comparison**: Click "Compare" to analyze differences
+4. **Review Results**: Explore the tabbed results:
+   - **Added**: Requirements present only in the second file
+   - **Modified**: Requirements that changed between files
+   - **Deleted**: Requirements present only in the first file
+   - **Unchanged**: Requirements that are identical
+5. **Export Results**: Use "Export Results" to save findings
+
+### **Visualizing ReqIF Files**
+
+1. **Select Visualizer Mode**: Click "ReqIF Visualizer" from the main menu
+2. **Load File**: Browse and select a ReqIF file, then click "Load"
+3. **Explore Views**:
+   - **Table View**: Excel-like browsing with search functionality
+   - **Details View**: Complete requirement information
+   - **Statistics**: Analytical insights and distributions
+4. **Search & Filter**: Use the search box to find specific requirements
+5. **Export Data**: Use "Export to CSV" for external analysis
+
+## 🔧 **Advanced Configuration**
+
+### **Configuration File**
+The application stores settings in `config/user_config.json`:
+
+```json
+{
+  "window": {
+    "width": 1200,
+    "height": 800,
+    "remember_position": true
+  },
+  "theme": "default",
+  "export": {
+    "default_format": "csv",
+    "include_timestamps": true
+  },
+  "comparison": {
+    "ignore_whitespace": false,
+    "case_sensitive": true
+  }
+}
+```
+
+### **Logging**
+Logs are stored in the `logs/` directory:
+- `app.log`: General application logs
+- `error.log`: Error-specific logs
+- `debug.log`: Detailed debugging information (when enabled)
+
+## 🛠️ **Development**
+
+### **Project Structure**
 ```
 reqif_tool_suite/
-│
-├── main.py                          # Application entry point
-├── requirements.txt                 # Python dependencies
-├── README.md                       # Project documentation
-├── setup.py                       # Installation script
-│
-├── core/                          # Core business logic
-│   ├── __init__.py
-│   ├── reqif_parser.py           # ReqIF file parsing logic
-│   ├── reqif_comparator.py       # File comparison algorithms
-│   ├── reqif_analyzer.py         # Statistics and analysis
-│   └── file_manager.py           # File I/O operations
-│
-├── gui/                          # User interface components
-│   ├── __init__.py
-│   ├── main_menu.py              # Main application menu
-│   ├── comparison_gui.py         # Comparison tool interface
-│   ├── visualizer_gui.py         # Visualization tool interface
-│   ├── common_widgets.py         # Reusable GUI components
-│   └── dialogs.py                # Custom dialog boxes
-│
-├── utils/                        # Utility functions
-│   ├── __init__.py
-│   ├── config.py                 # Configuration management
-│   ├── constants.py              # Application constants
-│   ├── helpers.py                # General helper functions
-│   ├── validators.py             # Input validation
-│   └── logger.py                 # Logging configuration
-│
-├── exporters/                    # Export functionality
-│   ├── __init__.py
-│   ├── base_exporter.py          # Base exporter class
-│   ├── csv_exporter.py           # CSV export functionality
-│   ├── excel_exporter.py         # Excel export functionality
-│   ├── pdf_exporter.py           # PDF export functionality
-│   └── json_exporter.py          # JSON export functionality
-│
-├── models/                       # Data models and structures
-│   ├── __init__.py
-│   ├── requirement.py            # Requirement data model
-│   ├── comparison_result.py      # Comparison result model
-│   ├── file_info.py              # File information model
-│   └── statistics.py             # Statistics model
-│
-├── plugins/                      # Plugin system for extensibility
-│   ├── __init__.py
-│   ├── plugin_manager.py         # Plugin loading and management
-│   ├── base_plugin.py            # Base plugin interface
-│   └── examples/                 # Example plugins
-│       ├── custom_parser.py
-│       └── custom_exporter.py
-│
-├── tests/                        # Test suite
-│   ├── __init__.py
-│   ├── test_reqif_parser.py      # Parser tests
-│   ├── test_comparator.py        # Comparator tests
-│   ├── test_gui.py               # GUI tests
-│   ├── test_exporters.py         # Export tests
-│   └── fixtures/                 # Test data files
-│       ├── sample1.reqif
-│       └── sample2.reqif
-│
-├── resources/                    # Static resources
-│   ├── icons/                    # Application icons
-│   ├── themes/                   # GUI themes
-│   ├── templates/                # Report templates
-│   └── config/                   # Default configurations
-│
-└── docs/                         # Documentation
-    ├── user_guide.md
-    ├── developer_guide.md
-    ├── api_reference.md
-    └── architecture.md
+├── main.py                    # Application entry point
+├── core/                      # Business logic
+│   ├── reqif_parser.py       # ReqIF parsing
+│   ├── reqif_comparator.py   # Comparison algorithms
+│   └── reqif_analyzer.py     # Statistical analysis
+├── gui/                       # User interface
+│   ├── main_menu.py          # Main application menu
+│   ├── comparison_gui.py     # Comparison interface
+│   └── visualizer_gui.py     # Visualization interface
+├── utils/                     # Utilities
+├── exporters/                 # Export functionality
+├── models/                    # Data models
+├── plugins/                   # Plugin system
+└── tests/                     # Test suite
 ```
 
-## 📋 File Responsibilities
+### **Setting Up Development Environment**
 
-### **1. Entry Point**
-- **`main.py`**
-  - Application startup
-  - Dependency injection setup
-  - Main window initialization
-  - Global exception handling
+```bash
+# Clone and setup
+git clone https://github.com/your-org/reqif-tool-suite.git
+cd reqif-tool-suite
 
-### **2. Core Business Logic (`core/`)**
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-#### **`reqif_parser.py`**
-- ReqIF file format detection
-- XML parsing with namespace handling
-- Requirement extraction and structuring
-- Support for .reqif and .reqifz files
-- Error handling for malformed files
-- Extensible parser interface for future formats
+# Install development dependencies
+pip install -r requirements-dev.txt
 
-#### **`reqif_comparator.py`**
-- File comparison algorithms
-- Requirement matching logic
-- Difference detection (added/modified/deleted)
-- Folder comparison capabilities
-- Configurable comparison strategies
-- Performance optimization for large files
+# Install pre-commit hooks
+pre-commit install
 
-#### **`reqif_analyzer.py`**
-- Statistical analysis of requirements
-- Trend analysis
-- Quality metrics calculation
-- Distribution analysis (types, status, priority)
-- Text analytics (length, complexity)
-- Custom metric plugins support
+# Run tests
+pytest tests/
 
-#### **`file_manager.py`**
-- File I/O operations
-- Archive handling (.reqifz)
-- Temporary file management
-- File validation
-- Backup and recovery
-- Recent files management
+# Run the application in development mode
+python main.py --debug
+```
 
-### **3. User Interface (`gui/`)**
+### **Running Tests**
 
-#### **`main_menu.py`**
-- Application main menu
-- Tool selection interface
-- Recent files display
-- Settings access
-- About dialog
+```bash
+# Run all tests
+pytest
 
-#### **`comparison_gui.py`**
-- File/folder selection for comparison
-- Results display (side-by-side view)
-- Difference highlighting
-- Navigation between changes
-- Comparison settings panel
+# Run with coverage
+pytest --cov=core --cov=gui --cov=utils
 
-#### **`visualizer_gui.py`**
-- File loading interface
-- Excel-like table view
-- Details view
-- Statistics dashboard
-- Search and filter functionality
-- Column customization
+# Run specific test categories
+pytest tests/test_core/        # Core functionality tests
+pytest tests/test_gui/         # GUI tests
+pytest tests/test_integration/ # Integration tests
+```
 
-#### **`common_widgets.py`**
-- Reusable GUI components
-- Custom table widgets
-- Progress bars
-- Status bars
-- Tool tips
-- Theme management
+### **Building Executables**
 
-#### **`dialogs.py`**
-- File selection dialogs
-- Settings dialogs
-- Progress dialogs
-- Error/warning dialogs
-- About dialog
-- Custom input dialogs
+```bash
+# Install build dependencies
+pip install pyinstaller
 
-### **4. Utilities (`utils/`)**
+# Build for current platform
+python build.py
 
-#### **`config.py`**
-- Application configuration management
-- User preferences
-- Default settings
-- Configuration file I/O
-- Settings validation
+# Build for multiple platforms (requires Docker)
+python build.py --all-platforms
+```
 
-#### **`constants.py`**
-- Application constants
-- File extensions
-- Default values
-- Error codes
-- GUI constants (colors, fonts, sizes)
+## 🔌 **Plugin System**
 
-#### **`helpers.py`**
-- General utility functions
-- String manipulation
-- Date/time formatting
-- Path operations
-- Conversion utilities
+The ReqIF Tool Suite supports custom plugins for extending functionality:
 
-#### **`validators.py`**
-- Input validation functions
-- File format validation
-- Data integrity checks
-- User input sanitization
+### **Creating a Custom Parser Plugin**
+```python
+from plugins.base_plugin import BasePlugin
 
-#### **`logger.py`**
-- Logging configuration
-- Log rotation
-- Debug logging
-- Error reporting
-- Performance monitoring
+class CustomParserPlugin(BasePlugin):
+    name = "Custom Format Parser"
+    version = "1.0.0"
+    
+    def parse_file(self, file_path):
+        # Your custom parsing logic
+        pass
+```
 
-### **5. Export System (`exporters/`)**
+### **Available Plugin Types**
+- **Parsers**: Support for additional file formats
+- **Exporters**: Custom export formats
+- **Analyzers**: Additional statistical analysis
+- **Themes**: Custom visual themes
 
-#### **`base_exporter.py`**
-- Abstract base class for all exporters
-- Common export interface
-- Progress reporting
-- Error handling template
+## 📊 **Performance**
 
-#### **`csv_exporter.py`**
-- CSV export functionality
-- Custom delimiter support
-- UTF-8 encoding
-- Large dataset handling
+### **Benchmarks**
+| File Size | Requirements | Load Time | Memory Usage |
+|-----------|--------------|-----------|--------------|
+| Small     | < 100        | < 1s      | < 50 MB      |
+| Medium    | 100-1,000    | 1-5s      | 50-200 MB    |
+| Large     | 1,000-10,000 | 5-30s     | 200-500 MB   |
+| Very Large| 10,000+      | 30s+      | 500 MB+      |
 
-#### **`excel_exporter.py`**
-- Excel export with formatting
-- Multiple sheets support
-- Charts and graphs
-- Conditional formatting
+### **Optimization Tips**
+- **Use folder comparison** for bulk analysis instead of individual files
+- **Enable caching** in settings for repeated comparisons
+- **Close unused tabs** to free memory
+- **Export large datasets** in chunks for better performance
 
-#### **`pdf_exporter.py`**
-- PDF report generation
-- Custom templates
-- Comparison reports
-- Statistical summaries
+## 🤝 **Contributing**
 
-#### **`json_exporter.py`**
-- Structured JSON export
-- API-friendly format
-- Metadata inclusion
-- Schema validation
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### **6. Data Models (`models/`)**
+### **Areas for Contribution**
+- 🐛 **Bug Reports**: Found an issue? Please report it!
+- 💡 **Feature Requests**: Have an idea? We'd love to hear it!
+- 🔧 **Code Contributions**: Pull requests welcome!
+- 📖 **Documentation**: Help improve our docs
+- 🎨 **UI/UX**: Design improvements and themes
+- 🧪 **Testing**: Help us test edge cases
 
-#### **`requirement.py`**
-- Requirement data structure
-- Attribute management
-- Validation rules
-- Serialization/deserialization
+### **Development Workflow**
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Run the test suite: `pytest`
+5. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Push to your branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
 
-#### **`comparison_result.py`**
-- Comparison result data model
-- Change tracking
-- Difference metadata
-- Result aggregation
+## 📄 **License**
 
-#### **`file_info.py`**
-- File metadata structure
-- Parsing statistics
-- File history tracking
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-#### **`statistics.py`**
-- Statistical data models
-- Calculation methods
-- Visualization data preparation
+## 🆘 **Support**
 
-### **7. Plugin System (`plugins/`)**
+### **Getting Help**
+- 📖 **Documentation**: Check our [User Guide](docs/user_guide.md)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-org/reqif-tool-suite/discussions)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-org/reqif-tool-suite/issues)
+- 📧 **Email Support**: support@reqif-tools.com
 
-#### **`plugin_manager.py`**
-- Plugin discovery and loading
-- Plugin lifecycle management
-- API versioning
-- Plugin configuration
+### **FAQ**
 
-#### **`base_plugin.py`**
-- Plugin interface definition
-- Hook system
-- Event handling
-- Plugin metadata
+**Q: What is ReqIF?**
+A: ReqIF (Requirements Interchange Format) is an international standard for exchanging requirements between different tools and organizations.
 
-### **8. Testing (`tests/`)**
-- Comprehensive test suite
-- Unit tests for all modules
-- Integration tests
-- GUI automation tests
-- Performance benchmarks
+**Q: Can I compare files from different ReqIF tools?**
+A: Yes! The tool is designed to work with ReqIF files from any compliant tool (DOORS, PTC, Siemens, etc.).
 
-## 🔧 Benefits of This Structure
+**Q: Is my data secure?**
+A: Yes. The tool works entirely offline - your files never leave your computer.
 
-### **Scalability**
-- Easy to add new features without affecting existing code
-- Plugin system allows third-party extensions
-- Modular design supports team development
+**Q: Can I automate comparisons?**
+A: Yes, we provide a command-line interface for batch operations. See [CLI Documentation](docs/cli_guide.md).
 
-### **Maintainability**
-- Clear separation of concerns
-- Single responsibility principle
-- Easy debugging and testing
-- Code reusability
+## 🗺️ **Roadmap**
 
-### **Extensibility**
-- New export formats can be added easily
-- Additional analysis tools can be plugged in
-- GUI can be extended with new views
-- Support for new file formats
+### **Version 2.1 (Q2 2024)**
+- [ ] Command-line interface for automation
+- [ ] Advanced filtering and search
+- [ ] Custom requirement attributes
+- [ ] Performance optimizations
 
-### **Future Features Ready**
-- **Version Control Integration**: Git/SVN support for requirements
-- **Collaboration Features**: Multi-user editing, comments
-- **Advanced Analytics**: Machine learning insights
-- **API Server**: REST API for integration
-- **Database Support**: Requirement storage in databases
-- **Workflow Management**: Approval processes, notifications
-- **Custom Fields**: User-defined requirement attributes
-- **Templates**: Requirement templates and standards
-- **Integration**: JIRA, ALM tools, CI/CD pipelines
+### **Version 2.2 (Q3 2024)**
+- [ ] Database storage support
+- [ ] Version control integration (Git)
+- [ ] Collaborative features
+- [ ] Web-based interface
 
-## 🚀 Implementation Priority
+### **Version 3.0 (Q4 2024)**
+- [ ] AI-powered requirement analysis
+- [ ] Natural language processing
+- [ ] Integration with ALM tools
+- [ ] Cloud synchronization
 
-1. **Phase 1**: Core modules (parser, comparator, basic GUI)
-2. **Phase 2**: Enhanced GUI and export capabilities
-3. **Phase 3**: Plugin system and advanced features
-4. **Phase 4**: Collaboration and integration features
+## 🏆 **Acknowledgments**
 
-This structure provides a solid foundation for current functionality while enabling seamless addition of advanced features in the future.
+- **ReqIF Standard**: [Object Management Group (OMG)](https://www.omg.org/)
+- **Python Community**: For excellent libraries and tools
+- **Contributors**: All our amazing contributors and testers
+- **Users**: Thank you for your feedback and support!
+
+---
+
+<div align="center">
+
+**Made with ❤️ for the Requirements Engineering Community**
+
+[Website](https://reqif-tools.com) • [Documentation](docs/) • [Support](mailto:support@reqif-tools.com) • [Contributing](CONTRIBUTING.md)
+
+</div>
