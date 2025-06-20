@@ -10,6 +10,14 @@ import csv
 from typing import Dict, Any, List
 from collections import Counter
 
+# Import tooltip functionality
+try:
+    from theme_manager import add_tooltip
+except ImportError:
+    # Fallback if theme_manager not available
+    def add_tooltip(widget, text, delay=500):
+        pass
+
 
 class VisualizerGUI:
     """GUI for visualizing and exploring requirements from a single ReqIF file"""
@@ -34,46 +42,82 @@ class VisualizerGUI:
         self.update_statistics()
         
     def setup_gui(self):
-        """Create the visualizer GUI"""
-        # Main frame
+        """Create the modern visualizer GUI"""
+        # Main frame with professional styling
         main_frame = ttk.Frame(self.parent)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Header with file info
-        header_frame = ttk.Frame(main_frame)
-        header_frame.pack(fill=tk.X, pady=(0, 10))
+        # Header with file info and controls
+        header_frame = ttk.Frame(main_frame, padding="10")
+        header_frame.pack(fill=tk.X)
+        header_frame.columnconfigure(1, weight=1)
         
-        # File info
-        info_text = f"File: {self.filename} | Total Requirements: {len(self.requirements)}"
-        ttk.Label(header_frame, text=info_text, font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
+        # File info with icon
+        info_text = f"📄 {self.filename} | 📊 {len(self.requirements)} Requirements"
+        info_label = ttk.Label(header_frame, text=info_text, font=('Arial', 11, 'bold'))
+        info_label.grid(row=0, column=0, sticky=tk.W)
         
-        # Export button
-        ttk.Button(header_frame, text="Export to CSV", 
-                  command=self.export_to_csv).pack(side=tk.RIGHT, padx=(10, 0))
+        # Control buttons
+        controls_frame = ttk.Frame(header_frame)
+        controls_frame.grid(row=0, column=2, sticky=tk.E)
         
-        # Search frame
-        search_frame = ttk.Frame(main_frame)
-        search_frame.pack(fill=tk.X, pady=(0, 10))
+        # Export button with icon
+        export_btn = ttk.Button(controls_frame, text="📤 Export CSV", 
+                               command=self.export_to_csv, style='Accent.TButton')
+        export_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        add_tooltip(export_btn, "Export current view to CSV file")
         
-        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT)
-        search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=30)
-        search_entry.pack(side=tk.LEFT, padx=(5, 10))
+        # Refresh button
+        refresh_btn = ttk.Button(controls_frame, text="🔄", width=3,
+                                command=self.refresh_view)
+        refresh_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        add_tooltip(refresh_btn, "Refresh visualization")
         
-        ttk.Button(search_frame, text="Clear", 
-                  command=self.clear_search).pack(side=tk.LEFT)
+        # Search section with enhanced styling
+        search_frame = ttk.LabelFrame(main_frame, text="🔍 Search & Filter", padding="10")
+        search_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
+        search_frame.columnconfigure(1, weight=1)
         
-        # Create notebook for different views
+        ttk.Label(search_frame, text="Search:").grid(row=0, column=0, sticky=tk.W)
+        
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=40, font=('Arial', 10))
+        search_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 5))
+        search_entry.focus()  # Focus on search by default
+        add_tooltip(search_entry, "Search across all requirement fields (Ctrl+F)")
+        
+        # Search controls
+        search_controls = ttk.Frame(search_frame)
+        search_controls.grid(row=0, column=2, padx=(5, 0))
+        
+        clear_btn = ttk.Button(search_controls, text="❌", width=3, command=self.clear_search)
+        clear_btn.pack(side=tk.LEFT, padx=(0, 5))
+        add_tooltip(clear_btn, "Clear search (Esc)")
+        
+        # Search info label
+        self.search_info_label = ttk.Label(search_frame, text="", font=('Arial', 9, 'italic'))
+        self.search_info_label.grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=(5, 0))
+        
+        # Create enhanced notebook for different views
         self.notebook = ttk.Notebook(main_frame)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         
-        # Create tabs
+        # Create tabs with icons
         self.create_table_tab()
         self.create_statistics_tab()
         
+        # Bind search shortcut
+        try:
+            # Get root window for binding
+            root = self.parent.winfo_toplevel()
+            search_entry.bind('<Control-f>', lambda e: search_entry.focus())
+            search_entry.bind('<Escape>', lambda e: self.clear_search())
+        except:
+            pass
+            
     def create_table_tab(self):
-        """Create the requirements table view"""
+        """Create the enhanced requirements table view"""
         table_frame = ttk.Frame(self.notebook)
-        self.notebook.add(table_frame, text="Requirements Table")
+        self.notebook.add(table_frame, text="📋 Requirements Table")
         
         # Determine columns based on actual data
         base_columns = ['ID', 'Title', 'Type', 'Description']
@@ -87,53 +131,89 @@ class VisualizerGUI:
         common_attrs = sorted(list(all_attributes))[:3]  # Show top 3 additional attributes
         columns = base_columns + common_attrs
         
-        # Create treeview
-        self.tree = ttk.Treeview(table_frame, columns=columns, show='headings', height=20)
+        # Create treeview with enhanced styling
+        tree_frame = ttk.Frame(table_frame)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        tree_frame.columnconfigure(0, weight=1)
+        tree_frame.rowconfigure(0, weight=1)
         
-        # Configure base columns
-        self.tree.heading('ID', text='Requirement ID')
-        self.tree.heading('Title', text='Title')
-        self.tree.heading('Type', text='Type')
-        self.tree.heading('Description', text='Description')
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=20)
         
-        self.tree.column('ID', width=150)
-        self.tree.column('Title', width=250)
-        self.tree.column('Type', width=100)
-        self.tree.column('Description', width=300)
+        # Configure base columns with icons
+        self.tree.heading('ID', text='🆔 Requirement ID')
+        self.tree.heading('Title', text='📝 Title')
+        self.tree.heading('Type', text='🏷️ Type')
+        self.tree.heading('Description', text='📄 Description')
+        
+        self.tree.column('ID', width=150, minwidth=100)
+        self.tree.column('Title', width=250, minwidth=150)
+        self.tree.column('Type', width=120, minwidth=80)
+        self.tree.column('Description', width=300, minwidth=200)
         
         # Configure additional attribute columns
         for attr in common_attrs:
-            self.tree.heading(attr, text=attr)
-            self.tree.column(attr, width=150)
+            self.tree.heading(attr, text=f'⚙️ {attr}')
+            self.tree.column(attr, width=150, minwidth=100)
         
-        # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        h_scrollbar = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
+        # Add professional scrollbars
+        v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        h_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
         self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-        # Pack treeview and scrollbars
+        # Grid layout
         self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
         h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
         
-        table_frame.grid_columnconfigure(0, weight=1)
-        table_frame.grid_rowconfigure(0, weight=1)
-        
-        # Bind double-click for details
+        # Bind events
         self.tree.bind('<Double-1>', self.show_requirement_details)
+        self.tree.bind('<Button-3>', self.show_context_menu)  # Right-click
         
-        # Status label for filtered results
-        self.status_label = ttk.Label(table_frame, text="")
-        self.status_label.grid(row=2, column=0, columnspan=2, pady=(5, 0))
+        # Status label for filtered results with enhanced styling
+        status_frame = ttk.Frame(table_frame)
+        status_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
+        
+        self.status_label = ttk.Label(status_frame, text="", font=('Arial', 9, 'italic'))
+        self.status_label.pack(side=tk.LEFT)
+        
+        # Quick stats in status area
+        self.quick_stats_label = ttk.Label(status_frame, text="", font=('Arial', 9))
+        self.quick_stats_label.pack(side=tk.RIGHT)
         
         # Store column info for population
         self.table_columns = columns
         self.common_attrs = common_attrs
         
+    def show_context_menu(self, event):
+        """Show context menu on right-click"""
+        try:
+            context_menu = tk.Menu(self.tree, tearoff=0)
+            context_menu.add_command(label="📋 View Details", command=lambda: self.show_requirement_details(event))
+            context_menu.add_separator()
+            context_menu.add_command(label="📤 Export Selected", command=self.export_selected)
+            context_menu.add_command(label="🔍 Search Similar", command=self.search_similar)
+            
+            # Show menu at cursor position
+            context_menu.post(event.x_root, event.y_root)
+        except Exception:
+            pass  # Fail silently if context menu creation fails
+            
+    def export_selected(self):
+        """Export selected requirement"""
+        selection = self.tree.selection()
+        if selection:
+            messagebox.showinfo("Export", "Selected requirement export feature coming soon!")
+            
+    def search_similar(self):
+        """Search for similar requirements"""
+        selection = self.tree.selection()
+        if selection:
+            messagebox.showinfo("Search", "Similar requirements search feature coming soon!")
+        
     def create_statistics_tab(self):
         """Create the statistics and analytics view"""
         stats_frame = ttk.Frame(self.notebook)
-        self.notebook.add(stats_frame, text="Statistics")
+        self.notebook.add(stats_frame, text="📊 Statistics")
         
         # Create scrollable frame for statistics
         canvas = tk.Canvas(stats_frame)
@@ -153,13 +233,18 @@ class VisualizerGUI:
         
         self.stats_container = scrollable_frame
         
+    def refresh_view(self):
+        """Refresh the visualization"""
+        self.populate_requirements()
+        self.update_statistics()
+        
     def populate_requirements(self):
-        """Populate the requirements table"""
+        """Populate the requirements table with enhanced information"""
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Add filtered requirements
+        # Add filtered requirements with enhanced data
         for req in self.filtered_requirements:
             # Build row values for all columns
             row_values = []
@@ -193,16 +278,25 @@ class VisualizerGUI:
                         attr_value = str(attr_value)[:27] + "..."
                     row_values.append(str(attr_value))
             
-            self.tree.insert('', tk.END, values=row_values)
+            # Insert with alternating row colors (if supported)
+            item_id = self.tree.insert('', tk.END, values=row_values)
         
-        # Update status
+        # Update status with enhanced information
         total = len(self.requirements)
         showing = len(self.filtered_requirements)
+        
         if total == showing:
-            status_text = f"Showing all {total} requirements"
+            status_text = f"📊 Showing all {total} requirements"
         else:
-            status_text = f"Showing {showing} of {total} requirements"
+            status_text = f"🔍 Showing {showing} of {total} requirements"
         self.status_label.config(text=status_text)
+        
+        # Update quick stats
+        if hasattr(self, 'quick_stats_label'):
+            with_desc = len([r for r in self.filtered_requirements if r.get('description')])
+            with_type = len([r for r in self.filtered_requirements if r.get('type')])
+            quick_stats = f"📝 {with_desc} with descriptions | 🏷️ {with_type} with types"
+            self.quick_stats_label.config(text=quick_stats)
         
     def update_statistics(self):
         """Update the statistics display"""
@@ -211,7 +305,7 @@ class VisualizerGUI:
             widget.destroy()
         
         # General statistics
-        general_frame = ttk.LabelFrame(self.stats_container, text="General Statistics", padding="10")
+        general_frame = ttk.LabelFrame(self.stats_container, text="📊 General Statistics", padding="10")
         general_frame.pack(fill=tk.X, pady=(0, 10))
         
         total_reqs = len(self.requirements)
@@ -235,7 +329,7 @@ Completeness:
         
         # Type distribution
         if with_type > 0:
-            type_frame = ttk.LabelFrame(self.stats_container, text="Type Distribution", padding="10")
+            type_frame = ttk.LabelFrame(self.stats_container, text="🏷️ Type Distribution", padding="10")
             type_frame.pack(fill=tk.X, pady=(0, 10))
             
             types = [r.get('type', 'Unknown') for r in self.requirements if r.get('type')]
@@ -249,7 +343,7 @@ Completeness:
             ttk.Label(type_frame, text=type_text, justify=tk.LEFT).pack(anchor=tk.W)
         
         # Text analysis
-        text_frame = ttk.LabelFrame(self.stats_container, text="Text Analysis", padding="10")
+        text_frame = ttk.LabelFrame(self.stats_container, text="📝 Text Analysis", padding="10")
         text_frame.pack(fill=tk.X, pady=(0, 10))
         
         # Analyze description lengths
@@ -272,7 +366,7 @@ Completeness:
         ttk.Label(text_frame, text=text_analysis, justify=tk.LEFT).pack(anchor=tk.W)
         
         # Attribute analysis
-        attr_frame = ttk.LabelFrame(self.stats_container, text="Attribute Analysis", padding="10")
+        attr_frame = ttk.LabelFrame(self.stats_container, text="⚙️ Attribute Analysis", padding="10")
         attr_frame.pack(fill=tk.X, pady=(0, 10))
         
         # Collect all unique attributes
@@ -299,20 +393,27 @@ Completeness:
         
         if not search_term:
             self.filtered_requirements = self.requirements.copy()
+            self.search_info_label.config(text="")
         else:
             # Filter requirements based on search term
             self.filtered_requirements = []
             for req in self.requirements:
-                # Search in ID, title, description, and type
+                # Search in ID, title, description, type, and all attributes
                 searchable_text = ' '.join([
                     req.get('id', ''),
                     req.get('title', ''),
                     req.get('description', ''),
-                    req.get('type', '')
+                    req.get('type', ''),
+                    ' '.join(str(v) for v in req.get('attributes', {}).values())
                 ]).lower()
                 
                 if search_term in searchable_text:
                     self.filtered_requirements.append(req)
+            
+            # Update search info
+            total = len(self.requirements)
+            found = len(self.filtered_requirements)
+            self.search_info_label.config(text=f"🔍 Found {found} of {total} requirements")
         
         self.populate_requirements()
         
