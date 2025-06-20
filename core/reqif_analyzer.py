@@ -1,4 +1,321 @@
-def _count_urls(self, text: str) -> int:
+"""
+ReqIF Analyzer Module
+====================
+
+This module provides comprehensive statistical analysis and metrics
+calculation for ReqIF files and requirements data.
+
+Classes:
+    ReqIFAnalyzer: Main analysis engine
+    AnalysisResult: Container for analysis results
+    MetricCalculator: Calculator for various metrics
+    TrendAnalyzer: Analyzer for trend detection
+    
+Functions:
+    analyze_requirements: Quick analysis function
+    calculate_metrics: Calculate specific metrics
+    generate_report: Generate analysis report
+"""
+
+import re
+import statistics
+from collections import defaultdict, Counter
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Union, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+import logging
+
+# Import project modules
+from models.requirement import Requirement
+from utils.logger import get_logger
+from utils.helpers import normalize_text, extract_keywords
+
+logger = get_logger(__name__)
+
+
+class AnalysisMode(Enum):
+    """Analysis mode enumeration"""
+    BASIC = "basic"
+    DETAILED = "detailed"
+    COMPREHENSIVE = "comprehensive"
+    CUSTOM = "custom"
+
+
+class MetricType(Enum):
+    """Types of metrics that can be calculated"""
+    TEXT_COMPLEXITY = "text_complexity"
+    ATTRIBUTE_COMPLETENESS = "attribute_completeness"
+    REQUIREMENT_DENSITY = "requirement_density"
+    READABILITY = "readability"
+    CONSISTENCY = "consistency"
+    TRACEABILITY = "traceability"
+
+
+@dataclass
+class AnalysisOptions:
+    """Configuration options for analysis"""
+    mode: AnalysisMode = AnalysisMode.DETAILED
+    include_text_analysis: bool = True
+    include_attribute_analysis: bool = True
+    include_quality_metrics: bool = True
+    include_trends: bool = False
+    custom_metrics: List[MetricType] = field(default_factory=list)
+    language: str = "en"
+    readability_formula: str = "flesch_kincaid"
+
+
+@dataclass
+class RequirementStatistics:
+    """Basic requirement statistics"""
+    total_count: int = 0
+    with_text: int = 0
+    with_attributes: int = 0
+    empty_requirements: int = 0
+    avg_attributes_per_requirement: float = 0.0
+    avg_text_length: float = 0.0
+    min_text_length: int = 0
+    max_text_length: int = 0
+
+
+@dataclass
+class TextStatistics:
+    """Text analysis statistics"""
+    total_characters: int = 0
+    total_words: int = 0
+    total_sentences: int = 0
+    avg_words_per_requirement: float = 0.0
+    avg_sentences_per_requirement: float = 0.0
+    avg_word_length: float = 0.0
+    avg_readability_score: float = 0.0
+    avg_complexity_score: float = 0.0
+    word_count_distribution: Dict[str, Any] = field(default_factory=dict)
+    readability_distribution: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AttributeStatistics:
+    """Attribute analysis statistics"""
+    total_unique_attributes: int = 0
+    attribute_completeness: Dict[str, float] = field(default_factory=dict)
+    attribute_distributions: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    missing_attributes: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    most_common_attributes: Dict[str, int] = field(default_factory=dict)
+    avg_completeness: float = 0.0
+    min_completeness: float = 0.0
+    max_completeness: float = 0.0
+
+
+@dataclass
+class DistributionAnalysis:
+    """Distribution analysis results"""
+    categories: Dict[str, int] = field(default_factory=dict)
+    percentages: Dict[str, float] = field(default_factory=dict)
+    total_items: int = 0
+    unique_categories: int = 0
+    most_common: Tuple[str, int] = ("", 0)
+
+
+@dataclass
+class QualityMetrics:
+    """Quality assessment metrics"""
+    overall_score: float = 0.0
+    readability_score: float = 0.0
+    completeness_score: float = 0.0
+    consistency_issues: List[Dict[str, str]] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
+    quality_distribution: Dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
+class TrendAnalysis:
+    """Trend analysis results"""
+    changes_over_time: Dict[str, List[Any]] = field(default_factory=dict)
+    growth_rates: Dict[str, float] = field(default_factory=dict)
+    patterns: List[str] = field(default_factory=list)
+
+
+@dataclass
+class AnalysisResult:
+    """Complete analysis result"""
+    file_path: str
+    analysis_timestamp: datetime
+    options: AnalysisOptions
+    
+    # Core statistics
+    requirement_stats: RequirementStatistics
+    text_stats: TextStatistics
+    attribute_stats: AttributeStatistics
+    
+    # Distribution analysis
+    type_distribution: DistributionAnalysis
+    status_distribution: DistributionAnalysis
+    priority_distribution: DistributionAnalysis
+    
+    # Quality metrics
+    quality_metrics: QualityMetrics
+    
+    # Optional trend analysis
+    trend_analysis: Optional[TrendAnalysis] = None
+    
+    # Custom metrics
+    custom_metrics: Dict[str, Any] = field(default_factory=dict)
+    
+    # Analysis metadata
+    processing_time: float = 0.0
+    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+
+
+class TextAnalyzer:
+    """Analyzes text content of requirements"""
+    
+    def __init__(self, language: str = "en"):
+        self.language = language
+        
+    def analyze_text(self, text: str) -> Dict[str, Any]:
+        """Analyze a single text for various metrics"""
+        if not text:
+            return self._empty_analysis()
+        
+        analysis = {
+            'character_count': len(text),
+            'word_count': len(text.split()),
+            'sentence_count': self._count_sentences(text),
+            'paragraph_count': self._count_paragraphs(text),
+            'avg_word_length': self._average_word_length(text),
+            'avg_sentence_length': self._average_sentence_length(text),
+            'complexity_score': self._calculate_complexity(text),
+            'readability_score': self._calculate_readability(text),
+            'keyword_density': self._calculate_keyword_density(text),
+            'special_characters': self._count_special_characters(text),
+            'numbers_count': self._count_numbers(text),
+            'urls_count': self._count_urls(text),
+            'capitalized_words': self._count_capitalized_words(text)
+        }
+        
+        return analysis
+    
+    def _empty_analysis(self) -> Dict[str, Any]:
+        """Return empty analysis for null/empty text"""
+        return {key: 0 for key in [
+            'character_count', 'word_count', 'sentence_count', 'paragraph_count',
+            'avg_word_length', 'avg_sentence_length', 'complexity_score',
+            'readability_score', 'keyword_density', 'special_characters',
+            'numbers_count', 'urls_count', 'capitalized_words'
+        ]}
+    
+    def _count_sentences(self, text: str) -> int:
+        """Count sentences in text"""
+        sentence_endings = re.findall(r'[.!?]+', text)
+        return len(sentence_endings) if sentence_endings else 1
+    
+    def _count_paragraphs(self, text: str) -> int:
+        """Count paragraphs in text"""
+        paragraphs = text.split('\n\n')
+        return len([p for p in paragraphs if p.strip()])
+    
+    def _average_word_length(self, text: str) -> float:
+        """Calculate average word length"""
+        words = text.split()
+        if not words:
+            return 0.0
+        return sum(len(word) for word in words) / len(words)
+    
+    def _average_sentence_length(self, text: str) -> float:
+        """Calculate average sentence length in words"""
+        word_count = len(text.split())
+        sentence_count = self._count_sentences(text)
+        return word_count / sentence_count if sentence_count > 0 else 0.0
+    
+    def _calculate_complexity(self, text: str) -> float:
+        """Calculate text complexity score (0-100)"""
+        words = text.split()
+        if not words:
+            return 0.0
+        
+        # Factors contributing to complexity
+        avg_word_length = self._average_word_length(text)
+        avg_sentence_length = self._average_sentence_length(text)
+        special_char_ratio = self._count_special_characters(text) / len(text)
+        
+        # Weighted complexity score
+        complexity = (
+            (avg_word_length * 10) +
+            (avg_sentence_length * 2) +
+            (special_char_ratio * 50)
+        )
+        
+        return min(complexity, 100.0)  # Cap at 100
+    
+    def _calculate_readability(self, text: str) -> float:
+        """Calculate readability score using Flesch-Kincaid formula"""
+        words = text.split()
+        sentences = self._count_sentences(text)
+        
+        if not words or sentences == 0:
+            return 0.0
+        
+        # Count syllables (simplified)
+        total_syllables = sum(self._count_syllables(word) for word in words)
+        
+        # Flesch-Kincaid Grade Level
+        if sentences > 0 and len(words) > 0:
+            score = (
+                (0.39 * (len(words) / sentences)) +
+                (11.8 * (total_syllables / len(words))) -
+                15.59
+            )
+            return max(0.0, score)
+        
+        return 0.0
+    
+    def _count_syllables(self, word: str) -> int:
+        """Estimate syllable count in a word"""
+        word = word.lower()
+        vowels = 'aeiouy'
+        syllables = 0
+        prev_char_vowel = False
+        
+        for char in word:
+            if char in vowels:
+                if not prev_char_vowel:
+                    syllables += 1
+                prev_char_vowel = True
+            else:
+                prev_char_vowel = False
+        
+        # Adjust for silent 'e'
+        if word.endswith('e') and syllables > 1:
+            syllables -= 1
+        
+        return max(1, syllables)  # At least 1 syllable per word
+    
+    def _calculate_keyword_density(self, text: str) -> Dict[str, float]:
+        """Calculate keyword density"""
+        words = text.lower().split()
+        if not words:
+            return {}
+        
+        word_count = Counter(words)
+        total_words = len(words)
+        
+        # Return density for top 10 keywords
+        top_keywords = word_count.most_common(10)
+        return {word: count / total_words for word, count in top_keywords}
+    
+    def _count_special_characters(self, text: str) -> int:
+        """Count special characters and punctuation"""
+        special_chars = re.findall(r'[^a-zA-Z0-9\s]', text)
+        return len(special_chars)
+    
+    def _count_numbers(self, text: str) -> int:
+        """Count numeric values in text"""
+        numbers = re.findall(r'\b\d+\b', text)
+        return len(numbers)
+    
+    def _count_urls(self, text: str) -> int:
         """Count URLs in text"""
         url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
         urls = re.findall(url_pattern, text)
@@ -188,261 +505,7 @@ class QualityAnalyzer:
         issues = []
         
         # Check ID format consistency
-        if not re.match(r'^[A-Z]{2,}-\d+"""
-ReqIF Analyzer Module
-====================
-
-This module provides comprehensive statistical analysis and metrics
-calculation for ReqIF files and requirements data.
-
-Classes:
-    ReqIFAnalyzer: Main analysis engine
-    AnalysisResult: Container for analysis results
-    MetricCalculator: Calculator for various metrics
-    TrendAnalyzer: Analyzer for trend detection
-    
-Functions:
-    analyze_requirements: Quick analysis function
-    calculate_metrics: Calculate specific metrics
-    generate_report: Generate analysis report
-"""
-
-import re
-import statistics
-from collections import defaultdict, Counter
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-import logging
-
-# Import project modules
-from models.requirement import Requirement
-from models.statistics import (
-    RequirementStatistics, TextStatistics, AttributeStatistics,
-    DistributionAnalysis, QualityMetrics, TrendAnalysis
-)
-from utils.logger import get_logger
-from utils.helpers import normalize_text, extract_keywords
-
-logger = get_logger(__name__)
-
-
-class AnalysisMode(Enum):
-    """Analysis mode enumeration"""
-    BASIC = "basic"
-    DETAILED = "detailed"
-    COMPREHENSIVE = "comprehensive"
-    CUSTOM = "custom"
-
-
-class MetricType(Enum):
-    """Types of metrics that can be calculated"""
-    TEXT_COMPLEXITY = "text_complexity"
-    ATTRIBUTE_COMPLETENESS = "attribute_completeness"
-    REQUIREMENT_DENSITY = "requirement_density"
-    READABILITY = "readability"
-    CONSISTENCY = "consistency"
-    TRACEABILITY = "traceability"
-
-
-@dataclass
-class AnalysisOptions:
-    """Configuration options for analysis"""
-    mode: AnalysisMode = AnalysisMode.DETAILED
-    include_text_analysis: bool = True
-    include_attribute_analysis: bool = True
-    include_quality_metrics: bool = True
-    include_trends: bool = False
-    custom_metrics: List[MetricType] = field(default_factory=list)
-    language: str = "en"
-    readability_formula: str = "flesch_kincaid"
-
-
-@dataclass
-class AnalysisResult:
-    """Complete analysis result"""
-    file_path: str
-    analysis_timestamp: datetime
-    options: AnalysisOptions
-    
-    # Core statistics
-    requirement_stats: RequirementStatistics
-    text_stats: TextStatistics
-    attribute_stats: AttributeStatistics
-    
-    # Distribution analysis
-    type_distribution: DistributionAnalysis
-    status_distribution: DistributionAnalysis
-    priority_distribution: DistributionAnalysis
-    
-    # Quality metrics
-    quality_metrics: QualityMetrics
-    
-    # Optional trend analysis
-    trend_analysis: Optional[TrendAnalysis] = None
-    
-    # Custom metrics
-    custom_metrics: Dict[str, Any] = field(default_factory=dict)
-    
-    # Analysis metadata
-    processing_time: float = 0.0
-    warnings: List[str] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
-
-
-class TextAnalyzer:
-    """Analyzes text content of requirements"""
-    
-    def __init__(self, language: str = "en"):
-        self.language = language
-        
-    def analyze_text(self, text: str) -> Dict[str, Any]:
-        """Analyze a single text for various metrics"""
-        if not text:
-            return self._empty_analysis()
-        
-        analysis = {
-            'character_count': len(text),
-            'word_count': len(text.split()),
-            'sentence_count': self._count_sentences(text),
-            'paragraph_count': self._count_paragraphs(text),
-            'avg_word_length': self._average_word_length(text),
-            'avg_sentence_length': self._average_sentence_length(text),
-            'complexity_score': self._calculate_complexity(text),
-            'readability_score': self._calculate_readability(text),
-            'keyword_density': self._calculate_keyword_density(text),
-            'special_characters': self._count_special_characters(text),
-            'numbers_count': self._count_numbers(text),
-            'urls_count': self._count_urls(text),
-            'capitalized_words': self._count_capitalized_words(text)
-        }
-        
-        return analysis
-    
-    def _empty_analysis(self) -> Dict[str, Any]:
-        """Return empty analysis for null/empty text"""
-        return {key: 0 for key in [
-            'character_count', 'word_count', 'sentence_count', 'paragraph_count',
-            'avg_word_length', 'avg_sentence_length', 'complexity_score',
-            'readability_score', 'keyword_density', 'special_characters',
-            'numbers_count', 'urls_count', 'capitalized_words'
-        ]}
-    
-    def _count_sentences(self, text: str) -> int:
-        """Count sentences in text"""
-        sentence_endings = re.findall(r'[.!?]+', text)
-        return len(sentence_endings) if sentence_endings else 1
-    
-    def _count_paragraphs(self, text: str) -> int:
-        """Count paragraphs in text"""
-        paragraphs = text.split('\n\n')
-        return len([p for p in paragraphs if p.strip()])
-    
-    def _average_word_length(self, text: str) -> float:
-        """Calculate average word length"""
-        words = text.split()
-        if not words:
-            return 0.0
-        return sum(len(word) for word in words) / len(words)
-    
-    def _average_sentence_length(self, text: str) -> float:
-        """Calculate average sentence length in words"""
-        word_count = len(text.split())
-        sentence_count = self._count_sentences(text)
-        return word_count / sentence_count if sentence_count > 0 else 0.0
-    
-    def _calculate_complexity(self, text: str) -> float:
-        """Calculate text complexity score (0-100)"""
-        words = text.split()
-        if not words:
-            return 0.0
-        
-        # Factors contributing to complexity
-        avg_word_length = self._average_word_length(text)
-        avg_sentence_length = self._average_sentence_length(text)
-        special_char_ratio = self._count_special_characters(text) / len(text)
-        
-        # Weighted complexity score
-        complexity = (
-            (avg_word_length * 10) +
-            (avg_sentence_length * 2) +
-            (special_char_ratio * 50)
-        )
-        
-        return min(complexity, 100.0)  # Cap at 100
-    
-    def _calculate_readability(self, text: str) -> float:
-        """Calculate readability score using Flesch-Kincaid formula"""
-        words = text.split()
-        sentences = self._count_sentences(text)
-        
-        if not words or sentences == 0:
-            return 0.0
-        
-        # Count syllables (simplified)
-        total_syllables = sum(self._count_syllables(word) for word in words)
-        
-        # Flesch-Kincaid Grade Level
-        if sentences > 0 and len(words) > 0:
-            score = (
-                (0.39 * (len(words) / sentences)) +
-                (11.8 * (total_syllables / len(words))) -
-                15.59
-            )
-            return max(0.0, score)
-        
-        return 0.0
-    
-    def _count_syllables(self, word: str) -> int:
-        """Estimate syllable count in a word"""
-        word = word.lower()
-        vowels = 'aeiouy'
-        syllables = 0
-        prev_char_vowel = False
-        
-        for char in word:
-            if char in vowels:
-                if not prev_char_vowel:
-                    syllables += 1
-                prev_char_vowel = True
-            else:
-                prev_char_vowel = False
-        
-        # Adjust for silent 'e'
-        if word.endswith('e') and syllables > 1:
-            syllables -= 1
-        
-        return max(1, syllables)  # At least 1 syllable per word
-    
-    def _calculate_keyword_density(self, text: str) -> Dict[str, float]:
-        """Calculate keyword density"""
-        words = text.lower().split()
-        if not words:
-            return {}
-        
-        word_count = Counter(words)
-        total_words = len(words)
-        
-        # Return density for top 10 keywords
-        top_keywords = word_count.most_common(10)
-        return {word: count / total_words for word, count in top_keywords}
-    
-    def _count_special_characters(self, text: str) -> int:
-        """Count special characters and punctuation"""
-        special_chars = re.findall(r'[^a-zA-Z0-9\s]', text)
-        return len(special_chars)
-    
-    def _count_numbers(self, text: str) -> int:
-        """Count numeric values in text"""
-        numbers = re.findall(r'\b\d+\b', text)
-        return len(numbers)
-    
-    def _count_urls(self, text: str) -> int:
-        """Count URLs in text"""
-        url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-        urls = re.findall, req_id):
+        if not re.match(r'^[A-Z]{2,}-\d+$', req_id):
             issues.append({
                 'req_id': req_id,
                 'type': 'ID_FORMAT',
@@ -1042,258 +1105,116 @@ def generate_report(analysis_result: AnalysisResult) -> str:
             report_lines.append(f"• {warning}")
         report_lines.append("")
     
-    return "\n".join(report_lines)"""
-ReqIF Analyzer Module
-====================
-
-This module provides comprehensive statistical analysis and metrics
-calculation for ReqIF files and requirements data.
-
-Classes:
-    ReqIFAnalyzer: Main analysis engine
-    AnalysisResult: Container for analysis results
-    MetricCalculator: Calculator for various metrics
-    TrendAnalyzer: Analyzer for trend detection
-    
-Functions:
-    analyze_requirements: Quick analysis function
-    calculate_metrics: Calculate specific metrics
-    generate_report: Generate analysis report
-"""
-
-import re
-import statistics
-from collections import defaultdict, Counter
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-import logging
-
-# Import project modules
-from models.requirement import Requirement
-from models.statistics import (
-    RequirementStatistics, TextStatistics, AttributeStatistics,
-    DistributionAnalysis, QualityMetrics, TrendAnalysis
-)
-from utils.logger import get_logger
-from utils.helpers import normalize_text, extract_keywords
-
-logger = get_logger(__name__)
+    return "\n".join(report_lines)
 
 
-class AnalysisMode(Enum):
-    """Analysis mode enumeration"""
-    BASIC = "basic"
-    DETAILED = "detailed"
-    COMPREHENSIVE = "comprehensive"
-    CUSTOM = "custom"
+def compare_analysis_results(result1: AnalysisResult, result2: AnalysisResult) -> Dict[str, Any]:
+    """
+    Compare two analysis results to identify trends and changes
+    
+    Args:
+        result1: First analysis result (typically older)
+        result2: Second analysis result (typically newer)
+        
+    Returns:
+        Comparison analysis with trends and changes
+    """
+    comparison = {
+        'summary': {},
+        'text_changes': {},
+        'quality_changes': {},
+        'distribution_changes': {},
+        'trends': []
+    }
+    
+    # Summary comparison
+    stats1 = result1.requirement_stats
+    stats2 = result2.requirement_stats
+    
+    comparison['summary'] = {
+        'requirement_count_change': stats2.total_count - stats1.total_count,
+        'avg_text_length_change': stats2.avg_text_length - stats1.avg_text_length,
+        'avg_attributes_change': stats2.avg_attributes_per_requirement - stats1.avg_attributes_per_requirement
+    }
+    
+    # Quality comparison
+    quality1 = result1.quality_metrics
+    quality2 = result2.quality_metrics
+    
+    comparison['quality_changes'] = {
+        'overall_score_change': quality2.overall_score - quality1.overall_score,
+        'readability_change': quality2.readability_score - quality1.readability_score,
+        'completeness_change': quality2.completeness_score - quality1.completeness_score,
+        'consistency_issues_change': len(quality2.consistency_issues) - len(quality1.consistency_issues)
+    }
+    
+    # Generate trend observations
+    trends = []
+    
+    if comparison['summary']['requirement_count_change'] > 0:
+        trends.append(f"Requirements increased by {comparison['summary']['requirement_count_change']}")
+    elif comparison['summary']['requirement_count_change'] < 0:
+        trends.append(f"Requirements decreased by {abs(comparison['summary']['requirement_count_change'])}")
+    
+    if comparison['quality_changes']['overall_score_change'] > 5:
+        trends.append("Overall quality significantly improved")
+    elif comparison['quality_changes']['overall_score_change'] < -5:
+        trends.append("Overall quality significantly decreased")
+    
+    if comparison['quality_changes']['consistency_issues_change'] > 0:
+        trends.append("More consistency issues detected")
+    elif comparison['quality_changes']['consistency_issues_change'] < 0:
+        trends.append("Consistency issues reduced")
+    
+    comparison['trends'] = trends
+    
+    return comparison
 
 
-class MetricType(Enum):
-    """Types of metrics that can be calculated"""
-    TEXT_COMPLEXITY = "text_complexity"
-    ATTRIBUTE_COMPLETENESS = "attribute_completeness"
-    REQUIREMENT_DENSITY = "requirement_density"
-    READABILITY = "readability"
-    CONSISTENCY = "consistency"
-    TRACEABILITY = "traceability"
+def export_analysis_to_json(analysis_result: AnalysisResult, file_path: str):
+    """
+    Export analysis result to JSON file
+    
+    Args:
+        analysis_result: Analysis result to export
+        file_path: Output JSON file path
+    """
+    import json
+    from dataclasses import asdict
+    
+    # Convert dataclass to dictionary
+    data = asdict(analysis_result)
+    
+    # Convert datetime to string
+    data['analysis_timestamp'] = analysis_result.analysis_timestamp.isoformat()
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+    
+    logger.info("Analysis exported to JSON: %s", file_path)
 
 
-@dataclass
-class AnalysisOptions:
-    """Configuration options for analysis"""
-    mode: AnalysisMode = AnalysisMode.DETAILED
-    include_text_analysis: bool = True
-    include_attribute_analysis: bool = True
-    include_quality_metrics: bool = True
-    include_trends: bool = False
-    custom_metrics: List[MetricType] = field(default_factory=list)
-    language: str = "en"
-    readability_formula: str = "flesch_kincaid"
-
-
-@dataclass
-class AnalysisResult:
-    """Complete analysis result"""
-    file_path: str
-    analysis_timestamp: datetime
-    options: AnalysisOptions
+def import_analysis_from_json(file_path: str) -> AnalysisResult:
+    """
+    Import analysis result from JSON file
     
-    # Core statistics
-    requirement_stats: RequirementStatistics
-    text_stats: TextStatistics
-    attribute_stats: AttributeStatistics
-    
-    # Distribution analysis
-    type_distribution: DistributionAnalysis
-    status_distribution: DistributionAnalysis
-    priority_distribution: DistributionAnalysis
-    
-    # Quality metrics
-    quality_metrics: QualityMetrics
-    
-    # Optional trend analysis
-    trend_analysis: Optional[TrendAnalysis] = None
-    
-    # Custom metrics
-    custom_metrics: Dict[str, Any] = field(default_factory=dict)
-    
-    # Analysis metadata
-    processing_time: float = 0.0
-    warnings: List[str] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
-
-
-class TextAnalyzer:
-    """Analyzes text content of requirements"""
-    
-    def __init__(self, language: str = "en"):
-        self.language = language
+    Args:
+        file_path: JSON file path to import
         
-    def analyze_text(self, text: str) -> Dict[str, Any]:
-        """Analyze a single text for various metrics"""
-        if not text:
-            return self._empty_analysis()
-        
-        analysis = {
-            'character_count': len(text),
-            'word_count': len(text.split()),
-            'sentence_count': self._count_sentences(text),
-            'paragraph_count': self._count_paragraphs(text),
-            'avg_word_length': self._average_word_length(text),
-            'avg_sentence_length': self._average_sentence_length(text),
-            'complexity_score': self._calculate_complexity(text),
-            'readability_score': self._calculate_readability(text),
-            'keyword_density': self._calculate_keyword_density(text),
-            'special_characters': self._count_special_characters(text),
-            'numbers_count': self._count_numbers(text),
-            'urls_count': self._count_urls(text),
-            'capitalized_words': self._count_capitalized_words(text)
-        }
-        
-        return analysis
+    Returns:
+        Loaded analysis result
+    """
+    import json
     
-    def _empty_analysis(self) -> Dict[str, Any]:
-        """Return empty analysis for null/empty text"""
-        return {key: 0 for key in [
-            'character_count', 'word_count', 'sentence_count', 'paragraph_count',
-            'avg_word_length', 'avg_sentence_length', 'complexity_score',
-            'readability_score', 'keyword_density', 'special_characters',
-            'numbers_count', 'urls_count', 'capitalized_words'
-        ]}
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
     
-    def _count_sentences(self, text: str) -> int:
-        """Count sentences in text"""
-        sentence_endings = re.findall(r'[.!?]+', text)
-        return len(sentence_endings) if sentence_endings else 1
+    # Convert timestamp back to datetime
+    data['analysis_timestamp'] = datetime.fromisoformat(data['analysis_timestamp'])
     
-    def _count_paragraphs(self, text: str) -> int:
-        """Count paragraphs in text"""
-        paragraphs = text.split('\n\n')
-        return len([p for p in paragraphs if p.strip()])
+    # Reconstruct the analysis result
+    # Note: This is a simplified reconstruction - in practice, you might want
+    # to properly reconstruct all nested dataclasses
     
-    def _average_word_length(self, text: str) -> float:
-        """Calculate average word length"""
-        words = text.split()
-        if not words:
-            return 0.0
-        return sum(len(word) for word in words) / len(words)
-    
-    def _average_sentence_length(self, text: str) -> float:
-        """Calculate average sentence length in words"""
-        word_count = len(text.split())
-        sentence_count = self._count_sentences(text)
-        return word_count / sentence_count if sentence_count > 0 else 0.0
-    
-    def _calculate_complexity(self, text: str) -> float:
-        """Calculate text complexity score (0-100)"""
-        words = text.split()
-        if not words:
-            return 0.0
-        
-        # Factors contributing to complexity
-        avg_word_length = self._average_word_length(text)
-        avg_sentence_length = self._average_sentence_length(text)
-        special_char_ratio = self._count_special_characters(text) / len(text)
-        
-        # Weighted complexity score
-        complexity = (
-            (avg_word_length * 10) +
-            (avg_sentence_length * 2) +
-            (special_char_ratio * 50)
-        )
-        
-        return min(complexity, 100.0)  # Cap at 100
-    
-    def _calculate_readability(self, text: str) -> float:
-        """Calculate readability score using Flesch-Kincaid formula"""
-        words = text.split()
-        sentences = self._count_sentences(text)
-        
-        if not words or sentences == 0:
-            return 0.0
-        
-        # Count syllables (simplified)
-        total_syllables = sum(self._count_syllables(word) for word in words)
-        
-        # Flesch-Kincaid Grade Level
-        if sentences > 0 and len(words) > 0:
-            score = (
-                (0.39 * (len(words) / sentences)) +
-                (11.8 * (total_syllables / len(words))) -
-                15.59
-            )
-            return max(0.0, score)
-        
-        return 0.0
-    
-    def _count_syllables(self, word: str) -> int:
-        """Estimate syllable count in a word"""
-        word = word.lower()
-        vowels = 'aeiouy'
-        syllables = 0
-        prev_char_vowel = False
-        
-        for char in word:
-            if char in vowels:
-                if not prev_char_vowel:
-                    syllables += 1
-                prev_char_vowel = True
-            else:
-                prev_char_vowel = False
-        
-        # Adjust for silent 'e'
-        if word.endswith('e') and syllables > 1:
-            syllables -= 1
-        
-        return max(1, syllables)  # At least 1 syllable per word
-    
-    def _calculate_keyword_density(self, text: str) -> Dict[str, float]:
-        """Calculate keyword density"""
-        words = text.lower().split()
-        if not words:
-            return {}
-        
-        word_count = Counter(words)
-        total_words = len(words)
-        
-        # Return density for top 10 keywords
-        top_keywords = word_count.most_common(10)
-        return {word: count / total_words for word, count in top_keywords}
-    
-    def _count_special_characters(self, text: str) -> int:
-        """Count special characters and punctuation"""
-        special_chars = re.findall(r'[^a-zA-Z0-9\s]', text)
-        return len(special_chars)
-    
-    def _count_numbers(self, text: str) -> int:
-        """Count numeric values in text"""
-        numbers = re.findall(r'\b\d+\b', text)
-        return len(numbers)
-    
-    def _count_urls(self, text: str) -> int:
-        """Count URLs in text"""
-        url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-        urls = re.findall
+    logger.info("Analysis imported from JSON: %s", file_path)
+    return data  # Return as dict for now, could be enhanced to return proper AnalysisResult
