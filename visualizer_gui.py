@@ -2,6 +2,7 @@
 """
 Visualizer GUI Module
 Handles the display and exploration of requirements from a single ReqIF file.
+Enhanced with intelligent content prioritization and quality analysis.
 """
 
 import tkinter as tk
@@ -115,21 +116,19 @@ class VisualizerGUI:
             pass
             
     def create_table_tab(self):
-        """Create the enhanced requirements table view"""
+        """Create the enhanced requirements table view with intelligent column selection"""
         table_frame = ttk.Frame(self.notebook)
         self.notebook.add(table_frame, text="📋 Requirements Table")
         
-        # Determine columns based on actual data
+        # Intelligently determine columns based on content quality
         base_columns = ['ID', 'Title', 'Type', 'Description']
         
-        # Find common attributes across requirements
-        all_attributes = set()
-        for req in self.requirements:
-            all_attributes.update(req.get('attributes', {}).keys())
+        # Analyze all requirements to find meaningful attributes
+        meaningful_attrs = self._analyze_meaningful_attributes()
         
-        # Add most common attributes as columns (limit to avoid too many columns)
-        common_attrs = sorted(list(all_attributes))[:3]  # Show top 3 additional attributes
-        columns = base_columns + common_attrs
+        # Add top meaningful attributes as columns (limit for readability)
+        additional_columns = meaningful_attrs[:2]  # Show top 2 meaningful attributes
+        columns = base_columns + additional_columns
         
         # Create treeview with enhanced styling
         tree_frame = ttk.Frame(table_frame)
@@ -139,21 +138,22 @@ class VisualizerGUI:
         
         self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=20)
         
-        # Configure base columns with icons
+        # Configure base columns with icons and smart widths
         self.tree.heading('ID', text='🆔 Requirement ID')
         self.tree.heading('Title', text='📝 Title')
         self.tree.heading('Type', text='🏷️ Type')
         self.tree.heading('Description', text='📄 Description')
         
-        self.tree.column('ID', width=150, minwidth=100)
-        self.tree.column('Title', width=250, minwidth=150)
-        self.tree.column('Type', width=120, minwidth=80)
-        self.tree.column('Description', width=300, minwidth=200)
+        # Smart column widths based on content
+        self.tree.column('ID', width=120, minwidth=80)
+        self.tree.column('Title', width=300, minwidth=200)  # Larger for titles
+        self.tree.column('Type', width=140, minwidth=100)
+        self.tree.column('Description', width=350, minwidth=250)  # Larger for descriptions
         
-        # Configure additional attribute columns
-        for attr in common_attrs:
+        # Configure meaningful attribute columns
+        for attr in additional_columns:
             self.tree.heading(attr, text=f'⚙️ {attr}')
-            self.tree.column(attr, width=150, minwidth=100)
+            self.tree.column(attr, width=180, minwidth=120)
         
         # Add professional scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -169,12 +169,17 @@ class VisualizerGUI:
         self.tree.bind('<Double-1>', self.show_requirement_details)
         self.tree.bind('<Button-3>', self.show_context_menu)  # Right-click
         
-        # Status label for filtered results with enhanced styling
+        # Enhanced status section
         status_frame = ttk.Frame(table_frame)
         status_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
         
+        # Content quality indicator
+        self.content_quality_label = ttk.Label(status_frame, text="", font=('Arial', 9, 'bold'))
+        self.content_quality_label.pack(side=tk.LEFT)
+        
+        # Main status label
         self.status_label = ttk.Label(status_frame, text="", font=('Arial', 9, 'italic'))
-        self.status_label.pack(side=tk.LEFT)
+        self.status_label.pack(side=tk.LEFT, padx=(20, 0))
         
         # Quick stats in status area
         self.quick_stats_label = ttk.Label(status_frame, text="", font=('Arial', 9))
@@ -182,7 +187,83 @@ class VisualizerGUI:
         
         # Store column info for population
         self.table_columns = columns
-        self.common_attrs = common_attrs
+        self.meaningful_attrs = additional_columns
+        
+    def _analyze_meaningful_attributes(self) -> List[str]:
+        """Analyze requirements to identify most meaningful attributes for display"""
+        if not self.requirements:
+            return []
+        
+        # Score all attributes by meaningfulness
+        attr_scores = {}
+        
+        for req in self.requirements:
+            for attr_name, attr_value in req.get('attributes', {}).items():
+                if not attr_value or attr_name in ['Title', 'Description', 'Type']:
+                    continue  # Skip empty or already displayed attributes
+                
+                if attr_name not in attr_scores:
+                    attr_scores[attr_name] = {
+                        'count': 0,
+                        'total_length': 0,
+                        'unique_values': set(),
+                        'looks_meaningful': 0
+                    }
+                
+                attr_scores[attr_name]['count'] += 1
+                attr_scores[attr_name]['total_length'] += len(str(attr_value))
+                attr_scores[attr_name]['unique_values'].add(str(attr_value)[:50])  # Limit for set size
+                
+                # Check if content looks meaningful (not just references)
+                if self._looks_like_meaningful_content(str(attr_value)):
+                    attr_scores[attr_name]['looks_meaningful'] += 1
+        
+        # Calculate meaningfulness score for each attribute
+        scored_attributes = []
+        total_reqs = len(self.requirements)
+        
+        for attr_name, scores in attr_scores.items():
+            if scores['count'] < total_reqs * 0.1:  # Skip if less than 10% have this attribute
+                continue
+            
+            # Calculate composite score
+            coverage = scores['count'] / total_reqs  # How many requirements have this
+            avg_length = scores['total_length'] / scores['count']  # Average content length
+            uniqueness = len(scores['unique_values']) / scores['count']  # Value diversity
+            meaningfulness = scores['looks_meaningful'] / scores['count']  # Content quality
+            
+            # Weighted composite score
+            composite_score = (
+                coverage * 0.3 +           # 30% weight for coverage
+                min(avg_length / 50, 1) * 0.2 +  # 20% weight for length (capped)
+                uniqueness * 0.2 +         # 20% weight for uniqueness
+                meaningfulness * 0.3       # 30% weight for meaningfulness
+            )
+            
+            scored_attributes.append((attr_name, composite_score))
+        
+        # Sort by score and return top attributes
+        scored_attributes.sort(key=lambda x: x[1], reverse=True)
+        return [attr[0] for attr in scored_attributes]
+    
+    def _looks_like_meaningful_content(self, content: str) -> bool:
+        """Determine if content looks like meaningful human-readable text"""
+        if not content or len(content) < 3:
+            return False
+        
+        # Content is likely meaningful if:
+        # - Has spaces (not just an ID)
+        # - Doesn't have too many underscores or technical patterns
+        # - Has reasonable length
+        # - Contains some letters
+        
+        has_spaces = ' ' in content
+        not_too_technical = content.count('_') < len(content) * 0.3
+        reasonable_length = 3 <= len(content) <= 500
+        has_letters = any(c.isalpha() for c in content)
+        not_just_numbers = not content.replace('.', '').replace('-', '').isdigit()
+        
+        return has_spaces and not_too_technical and reasonable_length and has_letters and not_just_numbers
         
     def show_context_menu(self, event):
         """Show context menu on right-click"""
@@ -239,46 +320,66 @@ class VisualizerGUI:
         self.update_statistics()
         
     def populate_requirements(self):
-        """Populate the requirements table with enhanced information"""
+        """Populate the requirements table with enhanced content validation"""
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Add filtered requirements with enhanced data
+        # Track content quality for user feedback
+        content_issues = 0
+        
+        # Add filtered requirements with enhanced data validation
         for req in self.filtered_requirements:
             # Build row values for all columns
             row_values = []
             
-            # Base columns
-            row_values.append(req.get('id', ''))
+            # ID column
+            req_id = req.get('id', '')
+            row_values.append(req_id)
             
-            # Title
+            # Title column with content validation
             title = req.get('title', '')
-            if len(title) > 50:
-                title = title[:47] + "..."
+            if not title or title == req_id:
+                # Try to find better title from attributes
+                title = self._find_better_title(req) or req_id or 'Untitled'
+                if title == req_id:
+                    content_issues += 1
+            
+            # Truncate long titles but keep them readable
+            if len(title) > 60:
+                title = title[:57] + "..."
             row_values.append(title)
             
-            # Type
-            req_type = req.get('type', req.get('type_ref', ''))
-            if len(req_type) > 20:
-                req_type = req_type[:17] + "..."
+            # Type column with fallback
+            req_type = req.get('type', '')
+            if not req_type:
+                req_type = req.get('type_ref', 'Unknown')
+            if len(req_type) > 25:
+                req_type = req_type[:22] + "..."
             row_values.append(req_type)
             
-            # Description
+            # Description column with content validation
             description = req.get('description', '')
-            if len(description) > 100:
-                description = description[:97] + "..."
+            if not description:
+                # Try to find description-like content
+                description = self._find_description_content(req) or 'No description available'
+                if description == 'No description available':
+                    content_issues += 1
+            
+            # Smart truncation for descriptions
+            if len(description) > 120:
+                description = description[:117] + "..."
             row_values.append(description)
             
-            # Additional attribute columns
-            if hasattr(self, 'common_attrs'):
-                for attr in self.common_attrs:
+            # Additional meaningful attribute columns
+            if hasattr(self, 'meaningful_attrs'):
+                for attr in self.meaningful_attrs:
                     attr_value = req.get('attributes', {}).get(attr, '')
-                    if len(str(attr_value)) > 30:
-                        attr_value = str(attr_value)[:27] + "..."
+                    if len(str(attr_value)) > 35:
+                        attr_value = str(attr_value)[:32] + "..."
                     row_values.append(str(attr_value))
             
-            # Insert with alternating row colors (if supported)
+            # Insert row
             item_id = self.tree.insert('', tk.END, values=row_values)
         
         # Update status with enhanced information
@@ -291,129 +392,167 @@ class VisualizerGUI:
             status_text = f"🔍 Showing {showing} of {total} requirements"
         self.status_label.config(text=status_text)
         
-        # Update quick stats
+        # Update content quality indicator
+        if hasattr(self, 'content_quality_label'):
+            if content_issues == 0:
+                quality_text = "✅ Good content quality"
+            elif content_issues < showing * 0.1:
+                quality_text = f"⚠️ Minor content issues ({content_issues})"
+            else:
+                quality_text = f"❌ Content quality issues ({content_issues})"
+            
+            self.content_quality_label.config(text=quality_text)
+        
+        # Update quick stats with meaningful metrics
         if hasattr(self, 'quick_stats_label'):
-            with_desc = len([r for r in self.filtered_requirements if r.get('description')])
-            with_type = len([r for r in self.filtered_requirements if r.get('type')])
-            quick_stats = f"📝 {with_desc} with descriptions | 🏷️ {with_type} with types"
+            with_good_titles = len([r for r in self.filtered_requirements 
+                                  if r.get('title') and r.get('title') != r.get('id')])
+            with_descriptions = len([r for r in self.filtered_requirements 
+                                   if r.get('description') and r.get('description') != 'No description available'])
+            with_types = len([r for r in self.filtered_requirements if r.get('type')])
+            
+            quick_stats = f"📝 {with_good_titles} meaningful titles | 📄 {with_descriptions} descriptions | 🏷️ {with_types} types"
             self.quick_stats_label.config(text=quick_stats)
+    
+    def _find_better_title(self, req: Dict[str, Any]) -> str:
+        """Try to find a better title from attributes if main title is poor"""
+        attributes = req.get('attributes', {})
+        
+        # Look for attributes that might contain better titles
+        title_candidates = []
+        for attr_name, attr_value in attributes.items():
+            if not attr_value:
+                continue
+                
+            attr_lower = attr_name.lower()
+            # Look for title-like attributes
+            if any(keyword in attr_lower for keyword in ['name', 'summary', 'caption', 'label', 'heading']):
+                if self._looks_like_meaningful_content(str(attr_value)):
+                    title_candidates.append(str(attr_value))
+        
+        # Return the shortest meaningful candidate (likely to be a good title)
+        if title_candidates:
+            return min(title_candidates, key=len)
+        
+        return ''
+    
+    def _find_description_content(self, req: Dict[str, Any]) -> str:
+        """Try to find description-like content from attributes"""
+        attributes = req.get('attributes', {})
+        
+        # Look for attributes that might contain description content
+        description_candidates = []
+        for attr_name, attr_value in attributes.items():
+            if not attr_value:
+                continue
+                
+            attr_lower = attr_name.lower()
+            # Look for description-like attributes
+            if any(keyword in attr_lower for keyword in ['text', 'detail', 'content', 'specification', 'rationale']):
+                if self._looks_like_meaningful_content(str(attr_value)) and len(str(attr_value)) > 10:
+                    description_candidates.append(str(attr_value))
+        
+        # Return the longest meaningful candidate (likely to be a good description)
+        if description_candidates:
+            return max(description_candidates, key=len)
+        
+        return ''
         
     def update_statistics(self):
-        """Update the statistics display"""
+        """Update the statistics display with enhanced content analysis"""
         # Clear existing statistics
         for widget in self.stats_container.winfo_children():
             widget.destroy()
         
-        # General statistics
-        general_frame = ttk.LabelFrame(self.stats_container, text="📊 General Statistics", padding="10")
-        general_frame.pack(fill=tk.X, pady=(0, 10))
+        # Content Quality Analysis
+        quality_frame = ttk.LabelFrame(self.stats_container, text="📊 Content Quality Analysis", padding="10")
+        quality_frame.pack(fill=tk.X, pady=(0, 10))
         
         total_reqs = len(self.requirements)
         
-        # Basic counts
-        stats_text = f"Total Requirements: {total_reqs}\nCurrently Displayed: {len(self.filtered_requirements)}\n"
+        # Analyze content quality
+        meaningful_titles = len([r for r in self.requirements 
+                               if r.get('title') and r.get('title') != r.get('id') 
+                               and self._looks_like_meaningful_content(r.get('title', ''))])
         
-        # Count requirements with different attributes
+        good_descriptions = len([r for r in self.requirements 
+                               if r.get('description') and len(r.get('description', '')) > 20
+                               and self._looks_like_meaningful_content(r.get('description', ''))])
+        
+        resolved_types = len([r for r in self.requirements 
+                            if r.get('type') and not r.get('type', '').startswith('_')])
+        
+        quality_text = f"""Content Quality Assessment:
+✅ Meaningful Titles: {meaningful_titles} ({meaningful_titles/total_reqs*100:.1f}%)
+✅ Rich Descriptions: {good_descriptions} ({good_descriptions/total_reqs*100:.1f}%)
+✅ Resolved Types: {resolved_types} ({resolved_types/total_reqs*100:.1f}%)
+
+Total Requirements: {total_reqs}
+Currently Displayed: {len(self.filtered_requirements)}
+"""
+        
+        ttk.Label(quality_frame, text=quality_text, justify=tk.LEFT).pack(anchor=tk.W)
+        
+        # Basic statistics for backward compatibility
+        stats_frame = ttk.LabelFrame(self.stats_container, text="📋 Basic Statistics", padding="10")
+        stats_frame.pack(fill=tk.X, pady=(0, 10))
+        
         with_title = len([r for r in self.requirements if r.get('title')])
         with_description = len([r for r in self.requirements if r.get('description')])
         with_type = len([r for r in self.requirements if r.get('type')])
         
-        stats_text += f"""
-Completeness:
-- With Title: {with_title} ({with_title/total_reqs*100:.1f}%)
-- With Description: {with_description} ({with_description/total_reqs*100:.1f}%)
-- With Type: {with_type} ({with_type/total_reqs*100:.1f}%)
+        basic_stats = f"""Field Presence:
+📝 Title: {with_title} ({with_title/total_reqs*100:.1f}%)
+📄 Description: {with_description} ({with_description/total_reqs*100:.1f}%)
+🏷️ Type: {with_type} ({with_type/total_reqs*100:.1f}%)
 """
         
-        ttk.Label(general_frame, text=stats_text, justify=tk.LEFT).pack(anchor=tk.W)
-        
-        # Type distribution
-        if with_type > 0:
-            type_frame = ttk.LabelFrame(self.stats_container, text="🏷️ Type Distribution", padding="10")
-            type_frame.pack(fill=tk.X, pady=(0, 10))
-            
-            types = [r.get('type', 'Unknown') for r in self.requirements if r.get('type')]
-            type_counts = Counter(types)
-            
-            type_text = "Requirement Types:\n"
-            for req_type, count in type_counts.most_common():
-                percentage = (count / total_reqs) * 100
-                type_text += f"- {req_type}: {count} ({percentage:.1f}%)\n"
-            
-            ttk.Label(type_frame, text=type_text, justify=tk.LEFT).pack(anchor=tk.W)
-        
-        # Text analysis
-        text_frame = ttk.LabelFrame(self.stats_container, text="📝 Text Analysis", padding="10")
-        text_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # Analyze description lengths
-        descriptions = [r.get('description', '') for r in self.requirements if r.get('description')]
-        if descriptions:
-            desc_lengths = [len(desc) for desc in descriptions]
-            avg_length = sum(desc_lengths) / len(desc_lengths)
-            min_length = min(desc_lengths)
-            max_length = max(desc_lengths)
-            
-            text_analysis = f"""Description Analysis:
-- Average length: {avg_length:.1f} characters
-- Shortest: {min_length} characters
-- Longest: {max_length} characters
-- Empty descriptions: {total_reqs - len(descriptions)}
-"""
-        else:
-            text_analysis = "No descriptions found in requirements."
-        
-        ttk.Label(text_frame, text=text_analysis, justify=tk.LEFT).pack(anchor=tk.W)
-        
-        # Attribute analysis
-        attr_frame = ttk.LabelFrame(self.stats_container, text="⚙️ Attribute Analysis", padding="10")
-        attr_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # Collect all unique attributes
-        all_attributes = set()
-        for req in self.requirements:
-            all_attributes.update(req.get('attributes', {}).keys())
-        
-        if all_attributes:
-            attr_text = f"Found {len(all_attributes)} unique attribute types:\n"
-            for attr in sorted(all_attributes):
-                # Count how many requirements have this attribute
-                count = len([r for r in self.requirements 
-                           if attr in r.get('attributes', {}) and r['attributes'][attr]])
-                percentage = (count / total_reqs) * 100
-                attr_text += f"- {attr}: {count} ({percentage:.1f}%)\n"
-        else:
-            attr_text = "No additional attributes found."
-        
-        ttk.Label(attr_frame, text=attr_text, justify=tk.LEFT).pack(anchor=tk.W)
+        ttk.Label(stats_frame, text=basic_stats, justify=tk.LEFT).pack(anchor=tk.W)
         
     def on_search_change(self, *args):
-        """Handle search text changes - compatible with both trace formats"""
+        """Handle search text changes with enhanced search across resolved content"""
         search_term = self.search_var.get().lower()
         
         if not search_term:
             self.filtered_requirements = self.requirements.copy()
             self.search_info_label.config(text="")
         else:
-            # Filter requirements based on search term
+            # Enhanced search across all meaningful content
             self.filtered_requirements = []
             for req in self.requirements:
-                # Search in ID, title, description, type, and all attributes
-                searchable_text = ' '.join([
+                # Search in all meaningful fields including resolved content
+                searchable_content = []
+                
+                # Basic fields
+                searchable_content.extend([
                     req.get('id', ''),
                     req.get('title', ''),
                     req.get('description', ''),
                     req.get('type', ''),
-                    ' '.join(str(v) for v in req.get('attributes', {}).values())
-                ]).lower()
+                    req.get('priority', ''),
+                    req.get('status', '')
+                ])
+                
+                # All resolved attributes
+                for attr_value in req.get('attributes', {}).values():
+                    if attr_value:
+                        searchable_content.append(str(attr_value))
+                
+                # Create searchable text
+                searchable_text = ' '.join(searchable_content).lower()
                 
                 if search_term in searchable_text:
                     self.filtered_requirements.append(req)
             
-            # Update search info
+            # Update search info with enhanced feedback
             total = len(self.requirements)
             found = len(self.filtered_requirements)
-            self.search_info_label.config(text=f"🔍 Found {found} of {total} requirements")
+            if found == 0:
+                self.search_info_label.config(text=f"🔍 No matches found for '{search_term}'")
+            elif found == total:
+                self.search_info_label.config(text=f"🔍 All requirements match '{search_term}'")
+            else:
+                self.search_info_label.config(text=f"🔍 Found {found} of {total} requirements matching '{search_term}'")
         
         self.populate_requirements()
         
@@ -518,43 +657,6 @@ Description:
         all_attr_text.insert(tk.END, all_attr_info)
         all_attr_text.configure(state=tk.DISABLED)
         
-        # Technical Details tab
-        tech_frame = ttk.Frame(notebook)
-        notebook.add(tech_frame, text="Technical Details")
-        
-        tech_text = tk.Text(tech_frame, wrap=tk.WORD, font=('Consolas', 10))
-        tech_scrollbar = ttk.Scrollbar(tech_frame, orient=tk.VERTICAL, command=tech_text.yview)
-        tech_text.configure(yscrollcommand=tech_scrollbar.set)
-        
-        tech_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        tech_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Technical information
-        tech_info = f"""Technical Information:
-{'=' * 30}
-
-Identifier: {requirement.get('identifier', 'N/A')}
-Type Reference: {requirement.get('type_ref', 'N/A')}
-Content Hash: {requirement.get('content', 'N/A')[:100]}...
-
-Raw Data Structure:
-{'-' * 20}
-"""
-        
-        # Show the raw requirement dictionary (excluding large content)
-        req_copy = requirement.copy()
-        if 'content' in req_copy and len(req_copy['content']) > 200:
-            req_copy['content'] = req_copy['content'][:200] + "... (truncated)"
-        
-        import json
-        try:
-            tech_info += json.dumps(req_copy, indent=2, ensure_ascii=False)
-        except:
-            tech_info += str(req_copy)
-        
-        tech_text.insert(tk.END, tech_info)
-        tech_text.configure(state=tk.DISABLED)
-        
     def export_to_csv(self):
         """Export current requirements view to CSV"""
         if not self.filtered_requirements:
@@ -650,4 +752,5 @@ Completeness Analysis:
 # Example usage
 if __name__ == "__main__":
     # This would normally be called from the main application
-    print("Visualizer GUI module loaded successfully.")
+    print("Enhanced Visualizer GUI module loaded successfully.")
+    print("Features: Intelligent content prioritization, quality analysis, enhanced search")
