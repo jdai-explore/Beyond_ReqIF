@@ -1,355 +1,210 @@
-# ReqIF Tool Suite
+# ReqIF Tool Suite MVP
 
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)]()
+A simple but powerful tool for comparing ReqIF (Requirements Interchange Format) files with an intuitive GUI interface.
 
-A comprehensive, professional-grade tool suite for working with ReqIF (Requirements Interchange Format) files. Provides powerful comparison, visualization, and analysis capabilities with an intuitive graphical user interface.
+## 🚀 Quick Start
 
-![ReqIF Tool Suite Screenshot](docs/images/main_interface.png)
+### Prerequisites
+- Python 3.8 or higher
+- No additional dependencies required (uses built-in libraries only!)
 
-## 🎯 **Features**
+### Installation & Running
 
-### **📊 ReqIF Comparison Tool**
-- **Side-by-side comparison** of ReqIF files and entire folders
-- **Advanced diff highlighting** with color-coded changes (added/modified/deleted)
-- **Intelligent requirement matching** by ID and content similarity
-- **Comprehensive statistics** showing change summaries
-- **Bulk folder comparison** for managing large requirement sets
-- **Export comparison results** in multiple formats
-
-### **📋 ReqIF Visualizer**
-- **Excel-like table view** for easy requirement browsing
-- **Detailed requirement inspection** with full text and attributes
-- **Advanced search and filtering** capabilities
-- **Statistical analysis** with distribution charts and metrics
-- **Interactive requirement exploration** with double-click details
-- **Export to CSV/Excel** for external analysis
-
-### **🔍 Advanced Analytics**
-- **Requirement distribution analysis** by type, status, priority
-- **Text complexity metrics** and readability analysis
-- **Attribute completeness reporting**
-- **Trend analysis** across requirement versions
-- **Custom metrics** through plugin system
-
-### **💾 Multiple Export Formats**
-- **CSV Export**: Spreadsheet-compatible format
-- **Excel Export**: Rich formatting with multiple sheets
-- **PDF Reports**: Professional documentation
-- **JSON Export**: API-friendly structured data
-
-## 🚀 **Quick Start**
-
-### **Installation**
-
-#### **Option 1: Download Executable (Recommended for End Users)**
-1. Download the latest release from [Releases](https://github.com/your-org/reqif-tool-suite/releases)
-2. Extract the ZIP file
-3. Run `ReqIFToolSuite.exe` (Windows) or `ReqIFToolSuite` (macOS/Linux)
-
-#### **Option 2: Install from Source (For Developers)**
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/reqif-tool-suite.git
-cd reqif-tool-suite
-
-# Install dependencies
-pip install -r requirements.txt
+# Clone or download the project files
+# Navigate to the project directory
+cd reqif_mvp
 
 # Run the application
 python main.py
 ```
 
-#### **Option 3: Install via pip (Coming Soon)**
-```bash
-pip install reqif-tool-suite
-reqif-tool-suite
+## 📋 Features
+
+### ✅ Current MVP Features
+- **Dual File Comparison**: Compare two ReqIF files side-by-side
+- **Automatic Change Detection**: Identifies added, deleted, and modified requirements
+- **Categorized Results**: Organized tabs for different change types
+- **Detailed View**: Double-click any requirement for full details
+- **Summary Statistics**: Overview of all changes with percentages
+- **CSV Export**: Export comparison results for further analysis
+- **Error Handling**: Graceful handling of parsing errors and invalid files
+
+### 🔍 Comparison Categories
+- **Added**: Requirements present only in the second file (green highlighting)
+- **Deleted**: Requirements present only in the first file (red highlighting)  
+- **Modified**: Requirements that changed between files (yellow highlighting)
+- **Unchanged**: Requirements identical in both files
+
+## 🖥️ User Interface
+
+### Main Window
+- File selection for two ReqIF files
+- Compare button to start analysis
+- Status area showing progress and results
+- Menu with additional options
+
+### Results Window
+- **Tabbed Interface**:
+  - Added tab: New requirements in the second file
+  - Deleted tab: Requirements removed from the first file
+  - Modified tab: Requirements with changes between files
+  - Unchanged tab: Requirements that are identical
+- **Summary Statistics Panel**: Counts and percentages for each category
+- **Double-click Details**: View full requirement information
+- **Export Options**: Save results to CSV or summary to text file
+
+## 📁 Project Structure
+
+```
+reqif_mvp/
+├── main.py                 # Main application entry point
+├── reqif_parser.py         # ReqIF XML parsing logic
+├── reqif_comparator.py     # Comparison algorithms
+├── comparison_gui.py       # Results display interface
+├── requirements.txt        # Python dependencies (minimal)
+└── README.md              # This documentation
 ```
 
-### **First Usage**
+## 🔧 Technical Details
 
-1. **Launch the application**
-2. **Choose your tool**:
-   - Click **"ReqIF Compare"** to compare two files or folders
-   - Click **"ReqIF Visualizer"** to explore a single ReqIF file
-3. **Load your files** using the browse buttons
-4. **Explore the results** in the tabbed interface
-5. **Export your findings** using the export buttons
+### Architecture
+- **Parser Module**: Handles ReqIF XML structure and extracts requirements
+- **Comparator Module**: Implements comparison logic and change detection
+- **GUI Modules**: Provides user interface using tkinter
+- **Export System**: CSV and text export functionality
 
-## 📁 **Supported File Formats**
+### ReqIF Support
+- Parses standard ReqIF XML structure
+- Extracts requirement ID, title, description, type, and attributes
+- Handles SPEC-OBJECT elements and attribute values
+- Supports both namespaced and non-namespaced XML
+- Graceful fallback for non-standard ReqIF structures
 
-| Format | Extension | Support Level |
-|--------|-----------|---------------|
-| ReqIF | `.reqif` | ✅ Full Support |
-| ReqIF Archive | `.reqifz` | ✅ Full Support |
-| CSV Export | `.csv` | ✅ Export Only |
-| Excel Export | `.xlsx` | ✅ Export Only |
-| PDF Reports | `.pdf` | ✅ Export Only |
-| JSON Data | `.json` | ✅ Export Only |
+### Comparison Algorithm
+1. **ID Matching**: Primary matching by requirement ID
+2. **Content Comparison**: Text-based comparison for modifications
+3. **Change Categorization**: Automatic sorting into added/deleted/modified/unchanged
+4. **Detailed Change Tracking**: Field-level change identification
 
-## 🖥️ **System Requirements**
+## 🚀 Usage Examples
 
-### **Minimum Requirements**
-- **OS**: Windows 10, macOS 10.14, or Linux (Ubuntu 18.04+)
-- **Python**: 3.8 or higher (if running from source)
-- **RAM**: 4 GB
-- **Storage**: 100 MB free space
+### Basic Comparison
+1. Launch the application: `python main.py`
+2. Click "Browse" for File 1 and select your original ReqIF file
+3. Click "Browse" for File 2 and select your modified ReqIF file
+4. Click "Compare Files"
+5. Review results in the tabbed interface
+6. Export results if needed
 
-### **Recommended Requirements**
-- **OS**: Windows 11, macOS 12+, or Linux (Ubuntu 20.04+)
-- **Python**: 3.10 or higher
-- **RAM**: 8 GB or more
-- **Storage**: 500 MB free space (for large file processing)
+### Viewing Requirement Details
+- Double-click any requirement in the results to see full details
+- For modified requirements, view original, modified, and changes summary tabs
 
-## 📖 **User Guide**
+### Exporting Results
+- Click "Export Results to CSV" for spreadsheet analysis
+- Click "Export Summary" for a text summary report
 
-### **Comparing ReqIF Files**
+## 🧪 Testing
 
-1. **Select Comparison Mode**: Click "ReqIF Compare" from the main menu
-2. **Choose Files**: Use "Browse File" for single files or "Browse Folder" for entire directories
-3. **Run Comparison**: Click "Compare" to analyze differences
-4. **Review Results**: Explore the tabbed results:
-   - **Added**: Requirements present only in the second file
-   - **Modified**: Requirements that changed between files
-   - **Deleted**: Requirements present only in the first file
-   - **Unchanged**: Requirements that are identical
-5. **Export Results**: Use "Export Results" to save findings
+### Testing with Sample Data
+Create simple ReqIF files for testing:
 
-### **Visualizing ReqIF Files**
-
-1. **Select Visualizer Mode**: Click "ReqIF Visualizer" from the main menu
-2. **Load File**: Browse and select a ReqIF file, then click "Load"
-3. **Explore Views**:
-   - **Table View**: Excel-like browsing with search functionality
-   - **Details View**: Complete requirement information
-   - **Statistics**: Analytical insights and distributions
-4. **Search & Filter**: Use the search box to find specific requirements
-5. **Export Data**: Use "Export to CSV" for external analysis
-
-## 🔧 **Advanced Configuration**
-
-### **Configuration File**
-The application stores settings in `config/user_config.json`:
-
-```json
-{
-  "window": {
-    "width": 1200,
-    "height": 800,
-    "remember_position": true
-  },
-  "theme": "default",
-  "export": {
-    "default_format": "csv",
-    "include_timestamps": true
-  },
-  "comparison": {
-    "ignore_whitespace": false,
-    "case_sensitive": true
-  }
-}
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<REQ-IF xmlns="http://www.omg.org/spec/ReqIF/20110401/reqif.xsd">
+  <THE-HEADER>
+    <REQ-IF-HEADER IDENTIFIER="sample"/>
+  </THE-HEADER>
+  <CORE-CONTENT>
+    <REQ-IF-CONTENT>
+      <SPEC-OBJECTS>
+        <SPEC-OBJECT IDENTIFIER="REQ-001">
+          <VALUES>
+            <ATTRIBUTE-VALUE-STRING ATTRIBUTE-DEFINITION-REF="Title">
+              <THE-VALUE>System shall start</THE-VALUE>
+            </ATTRIBUTE-VALUE-STRING>
+            <ATTRIBUTE-VALUE-STRING ATTRIBUTE-DEFINITION-REF="Description">
+              <THE-VALUE>The system shall start within 5 seconds</THE-VALUE>
+            </ATTRIBUTE-VALUE-STRING>
+          </VALUES>
+        </SPEC-OBJECT>
+      </SPEC-OBJECTS>
+    </REQ-IF-CONTENT>
+  </CORE-CONTENT>
+</REQ-IF>
 ```
 
-### **Logging**
-Logs are stored in the `logs/` directory:
-- `app.log`: General application logs
-- `error.log`: Error-specific logs
-- `debug.log`: Detailed debugging information (when enabled)
+### Expected Results
+- Parser should extract requirements with ID, title, and description
+- Comparator should identify differences between file versions
+- GUI should display results in organized tabs
 
-## 🛠️ **Development**
+## 🐛 Troubleshooting
 
-### **Project Structure**
-```
-reqif_tool_suite/
-├── main.py                    # Application entry point
-├── core/                      # Business logic
-│   ├── reqif_parser.py       # ReqIF parsing
-│   ├── reqif_comparator.py   # Comparison algorithms
-│   └── reqif_analyzer.py     # Statistical analysis
-├── gui/                       # User interface
-│   ├── main_menu.py          # Main application menu
-│   ├── comparison_gui.py     # Comparison interface
-│   └── visualizer_gui.py     # Visualization interface
-├── utils/                     # Utilities
-├── exporters/                 # Export functionality
-├── models/                    # Data models
-├── plugins/                   # Plugin system
-└── tests/                     # Test suite
-```
+### Common Issues
 
-### **Setting Up Development Environment**
+**"No requirements found"**
+- Check that your ReqIF file contains SPEC-OBJECT elements
+- Verify the XML structure is valid
+- Try with a known working ReqIF file
 
-```bash
-# Clone and setup
-git clone https://github.com/your-org/reqif-tool-suite.git
-cd reqif-tool-suite
+**"XML parsing error"**
+- Ensure the file is valid XML
+- Check for special characters or encoding issues
+- Verify the file is actually a ReqIF file
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+**"Comparison fails"**
+- Ensure both files are valid ReqIF files
+- Check that requirements have ID attributes
+- Verify files are not corrupted
 
-# Install development dependencies
-pip install -r requirements-dev.txt
+### Debug Information
+- Check the status area in the main window for parsing progress
+- Error messages will appear in popup dialogs
+- File information is logged during parsing
 
-# Install pre-commit hooks
-pre-commit install
+## 🔮 Future Enhancements
 
-# Run tests
-pytest tests/
+### Next Sprint (2-4 hours)
+- Enhanced XML parsing for more ReqIF variants
+- Better error messages and validation
+- Search and filter functionality in results
+- Improved GUI styling and user experience
 
-# Run the application in development mode
-python main.py --debug
-```
+### Short-term Goals
+- Advanced similarity matching for requirements without exact ID matches
+- More export formats (Excel, PDF)
+- Configuration options for comparison sensitivity
+- Batch processing for multiple file pairs
 
-### **Running Tests**
+### Long-term Vision
+- Real-time diff highlighting
+- Version control integration
+- Web-based interface
+- Advanced analytics and reporting
+- Plugin system for custom parsers
 
-```bash
-# Run all tests
-pytest
+## 📄 License
 
-# Run with coverage
-pytest --cov=core --cov=gui --cov=utils
+MIT License - See LICENSE file for details.
 
-# Run specific test categories
-pytest tests/test_core/        # Core functionality tests
-pytest tests/test_gui/         # GUI tests
-pytest tests/test_integration/ # Integration tests
-```
+## 🤝 Contributing
 
-### **Building Executables**
+Contributions welcome! Areas for improvement:
+- Additional ReqIF format support
+- Enhanced comparison algorithms
+- UI/UX improvements
+- Performance optimizations
+- Documentation and examples
 
-```bash
-# Install build dependencies
-pip install pyinstaller
+## 📞 Support
 
-# Build for current platform
-python build.py
-
-# Build for multiple platforms (requires Docker)
-python build.py --all-platforms
-```
-
-## 🔌 **Plugin System**
-
-The ReqIF Tool Suite supports custom plugins for extending functionality:
-
-### **Creating a Custom Parser Plugin**
-```python
-from plugins.base_plugin import BasePlugin
-
-class CustomParserPlugin(BasePlugin):
-    name = "Custom Format Parser"
-    version = "1.0.0"
-    
-    def parse_file(self, file_path):
-        # Your custom parsing logic
-        pass
-```
-
-### **Available Plugin Types**
-- **Parsers**: Support for additional file formats
-- **Exporters**: Custom export formats
-- **Analyzers**: Additional statistical analysis
-- **Themes**: Custom visual themes
-
-## 📊 **Performance**
-
-### **Benchmarks**
-| File Size | Requirements | Load Time | Memory Usage |
-|-----------|--------------|-----------|--------------|
-| Small     | < 100        | < 1s      | < 50 MB      |
-| Medium    | 100-1,000    | 1-5s      | 50-200 MB    |
-| Large     | 1,000-10,000 | 5-30s     | 200-500 MB   |
-| Very Large| 10,000+      | 30s+      | 500 MB+      |
-
-### **Optimization Tips**
-- **Use folder comparison** for bulk analysis instead of individual files
-- **Enable caching** in settings for repeated comparisons
-- **Close unused tabs** to free memory
-- **Export large datasets** in chunks for better performance
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### **Areas for Contribution**
-- 🐛 **Bug Reports**: Found an issue? Please report it!
-- 💡 **Feature Requests**: Have an idea? We'd love to hear it!
-- 🔧 **Code Contributions**: Pull requests welcome!
-- 📖 **Documentation**: Help improve our docs
-- 🎨 **UI/UX**: Design improvements and themes
-- 🧪 **Testing**: Help us test edge cases
-
-### **Development Workflow**
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Run the test suite: `pytest`
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to your branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 **Support**
-
-### **Getting Help**
-- 📖 **Documentation**: Check our [User Guide](docs/user_guide.md)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-org/reqif-tool-suite/discussions)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-org/reqif-tool-suite/issues)
-- 📧 **Email Support**: support@reqif-tools.com
-
-### **FAQ**
-
-**Q: What is ReqIF?**
-A: ReqIF (Requirements Interchange Format) is an international standard for exchanging requirements between different tools and organizations.
-
-**Q: Can I compare files from different ReqIF tools?**
-A: Yes! The tool is designed to work with ReqIF files from any compliant tool (DOORS, PTC, Siemens, etc.).
-
-**Q: Is my data secure?**
-A: Yes. The tool works entirely offline - your files never leave your computer.
-
-**Q: Can I automate comparisons?**
-A: Yes, we provide a command-line interface for batch operations. See [CLI Documentation](docs/cli_guide.md).
-
-## 🗺️ **Roadmap**
-
-### **Version 2.1 (Q2 2024)**
-- [ ] Command-line interface for automation
-- [ ] Advanced filtering and search
-- [ ] Custom requirement attributes
-- [ ] Performance optimizations
-
-### **Version 2.2 (Q3 2024)**
-- [ ] Database storage support
-- [ ] Version control integration (Git)
-- [ ] Collaborative features
-- [ ] Web-based interface
-
-### **Version 3.0 (Q4 2024)**
-- [ ] AI-powered requirement analysis
-- [ ] Natural language processing
-- [ ] Integration with ALM tools
-- [ ] Cloud synchronization
-
-## 🏆 **Acknowledgments**
-
-- **ReqIF Standard**: [Object Management Group (OMG)](https://www.omg.org/)
-- **Python Community**: For excellent libraries and tools
-- **Contributors**: All our amazing contributors and testers
-- **Users**: Thank you for your feedback and support!
+For issues or questions:
+1. Check this README for common solutions
+2. Review the troubleshooting section
+3. Create an issue with sample files and error details
 
 ---
 
-<div align="center">
-
-**Made with ❤️ for the Requirements Engineering Community**
-
-[Website](https://reqif-tools.com) • [Documentation](docs/) • [Support](mailto:support@reqif-tools.com) • [Contributing](CONTRIBUTING.md)
-
-</div>
+**Built with Python and tkinter - Professional requirements engineering made simple!**
