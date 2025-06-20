@@ -75,11 +75,14 @@ reqif_mvp/
 - **Export System**: CSV and text export functionality
 
 ### ReqIF Support
-- Parses standard ReqIF XML structure
+- Parses standard ReqIF XML structure (.reqif files)
+- Extracts and processes ReqIF ZIP archives (.reqifz files)
+- Handles single or multiple ReqIF files within archives
 - Extracts requirement ID, title, description, type, and attributes
 - Handles SPEC-OBJECT elements and attribute values
 - Supports both namespaced and non-namespaced XML
 - Graceful fallback for non-standard ReqIF structures
+- Automatic temporary file management for archives
 
 ### Comparison Algorithm
 1. **ID Matching**: Primary matching by requirement ID

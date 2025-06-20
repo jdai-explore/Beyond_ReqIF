@@ -107,7 +107,12 @@ class ReqIFToolMVP:
         """Browse for first ReqIF file"""
         filename = filedialog.askopenfilename(
             title="Select First ReqIF File",
-            filetypes=[("ReqIF files", "*.reqif*"), ("All files", "*.*")]
+            filetypes=[
+                ("ReqIF files", "*.reqif"), 
+                ("ReqIF Archives", "*.reqifz"), 
+                ("All ReqIF", "*.reqif;*.reqifz"),
+                ("All files", "*.*")
+            ]
         )
         if filename:
             self.file1_path.set(filename)
@@ -117,7 +122,12 @@ class ReqIFToolMVP:
         """Browse for second ReqIF file"""
         filename = filedialog.askopenfilename(
             title="Select Second ReqIF File",
-            filetypes=[("ReqIF files", "*.reqif*"), ("All files", "*.*")]
+            filetypes=[
+                ("ReqIF files", "*.reqif"), 
+                ("ReqIF Archives", "*.reqifz"), 
+                ("All ReqIF", "*.reqif;*.reqifz"),
+                ("All files", "*.*")
+            ]
         )
         if filename:
             self.file2_path.set(filename)

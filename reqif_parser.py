@@ -7,6 +7,9 @@ Handles parsing of ReqIF XML files and extracting requirement information.
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 import os
+import zipfile
+import tempfile
+import shutil
 
 
 class ReqIFParser:
@@ -20,17 +23,33 @@ class ReqIFParser:
         
     def parse_file(self, file_path: str) -> List[Dict[str, Any]]:
         """
-        Parse a ReqIF file and extract requirements
+        Parse a ReqIF file (.reqif or .reqifz) and extract requirements
         
         Args:
-            file_path: Path to the ReqIF file
+            file_path: Path to the ReqIF file or ReqIF archive
             
         Returns:
             List of requirement dictionaries
         """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"ReqIF file not found: {file_path}")
-            
+        
+        # Check file extension to determine parsing method
+        file_ext = os.path.splitext(file_path)[1].lower()
+        
+        if file_ext == '.reqifz':
+            return self._parse_reqifz_file(file_path)
+        elif file_ext == '.reqif':
+            return self._parse_reqif_file(file_path)
+        else:
+            # Try to parse as regular ReqIF first, then as archive
+            try:
+                return self._parse_reqif_file(file_path)
+            except:
+                return self._parse_reqifz_file(file_path)
+    
+    def _parse_reqif_file(self, file_path: str) -> List[Dict[str, Any]]:
+        """Parse a regular .reqif XML file"""
         try:
             # Parse XML
             tree = ET.parse(file_path)
@@ -49,6 +68,50 @@ class ReqIFParser:
             raise ValueError(f"Invalid XML in ReqIF file: {str(e)}")
         except Exception as e:
             raise RuntimeError(f"Error parsing ReqIF file: {str(e)}")
+    
+    def _parse_reqifz_file(self, file_path: str) -> List[Dict[str, Any]]:
+        """Parse a .reqifz archive file"""
+        try:
+            # Create temporary directory for extraction
+            temp_dir = tempfile.mkdtemp()
+            
+            try:
+                # Extract the archive
+                with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                    zip_ref.extractall(temp_dir)
+                
+                # Find ReqIF files in the extracted content
+                reqif_files = []
+                for root, dirs, files in os.walk(temp_dir):
+                    for file in files:
+                        if file.lower().endswith('.reqif'):
+                            reqif_files.append(os.path.join(root, file))
+                
+                if not reqif_files:
+                    raise ValueError("No .reqif files found in the archive")
+                
+                # Parse the first ReqIF file found (or combine multiple if needed)
+                if len(reqif_files) == 1:
+                    return self._parse_reqif_file(reqif_files[0])
+                else:
+                    # Multiple ReqIF files - combine requirements
+                    all_requirements = []
+                    for reqif_file in reqif_files:
+                        reqs = self._parse_reqif_file(reqif_file)
+                        # Add source file info to each requirement
+                        for req in reqs:
+                            req['source_file'] = os.path.basename(reqif_file)
+                        all_requirements.extend(reqs)
+                    return all_requirements
+                    
+            finally:
+                # Clean up temporary directory
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                
+        except zipfile.BadZipFile:
+            raise ValueError(f"Invalid ZIP archive: {file_path}")
+        except Exception as e:
+            raise RuntimeError(f"Error parsing ReqIFZ file: {str(e)}")
     
     def _extract_requirements(self, root) -> List[Dict[str, Any]]:
         """Extract requirement specifications from ReqIF XML"""
@@ -219,33 +282,84 @@ class ReqIFParser:
         return requirements
     
     def get_file_info(self, file_path: str) -> Dict[str, Any]:
-        """Get basic information about a ReqIF file"""
+        """Get basic information about a ReqIF file (.reqif or .reqifz)"""
         try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
+            file_ext = os.path.splitext(file_path)[1].lower()
             
-            # Count requirements
-            spec_objects = root.findall(".//SPEC-OBJECT")
-            if not spec_objects:
-                spec_objects = root.findall(".//reqif:SPEC-OBJECT", self.namespaces)
-            
-            info = {
-                'file_path': file_path,
-                'file_name': os.path.basename(file_path),
-                'file_size': os.path.getsize(file_path),
-                'requirement_count': len(spec_objects),
-                'root_tag': root.tag,
-                'namespace': root.tag.split('}')[0].strip('{') if '}' in root.tag else None
-            }
-            
-            return info
-            
+            if file_ext == '.reqifz':
+                return self._get_reqifz_info(file_path)
+            else:
+                return self._get_reqif_info(file_path)
+                
         except Exception as e:
             return {
                 'file_path': file_path,
                 'file_name': os.path.basename(file_path),
                 'error': str(e)
             }
+    
+    def _get_reqif_info(self, file_path: str) -> Dict[str, Any]:
+        """Get info about a regular .reqif file"""
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        
+        # Count requirements
+        spec_objects = root.findall(".//SPEC-OBJECT")
+        if not spec_objects:
+            spec_objects = root.findall(".//reqif:SPEC-OBJECT", self.namespaces)
+        
+        info = {
+            'file_path': file_path,
+            'file_name': os.path.basename(file_path),
+            'file_type': 'ReqIF',
+            'file_size': os.path.getsize(file_path),
+            'requirement_count': len(spec_objects),
+            'root_tag': root.tag,
+            'namespace': root.tag.split('}')[0].strip('{') if '}' in root.tag else None
+        }
+        
+        return info
+    
+    def _get_reqifz_info(self, file_path: str) -> Dict[str, Any]:
+        """Get info about a .reqifz archive file"""
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            # Extract and analyze
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+            
+            # Find ReqIF files
+            reqif_files = []
+            total_requirements = 0
+            
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    if file.lower().endswith('.reqif'):
+                        reqif_file_path = os.path.join(root, file)
+                        reqif_files.append(file)
+                        
+                        # Count requirements in this file
+                        try:
+                            file_info = self._get_reqif_info(reqif_file_path)
+                            total_requirements += file_info.get('requirement_count', 0)
+                        except:
+                            pass
+            
+            info = {
+                'file_path': file_path,
+                'file_name': os.path.basename(file_path),
+                'file_type': 'ReqIFZ Archive',
+                'file_size': os.path.getsize(file_path),
+                'requirement_count': total_requirements,
+                'contained_files': reqif_files,
+                'archive_file_count': len(reqif_files)
+            }
+            
+            return info
+            
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # Example usage and testing
@@ -258,4 +372,9 @@ if __name__ == "__main__":
     # for req in requirements[:3]:  # Print first 3
     #     print(f"ID: {req['id']}, Title: {req['title']}")
     
+    # Example: parse a ReqIFZ file
+    # requirements = parser.parse_file("example.reqifz")
+    # print(f"Found {len(requirements)} requirements in archive")
+    
     print("ReqIF Parser module loaded successfully.")
+    print("Supported formats: .reqif (XML files) and .reqifz (ZIP archives)")

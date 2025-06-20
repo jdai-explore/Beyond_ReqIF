@@ -6,10 +6,17 @@
 # Built-in modules used:
 # - tkinter (GUI framework)
 # - xml.etree.ElementTree (XML parsing)
+# - zipfile (ZIP archive handling for .reqifz files)
+# - tempfile (temporary directory management)
+# - shutil (file operations)
 # - csv (CSV export)
 # - difflib (text comparison)
 # - os, sys, pathlib (file operations)
 # - typing (type hints)
+
+# Supported file formats:
+# - .reqif (ReqIF XML files)
+# - .reqifz (ReqIF ZIP archives)
 
 # Future enhancements might add:
 # lxml>=4.6.0          # Advanced XML processing
