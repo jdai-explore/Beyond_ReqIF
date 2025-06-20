@@ -59,8 +59,11 @@ class ReqIFParser:
             for prefix, uri in self.namespaces.items():
                 ET.register_namespace(prefix, uri)
             
-            # Extract requirements
-            requirements = self._extract_requirements(root)
+            # First, extract attribute definitions to understand the schema
+            attr_definitions = self._extract_attribute_definitions(root)
+            
+            # Then extract requirements using the definitions
+            requirements = self._extract_requirements(root, attr_definitions)
             
             return requirements
             
@@ -68,6 +71,43 @@ class ReqIFParser:
             raise ValueError(f"Invalid XML in ReqIF file: {str(e)}")
         except Exception as e:
             raise RuntimeError(f"Error parsing ReqIF file: {str(e)}")
+    
+    def _extract_attribute_definitions(self, root) -> Dict[str, Dict[str, str]]:
+        """Extract attribute definitions to understand the ReqIF schema"""
+        attr_defs = {}
+        
+        # Find ATTRIBUTE-DEFINITION elements
+        for attr_def in root.findall(".//ATTRIBUTE-DEFINITION-STRING") + \
+                        root.findall(".//ATTRIBUTE-DEFINITION-XHTML") + \
+                        root.findall(".//ATTRIBUTE-DEFINITION-ENUMERATION"):
+            
+            identifier = attr_def.get('IDENTIFIER') or attr_def.get('identifier')
+            long_name = attr_def.get('LONG-NAME') or attr_def.get('long-name') or identifier
+            
+            if identifier:
+                attr_defs[identifier] = {
+                    'name': long_name,
+                    'type': attr_def.tag.split('}')[-1] if '}' in attr_def.tag else attr_def.tag,
+                    'identifier': identifier
+                }
+        
+        # Try with namespace if nothing found
+        if not attr_defs:
+            for attr_def in root.findall(".//reqif:ATTRIBUTE-DEFINITION-STRING", self.namespaces) + \
+                            root.findall(".//reqif:ATTRIBUTE-DEFINITION-XHTML", self.namespaces) + \
+                            root.findall(".//reqif:ATTRIBUTE-DEFINITION-ENUMERATION", self.namespaces):
+                
+                identifier = attr_def.get('IDENTIFIER') or attr_def.get('identifier')
+                long_name = attr_def.get('LONG-NAME') or attr_def.get('long-name') or identifier
+                
+                if identifier:
+                    attr_defs[identifier] = {
+                        'name': long_name,
+                        'type': attr_def.tag.split('}')[-1] if '}' in attr_def.tag else attr_def.tag,
+                        'identifier': identifier
+                    }
+        
+        return attr_defs
     
     def _parse_reqifz_file(self, file_path: str) -> List[Dict[str, Any]]:
         """Parse a .reqifz archive file"""
@@ -113,8 +153,11 @@ class ReqIFParser:
         except Exception as e:
             raise RuntimeError(f"Error parsing ReqIFZ file: {str(e)}")
     
-    def _extract_requirements(self, root) -> List[Dict[str, Any]]:
+    def _extract_requirements(self, root, attr_definitions: Dict[str, Dict[str, str]] = None) -> List[Dict[str, Any]]:
         """Extract requirement specifications from ReqIF XML"""
+        if attr_definitions is None:
+            attr_definitions = {}
+            
         requirements = []
         
         # Find all SPEC-OBJECT elements (requirements)
@@ -125,7 +168,7 @@ class ReqIFParser:
             spec_objects = root.findall(".//reqif:SPEC-OBJECT", self.namespaces)
         
         for spec_obj in spec_objects:
-            req = self._parse_spec_object(spec_obj)
+            req = self._parse_spec_object(spec_obj, attr_definitions)
             if req:
                 requirements.append(req)
         
@@ -135,15 +178,13 @@ class ReqIFParser:
             
         return requirements
     
-    def _parse_spec_object(self, spec_obj) -> Dict[str, Any]:
-        """Parse a single SPEC-OBJECT (requirement)"""
+    def _parse_spec_object(self, spec_obj, attr_definitions: Dict[str, Dict[str, str]]) -> Dict[str, Any]:
+        """Parse a single SPEC-OBJECT (requirement) with proper attribute mapping"""
         req = {
             'id': '',
             'identifier': '',
-            'title': '',
-            'description': '',
-            'type': '',
             'attributes': {},
+            'raw_attributes': {},  # Store raw attribute values
             'content': ''  # Combined content for comparison
         }
         
@@ -158,9 +199,9 @@ class ReqIFParser:
         if type_ref is not None:
             type_ref_attr = type_ref.get('SPEC-OBJECT-TYPE-REF') or type_ref.get('spec-object-type-ref')
             if type_ref_attr:
-                req['type'] = type_ref_attr
+                req['type_ref'] = type_ref_attr
         
-        # Parse attribute values
+        # Parse attribute values with proper mapping
         values = spec_obj.findall(".//ATTRIBUTE-VALUE-STRING") + \
                 spec_obj.findall(".//ATTRIBUTE-VALUE-XHTML") + \
                 spec_obj.findall(".//ATTRIBUTE-VALUE-ENUMERATION")
@@ -180,23 +221,59 @@ class ReqIFParser:
             # Extract value based on type
             attr_value = self._extract_attribute_value(value)
             
-            # Store in attributes
-            req['attributes'][attr_def_ref] = attr_value
+            # Store raw attribute
+            req['raw_attributes'][attr_def_ref] = attr_value
             
-            # Map common attribute names
-            attr_name_lower = attr_def_ref.lower()
-            if 'title' in attr_name_lower or 'name' in attr_name_lower:
-                req['title'] = attr_value
-            elif 'description' in attr_name_lower or 'text' in attr_name_lower or 'content' in attr_name_lower:
-                req['description'] = attr_value
+            # Get human-readable name from definitions
+            if attr_def_ref in attr_definitions:
+                attr_name = attr_definitions[attr_def_ref]['name']
+                req['attributes'][attr_name] = attr_value
+                
+                # Smart mapping to common fields based on attribute names
+                attr_name_lower = attr_name.lower()
+                if any(keyword in attr_name_lower for keyword in ['title', 'name', 'heading']):
+                    req['title'] = attr_value
+                elif any(keyword in attr_name_lower for keyword in ['description', 'text', 'content', 'detail']):
+                    req['description'] = attr_value
+                elif any(keyword in attr_name_lower for keyword in ['type', 'category', 'kind']):
+                    req['type'] = attr_value
+                elif any(keyword in attr_name_lower for keyword in ['priority', 'importance']):
+                    req['priority'] = attr_value
+                elif any(keyword in attr_name_lower for keyword in ['status', 'state']):
+                    req['status'] = attr_value
+                elif any(keyword in attr_name_lower for keyword in ['id', 'number', 'identifier']):
+                    if not req['id']:  # Only if we don't already have an ID
+                        req['id'] = attr_value
+            else:
+                # If no definition found, use the reference as the name
+                req['attributes'][attr_def_ref] = attr_value
         
-        # Create combined content for comparison
-        req['content'] = self._create_content_hash(req)
+        # Create combined content for comparison (using all available text)
+        content_parts = []
+        if req.get('title'):
+            content_parts.append(f"TITLE:{req['title']}")
+        if req.get('description'):
+            content_parts.append(f"DESC:{req['description']}")
+        if req.get('type'):
+            content_parts.append(f"TYPE:{req['type']}")
         
-        # Use ID as title if no title found
-        if not req['title'] and req['id']:
-            req['title'] = req['id']
-            
+        # Add all other attributes to content
+        for attr_name, attr_value in req['attributes'].items():
+            if attr_value and attr_name not in ['title', 'description', 'type']:
+                content_parts.append(f"{attr_name}:{attr_value}")
+        
+        req['content'] = '||'.join(content_parts)
+        
+        # Ensure we have at least an ID or generate one
+        if not req['id'] and req['identifier']:
+            req['id'] = req['identifier']
+        elif not req['id']:
+            req['id'] = f"REQ_{len(content_parts)}"
+        
+        # Set a display title if none found
+        if not req.get('title'):
+            req['title'] = req['id'] if req['id'] else 'Untitled Requirement'
+        
         return req
     
     def _extract_attribute_value(self, value_elem):
