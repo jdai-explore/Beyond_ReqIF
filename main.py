@@ -106,30 +106,24 @@ class ReqIFToolMVP:
     def browse_file1(self):
         """Browse for first ReqIF file"""
         filename = filedialog.askopenfilename(
-            title="Select First ReqIF File",
-            filetypes=[
-                ("ReqIF files", "*.reqif"), 
-                ("ReqIF Archives", "*.reqifz"), 
-                ("All ReqIF", "*.reqif;*.reqifz"),
-                ("All files", "*.*")
-            ]
+            title="Select First ReqIF File"
         )
         if filename:
+            if not filename.endswith((".reqif", ".reqifz")):
+                messagebox.showerror("Error", "Please select a valid ReqIF or ReqIFz file.")
+                return
             self.file1_path.set(filename)
             self.log_message(f"File 1 selected: {os.path.basename(filename)}")
             
     def browse_file2(self):
         """Browse for second ReqIF file"""
         filename = filedialog.askopenfilename(
-            title="Select Second ReqIF File",
-            filetypes=[
-                ("ReqIF files", "*.reqif"), 
-                ("ReqIF Archives", "*.reqifz"), 
-                ("All ReqIF", "*.reqif;*.reqifz"),
-                ("All files", "*.*")
-            ]
+            title="Select Second ReqIF File"
         )
         if filename:
+            if not filename.endswith((".reqif", ".reqifz")):
+                messagebox.showerror("Error", "Please select a valid ReqIF or ReqIFz file.")
+                return
             self.file2_path.set(filename)
             self.log_message(f"File 2 selected: {os.path.basename(filename)}")
             
