@@ -23,7 +23,8 @@ class ReqIFParser:
     def __init__(self):
         self.namespaces = {
             'reqif': 'http://www.omg.org/spec/ReqIF/20110401/reqif.xsd',
-            'xhtml': 'http://www.w3.org/1999/xhtml'
+            'xhtml': 'http://www.w3.org/1999/xhtml',
+            'reqif-xhtml': 'http://www.w3.org/1999/xhtml'  # Added for your specific format
         }
         
         # Four-level catalog system following ReqIF structure
@@ -306,7 +307,7 @@ class ReqIFParser:
         return extracted_objects
     
     def _extract_single_spec_object(self, spec_obj) -> Optional[Dict[str, Any]]:
-        """Extract a single SPEC-OBJECT with type and value references"""
+        """Extract a single SPEC-OBJECT with type and value references - Updated for different structures"""
         identifier = self._get_element_identifier(spec_obj)
         if not identifier:
             return None
@@ -318,7 +319,7 @@ class ReqIFParser:
             type_ref = (type_elem.get('SPEC-OBJECT-TYPE-REF') or 
                        type_elem.get('spec-object-type-ref'))
         
-        # Extract all ATTRIBUTE-VALUE elements with their references
+        # Extract all ATTRIBUTE-VALUE elements - UPDATED for your structure
         attribute_values = {}
         value_elements = self._find_elements_multiple_patterns(spec_obj, [
             ".//ATTRIBUTE-VALUE-STRING",
@@ -331,8 +332,33 @@ class ReqIFParser:
         ])
         
         for value_elem in value_elements:
+            # UPDATED: Handle different reference structures
+            attr_def_ref = None
+            
+            # Method 1: Direct attribute (old format)
             attr_def_ref = (value_elem.get('ATTRIBUTE-DEFINITION-REF') or 
                            value_elem.get('attribute-definition-ref'))
+            
+            # Method 2: DEFINITION child element (your format)
+            if not attr_def_ref:
+                definition_elem = value_elem.find(".//DEFINITION") or value_elem.find(".//definition")
+                if definition_elem is not None:
+                    # Look for various reference types
+                    ref_elements = (
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-STRING-REF") +
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-XHTML-REF") +
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-ENUMERATION-REF") +
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-INTEGER-REF") +
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-REAL-REF") +
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-DATE-REF") +
+                        definition_elem.findall(".//ATTRIBUTE-DEFINITION-BOOLEAN-REF")
+                    )
+                    
+                    for ref_elem in ref_elements:
+                        if ref_elem.text:
+                            attr_def_ref = ref_elem.text.strip()
+                            break
+            
             if attr_def_ref:
                 attribute_values[attr_def_ref] = value_elem
         
@@ -477,7 +503,7 @@ class ReqIFParser:
         return self._extract_comprehensive_text_content(the_value_elem)
     
     def _extract_comprehensive_text_content(self, element) -> str:
-        """Recursively extract all text content from an element, handling XHTML properly"""
+        """Recursively extract all text content from an element, handling XHTML and reqif-xhtml properly"""
         if element is None:
             return ''
         
@@ -489,10 +515,26 @@ class ReqIFParser:
         
         # Recursively process all children
         for child in element:
-            # Get text from child element
-            child_text = self._extract_comprehensive_text_content(child)
-            if child_text:
-                texts.append(child_text)
+            # Handle different element types
+            child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+            
+            if child_tag == 'br':
+                # Convert breaks to spaces
+                texts.append(' ')
+            elif child_tag == 'object':
+                # For object elements, try to get alt text or skip
+                alt_text = child.get('alt', '')
+                if alt_text:
+                    texts.append(alt_text)
+                # Also check for nested text content
+                nested_text = self._extract_comprehensive_text_content(child)
+                if nested_text and nested_text != 'OLE Object':
+                    texts.append(nested_text)
+            else:
+                # Get text from regular child element
+                child_text = self._extract_comprehensive_text_content(child)
+                if child_text:
+                    texts.append(child_text)
             
             # Add tail text that comes after the child element
             if child.tail:
@@ -504,17 +546,29 @@ class ReqIFParser:
         # Clean up multiple spaces, line breaks, and common XHTML artifacts
         full_text = re.sub(r'\s+', ' ', full_text)  # Multiple spaces to single
         full_text = re.sub(r'\n\s*\n', '\n', full_text)  # Multiple line breaks
+        
+        # Decode HTML entities
+        import html
+        full_text = html.unescape(full_text)
+        
         full_text = full_text.strip()
         
         return full_text
     
     def _extract_enumeration_value_content(self, value_element) -> str:
-        """Extract enumeration value with human-readable resolution"""
+        """Extract enumeration value with human-readable resolution - Updated for your structure"""
         enum_values = []
         
-        # Find ENUM-VALUE-REF elements
+        # Method 1: Direct ENUM-VALUE-REF elements (old format)
         enum_refs = (value_element.findall(".//ENUM-VALUE-REF") or 
                     value_element.findall(".//enum-value-ref"))
+        
+        # Method 2: VALUES container with ENUM-VALUE-REF (your format)
+        if not enum_refs:
+            values_container = value_element.find(".//VALUES") or value_element.find(".//values")
+            if values_container is not None:
+                enum_refs = (values_container.findall(".//ENUM-VALUE-REF") or 
+                           values_container.findall(".//enum-value-ref"))
         
         for enum_ref in enum_refs:
             ref_value = enum_ref.get('REF') or enum_ref.get('ref') or enum_ref.text
