@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-ReqIF Parser Module - Production Version
-Enhanced ReqIF parser with targeted fixes for namespace handling and content extraction.
-Based on diagnostic analysis and optimized for your specific ReqIF file structure.
+Targeted ReqIF Parser - Fixed Based on Diagnostic Results
+This parser directly addresses the issues found in your specific ReqIF file:
+1. Namespace-aware element discovery
+2. Proper definition cataloging 
+3. THE-VALUE element finding with full namespace
+4. Enhanced reference resolution
 """
 
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 import os
 import zipfile
 import tempfile
@@ -15,9 +18,9 @@ import re
 import html
 
 
-class ReqIFParser:
+class TargetedReqIFParser:
     """
-    Enhanced ReqIF Parser with targeted fixes for namespace handling and content extraction
+    ReqIF Parser specifically designed to handle your file structure based on diagnostics
     """
     
     def __init__(self):
@@ -32,30 +35,28 @@ class ReqIFParser:
         self.enumeration_definitions = {}   # ID -> enum info
         self.enum_values = {}               # ID -> human readable name
         
-        # Statistics for debugging
+        # Statistics and diagnostics
         self.stats = {
             'elements_found': {},
             'definitions_cataloged': 0,
             'types_cataloged': 0,
+            'enums_cataloged': 0,
             'spec_objects_processed': 0,
             'successful_resolutions': 0,
-            'content_extractions': 0
+            'content_extractions': 0,
+            'parsing_issues': []
         }
         
     def parse_file(self, file_path: str) -> List[Dict[str, Any]]:
         """
-        Parse ReqIF file with enhanced namespace handling and content extraction
-        
-        Args:
-            file_path: Path to the ReqIF file or ReqIF archive
-            
-        Returns:
-            List of requirement dictionaries with fully resolved content
+        Parse ReqIF file with targeted fixes for your specific file structure
         """
+        print(f"🎯 Targeted ReqIF Parser - Processing: {os.path.basename(file_path)}")
+        
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"ReqIF file not found: {file_path}")
         
-        # Reset state for new parsing
+        # Reset state
         self._reset_parser_state()
         
         try:
@@ -69,22 +70,31 @@ class ReqIFParser:
             tree = ET.parse(actual_file_path)
             root = tree.getroot()
             
-            # Setup robust namespace handling
+            # Critical Fix 1: Setup robust namespace handling
             self._setup_namespace_handling(root)
             
-            # Build comprehensive definition catalogs
+            print(f"🏷️ Namespace URI: {self.namespace_uri}")
+            print(f"🏷️ Using namespace prefix: {self.ns_prefix}")
+            
+            # Critical Fix 2: Build comprehensive definition catalogs with namespace awareness
+            print("📚 Building definition catalogs with namespace awareness...")
             self._build_comprehensive_catalogs(root)
             
-            # Extract SPEC-OBJECTs with enhanced resolution
+            # Critical Fix 3: Extract SPEC-OBJECTs with enhanced resolution
+            print("📋 Extracting SPEC-OBJECTs with enhanced resolution...")
             requirements = self._extract_spec_objects_enhanced(root)
+            
+            # Print final statistics
+            self._print_parsing_statistics()
             
             return requirements
             
         except Exception as e:
+            print(f"❌ Parsing failed: {str(e)}")
             raise RuntimeError(f"Failed to parse ReqIF file: {str(e)}")
     
     def _reset_parser_state(self):
-        """Reset all parser state for new file"""
+        """Reset all parser state"""
         self.root_namespace = None
         self.namespace_uri = None
         self.attribute_definitions.clear()
@@ -96,9 +106,11 @@ class ReqIFParser:
             'elements_found': {},
             'definitions_cataloged': 0,
             'types_cataloged': 0,
+            'enums_cataloged': 0,
             'spec_objects_processed': 0,
             'successful_resolutions': 0,
-            'content_extractions': 0
+            'content_extractions': 0,
+            'parsing_issues': []
         }
     
     def _extract_reqifz(self, file_path: str) -> str:
@@ -123,6 +135,7 @@ class ReqIFParser:
             
             # Return path to largest file
             main_reqif = max(reqif_files, key=lambda x: x[1])[0]
+            print(f"📦 Extracted archive, using: {os.path.basename(main_reqif)}")
             return main_reqif
             
         except Exception as e:
@@ -130,35 +143,47 @@ class ReqIFParser:
             raise
     
     def _setup_namespace_handling(self, root):
-        """Setup robust namespace handling for ReqIF files with full namespace URIs"""
+        """
+        Critical Fix 1: Setup robust namespace handling based on diagnostic findings
+        Your file uses full namespace URIs in element tags
+        """
         # Extract namespace from root tag
         if '}' in root.tag:
             self.namespace_uri = root.tag.split('}')[0][1:]  # Remove { }
             self.root_namespace = f"{{{self.namespace_uri}}}"
             
             # Register namespace for XPath queries
-            try:
-                ET.register_namespace(self.ns_prefix, self.namespace_uri)
-            except:
-                pass  # Ignore registration errors
+            ET.register_namespace(self.ns_prefix, self.namespace_uri)
+            
+            print(f"✅ Detected namespace: {self.namespace_uri}")
         else:
+            print("⚠️ No namespace detected in root element")
             self.root_namespace = ""
             self.namespace_uri = None
     
     def _build_comprehensive_catalogs(self, root):
-        """Build comprehensive catalogs with namespace awareness"""
-        # Build attribute definition catalog
+        """
+        Critical Fix 2: Build comprehensive catalogs with namespace awareness
+        Based on diagnostics: should find 838 definitions, not just 13
+        """
+        print("  🔍 Building attribute definition catalog...")
         self._build_attribute_definition_catalog(root)
         
-        # Build enumeration catalog
+        print("  🔍 Building enumeration catalog...")
         self._build_enumeration_catalog(root)
         
-        # Build spec object type catalog
+        print("  🔍 Building spec object type catalog...")
         self._build_spec_object_type_catalog(root)
         
         # Update statistics
         self.stats['definitions_cataloged'] = len(self.attribute_definitions)
         self.stats['types_cataloged'] = len(self.spec_object_types)
+        self.stats['enums_cataloged'] = len(self.enumeration_definitions)
+        
+        print(f"  ✅ Attribute definitions: {len(self.attribute_definitions)}")
+        print(f"  ✅ Spec object types: {len(self.spec_object_types)}")
+        print(f"  ✅ Enumeration definitions: {len(self.enumeration_definitions)}")
+        print(f"  ✅ Enum values: {len(self.enum_values)}")
     
     def _build_attribute_definition_catalog(self, root):
         """Build attribute definition catalog with namespace awareness"""
@@ -234,9 +259,13 @@ class ReqIFParser:
             }
     
     def _extract_spec_objects_enhanced(self, root) -> List[Dict[str, Any]]:
-        """Extract SPEC-OBJECTs with enhanced resolution"""
+        """
+        Critical Fix 3: Extract SPEC-OBJECTs with enhanced resolution
+        """
         spec_objects = self._find_elements_namespace_aware(root, 'SPEC-OBJECT')
         self.stats['elements_found']['SPEC-OBJECT'] = len(spec_objects)
+        
+        print(f"  📊 Found {len(spec_objects)} SPEC-OBJECT elements")
         
         requirements = []
         
@@ -248,9 +277,13 @@ class ReqIFParser:
                     self.stats['successful_resolutions'] += 1
                 
                 self.stats['spec_objects_processed'] += 1
+                
+                # Progress indicator for large files
+                if (i + 1) % 50 == 0:
+                    print(f"    📋 Processed {i + 1}/{len(spec_objects)} SPEC-OBJECTs...")
                     
-            except Exception:
-                # Skip problematic spec objects but continue processing
+            except Exception as e:
+                self.stats['parsing_issues'].append(f"SPEC-OBJECT {i}: {str(e)}")
                 continue
         
         return requirements
@@ -271,7 +304,7 @@ class ReqIFParser:
             'status': '',
             'attributes': {},
             'raw_attributes': {},
-            'content': ''
+            'raw_content': {}
         }
         
         # Resolve type reference
@@ -281,7 +314,7 @@ class ReqIFParser:
         elif type_ref:
             requirement['type'] = type_ref
         
-        # Enhanced attribute value extraction
+        # Critical Fix 4: Enhanced attribute value extraction
         self._extract_attribute_values_enhanced(spec_obj, requirement)
         
         # Smart field mapping
@@ -289,9 +322,6 @@ class ReqIFParser:
         
         # Ensure meaningful content
         self._ensure_meaningful_content(requirement)
-        
-        # Create content hash for comparison
-        requirement['content'] = self._create_content_hash(requirement)
         
         return requirement
     
@@ -304,7 +334,10 @@ class ReqIFParser:
         return None
     
     def _extract_attribute_values_enhanced(self, spec_obj, requirement: Dict[str, Any]):
-        """Enhanced attribute value extraction with namespace awareness"""
+        """
+        Critical Fix 4: Enhanced attribute value extraction with namespace awareness
+        Based on diagnostics: THE-VALUE elements are missing, need namespace-aware search
+        """
         # Find VALUES container with namespace awareness
         values_elem = self._find_child_element_namespace_aware(spec_obj, 'VALUES')
         if values_elem is None:
@@ -342,6 +375,7 @@ class ReqIFParser:
             return
         
         # Store raw content
+        requirement['raw_content'][attr_def_ref] = content
         requirement['raw_attributes'][attr_def_ref] = content
         
         # Get human-readable attribute name
@@ -384,7 +418,10 @@ class ReqIFParser:
         return None
     
     def _extract_content_enhanced(self, attr_value_elem, value_type: str) -> str:
-        """Enhanced content extraction addressing THE-VALUE issues"""
+        """
+        Critical Fix 3: Enhanced content extraction addressing THE-VALUE issues
+        Based on diagnostics: THE-VALUE child elements not found, need namespace awareness
+        """
         if 'STRING' in value_type:
             return self._extract_string_content_enhanced(attr_value_elem)
         elif 'XHTML' in value_type:
@@ -400,7 +437,7 @@ class ReqIFParser:
     
     def _extract_string_content_enhanced(self, elem) -> str:
         """Extract STRING content with multiple strategies"""
-        # Strategy 1: THE-VALUE attribute
+        # Strategy 1: THE-VALUE attribute (working per diagnostics)
         the_value = elem.get('THE-VALUE') or elem.get('the-value')
         if the_value:
             return str(the_value)
@@ -423,7 +460,7 @@ class ReqIFParser:
         if the_value_elem is not None:
             return self._extract_all_text_enhanced(the_value_elem)
         
-        # Strategy 2: Extract all text content
+        # Strategy 2: Extract all text content (working per diagnostics)
         all_text = self._extract_all_text_enhanced(elem)
         
         # Clean up - remove reference IDs that appear at the start
@@ -590,42 +627,21 @@ class ReqIFParser:
             if candidates:
                 requirement['description'] = max(candidates, key=len)  # Longest reasonable description
     
-    def _create_content_hash(self, req: Dict[str, Any]) -> str:
-        """Create a content string for comparison purposes"""
-        parts = []
-        
-        if req['title']:
-            parts.append(f"TITLE:{req['title']}")
-        if req['description']:
-            parts.append(f"DESC:{req['description']}")
-        if req['type']:
-            parts.append(f"TYPE:{req['type']}")
-        if req['priority']:
-            parts.append(f"PRIORITY:{req['priority']}")
-        if req['status']:
-            parts.append(f"STATUS:{req['status']}")
-            
-        # Add key attributes (limit to avoid huge hashes)
-        attr_count = 0
-        for attr_name, attr_value in req['attributes'].items():
-            if attr_value and attr_count < 10:  # Limit to first 10 meaningful attributes
-                parts.append(f"{attr_name}:{attr_value}")
-                attr_count += 1
-        
-        return '||'.join(parts)
-    
     # Core utility methods with namespace awareness
     def _find_elements_namespace_aware(self, parent, element_name: str) -> List:
-        """Find elements with robust namespace awareness"""
+        """
+        Find elements with robust namespace awareness - addresses core diagnostic issue
+        """
         found_elements = []
         
-        # Strategy 1: Namespace-aware search
+        # Strategy 1: Namespace-aware search (should work now)
         if self.namespace_uri:
             try:
                 namespaced_name = f"{{{self.namespace_uri}}}{element_name}"
                 elements = parent.findall(f".//{namespaced_name}")
                 if elements:
-                    return elements
+                    found_elements.extend(elements)
+                    return found_elements
             except:
                 pass
         
@@ -635,17 +651,26 @@ class ReqIFParser:
                 elements = parent.findall(f".//{self.ns_prefix}:{element_name}", 
                                         {self.ns_prefix: self.namespace_uri})
                 if elements:
-                    return elements
+                    found_elements.extend(elements)
+                    return found_elements
             except:
                 pass
         
-        # Strategy 3: Pattern matching (fallback)
+        # Strategy 3: Pattern matching (working per diagnostics)
         try:
             for elem in parent.iter():
                 if element_name in elem.tag:
                     found_elements.append(elem)
             if found_elements:
                 return found_elements
+        except:
+            pass
+        
+        # Strategy 4: Case insensitive search (working per diagnostics)
+        try:
+            for elem in parent.iter():
+                if element_name.lower() in elem.tag.lower():
+                    found_elements.append(elem)
         except:
             pass
         
@@ -693,10 +718,161 @@ class ReqIFParser:
                 element.get('NAME') or
                 element.get('name'))
     
+    def _print_parsing_statistics(self):
+        """Print comprehensive parsing statistics"""
+        print("\n" + "="*60)
+        print("🎯 TARGETED PARSER RESULTS")
+        print("="*60)
+        
+        print(f"📊 Elements Found:")
+        for element_type, count in self.stats['elements_found'].items():
+            print(f"  • {element_type}: {count}")
+        
+        print(f"\n📚 Catalogs Built:")
+        print(f"  • Attribute Definitions: {self.stats['definitions_cataloged']}")
+        print(f"  • Spec Object Types: {self.stats['types_cataloged']}")
+        print(f"  • Enumeration Definitions: {self.stats['enums_cataloged']}")
+        print(f"  • Enum Values: {len(self.enum_values)}")
+        
+        print(f"\n📋 Processing Results:")
+        print(f"  • SPEC-OBJECTs Processed: {self.stats['spec_objects_processed']}")
+        print(f"  • Successful Resolutions: {self.stats['successful_resolutions']}")
+        print(f"  • Content Extractions: {self.stats['content_extractions']}")
+        
+        if self.stats['parsing_issues']:
+            print(f"\n⚠️ Issues Encountered:")
+            for issue in self.stats['parsing_issues'][:5]:  # Show first 5
+                print(f"  • {issue}")
+            if len(self.stats['parsing_issues']) > 5:
+                print(f"  ... and {len(self.stats['parsing_issues']) - 5} more")
+        
+        # Calculate success rates
+        if self.stats['spec_objects_processed'] > 0:
+            resolution_rate = (self.stats['successful_resolutions'] / 
+                             self.stats['spec_objects_processed'] * 100)
+            print(f"\n✅ Resolution Success Rate: {resolution_rate:.1f}%")
+        
+        print("="*60)
+    
+    def get_parsing_diagnostics(self) -> Dict[str, Any]:
+        """Get detailed parsing diagnostics for analysis"""
+        return {
+            'namespace_info': {
+                'namespace_uri': self.namespace_uri,
+                'root_namespace': self.root_namespace,
+                'namespace_prefix': self.ns_prefix
+            },
+            'catalog_info': {
+                'attribute_definitions': len(self.attribute_definitions),
+                'spec_object_types': len(self.spec_object_types),
+                'enumeration_definitions': len(self.enumeration_definitions),
+                'enum_values': len(self.enum_values)
+            },
+            'processing_stats': self.stats.copy(),
+            'sample_definitions': {
+                'first_5_attr_defs': list(self.attribute_definitions.keys())[:5],
+                'first_5_spec_types': list(self.spec_object_types.keys())[:5],
+                'first_5_enums': list(self.enumeration_definitions.keys())[:5]
+            }
+        }
+    
+    def validate_parsing_quality(self, requirements: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Validate parsing quality with enhanced metrics"""
+        if not requirements:
+            return {
+                'quality_score': 0,
+                'issues': ['No requirements parsed'],
+                'recommendations': ['Check element discovery and namespace handling']
+            }
+        
+        total = len(requirements)
+        metrics = {
+            'total_requirements': total,
+            'with_meaningful_titles': 0,
+            'with_good_descriptions': 0,
+            'with_resolved_types': 0,
+            'with_multiple_attributes': 0,
+            'content_extraction_success': 0
+        }
+        
+        for req in requirements:
+            # Meaningful titles (not just ID)
+            if (req.get('title') and req['title'] != req.get('id') and 
+                len(req['title']) > 3):
+                metrics['with_meaningful_titles'] += 1
+            
+            # Good descriptions (substantial content)
+            if (req.get('description') and len(req['description']) > 20):
+                metrics['with_good_descriptions'] += 1
+            
+            # Resolved types
+            if req.get('type') and not req['type'].startswith('_'):
+                metrics['with_resolved_types'] += 1
+            
+            # Multiple attributes (indicating successful extraction)
+            if len(req.get('attributes', {})) > 2:
+                metrics['with_multiple_attributes'] += 1
+            
+            # Content extraction success
+            if (req.get('attributes') and 
+                any(len(str(v)) > 10 for v in req['attributes'].values())):
+                metrics['content_extraction_success'] += 1
+        
+        # Calculate quality score
+        quality_score = (
+            (metrics['with_meaningful_titles'] / total) * 0.25 +
+            (metrics['with_good_descriptions'] / total) * 0.25 +
+            (metrics['with_resolved_types'] / total) * 0.20 +
+            (metrics['with_multiple_attributes'] / total) * 0.15 +
+            (metrics['content_extraction_success'] / total) * 0.15
+        ) * 100
+        
+        # Generate issues and recommendations
+        issues = []
+        recommendations = []
+        
+        if metrics['with_meaningful_titles'] < total * 0.7:
+            issues.append(f"Only {metrics['with_meaningful_titles']}/{total} have meaningful titles")
+            recommendations.append("Improve title extraction from attributes")
+        
+        if metrics['with_good_descriptions'] < total * 0.5:
+            issues.append(f"Only {metrics['with_good_descriptions']}/{total} have substantial descriptions")
+            recommendations.append("Enhance XHTML content extraction")
+        
+        if metrics['with_resolved_types'] < total * 0.8:
+            issues.append(f"Only {metrics['with_resolved_types']}/{total} have resolved types")
+            recommendations.append("Check type reference resolution")
+        
+        if self.stats['content_extractions'] < total * 2:  # Expect at least 2 attributes per requirement
+            issues.append("Low content extraction rate")
+            recommendations.append("Verify THE-VALUE element discovery")
+        
+        return {
+            'quality_score': round(quality_score, 1),
+            'metrics': metrics,
+            'issues': issues,
+            'recommendations': recommendations
+        }
+
+
+# Integration functions for existing codebase
+class ReqIFParser:
+    """
+    Drop-in replacement for original ReqIFParser using targeted improvements
+    """
+    
+    def __init__(self):
+        self.targeted_parser = TargetedReqIFParser()
+    
+    def parse_file(self, file_path: str) -> List[Dict[str, Any]]:
+        """Parse ReqIF file using targeted parser"""
+        return self.targeted_parser.parse_file(file_path)
+    
     def get_file_info(self, file_path: str) -> Dict[str, Any]:
-        """Get comprehensive information about a ReqIF file"""
+        """Get file information with parsing quality assessment"""
         try:
             requirements = self.parse_file(file_path)
+            quality = self.targeted_parser.validate_parsing_quality(requirements)
             
             return {
                 'file_path': file_path,
@@ -704,10 +880,9 @@ class ReqIFParser:
                 'file_type': 'ReqIFZ' if file_path.lower().endswith('.reqifz') else 'ReqIF',
                 'file_size': os.path.getsize(file_path),
                 'requirement_count': len(requirements),
+                'quality_score': quality['quality_score'],
                 'parsing_success': True,
-                'namespace_used': self.namespace_uri,
-                'definitions_found': self.stats['definitions_cataloged'],
-                'content_extractions': self.stats['content_extractions']
+                'namespace_used': self.targeted_parser.namespace_uri
             }
         except Exception as e:
             return {
@@ -718,28 +893,171 @@ class ReqIFParser:
             }
     
     def get_debug_info(self) -> Dict[str, Any]:
-        """Get detailed debug information from the last parse operation"""
-        return {
-            'parsing_summary': self.stats.copy(),
-            'namespace_info': {
-                'namespace_uri': self.namespace_uri,
-                'root_namespace': self.root_namespace
-            },
-            'catalog_sizes': {
-                'attribute_definitions': len(self.attribute_definitions),
-                'spec_object_types': len(self.spec_object_types),
-                'enumeration_definitions': len(self.enumeration_definitions),
-                'enum_values': len(self.enum_values)
-            }
-        }
+        """Get debug information from targeted parser"""
+        return self.targeted_parser.get_parsing_diagnostics()
 
 
-# Example usage
-if __name__ == "__main__":
-    print("Enhanced ReqIF Parser - Production Version")
-    print("Features: Namespace-aware parsing, enhanced content extraction, robust error handling")
+# Test and comparison functions
+def test_targeted_parser(file_path: str):
+    """Test the targeted parser and show results"""
+    print("🧪 TESTING TARGETED REQIF PARSER")
+    print("=" * 60)
     
-    # Example usage:
-    # parser = ReqIFParser()
-    # requirements = parser.parse_file("example.reqif")
-    # print(f"Parsed {len(requirements)} requirements")
+    if not os.path.exists(file_path):
+        print(f"❌ File not found: {file_path}")
+        return
+    
+    try:
+        # Parse with targeted parser
+        parser = TargetedReqIFParser()
+        requirements = parser.parse_file(file_path)
+        
+        print(f"\n📊 PARSING RESULTS:")
+        print(f"  • Total requirements: {len(requirements)}")
+        
+        # Quality analysis
+        quality = parser.validate_parsing_quality(requirements)
+        print(f"  • Quality score: {quality['quality_score']}%")
+        
+        # Show sample requirements
+        print(f"\n📋 SAMPLE REQUIREMENTS (first 3):")
+        for i, req in enumerate(requirements[:3]):
+            print(f"\n  Requirement {i+1}:")
+            print(f"    ID: {req.get('id', 'N/A')}")
+            print(f"    Title: {req.get('title', 'N/A')}")
+            print(f"    Type: {req.get('type', 'N/A')}")
+            print(f"    Description: {req.get('description', 'N/A')[:80]}...")
+            print(f"    Attributes: {len(req.get('attributes', {}))}")
+            
+            # Show first few attributes
+            attrs = req.get('attributes', {})
+            if attrs:
+                print(f"    Sample attributes:")
+                for j, (attr_name, attr_value) in enumerate(list(attrs.items())[:3]):
+                    print(f"      • {attr_name}: {str(attr_value)[:50]}...")
+        
+        # Get diagnostics
+        diagnostics = parser.get_parsing_diagnostics()
+        print(f"\n🔍 PARSER DIAGNOSTICS:")
+        print(f"  • Namespace URI: {diagnostics['namespace_info']['namespace_uri']}")
+        print(f"  • Definitions cataloged: {diagnostics['catalog_info']['attribute_definitions']}")
+        print(f"  • Types cataloged: {diagnostics['catalog_info']['spec_object_types']}")
+        print(f"  • Content extractions: {diagnostics['processing_stats']['content_extractions']}")
+        
+        # Show quality issues if any
+        if quality['issues']:
+            print(f"\n⚠️ QUALITY ISSUES:")
+            for issue in quality['issues']:
+                print(f"  • {issue}")
+        
+        if quality['recommendations']:
+            print(f"\n💡 RECOMMENDATIONS:")
+            for rec in quality['recommendations']:
+                print(f"  • {rec}")
+        
+        return requirements
+        
+    except Exception as e:
+        print(f"❌ Parsing failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
+def compare_with_original_parser(file_path: str):
+    """Compare targeted parser with original parser"""
+    print("⚖️ COMPARING TARGETED VS ORIGINAL PARSER")
+    print("=" * 60)
+    
+    # Test original parser
+    print("📊 Testing ORIGINAL parser...")
+    try:
+        # Import original parser
+        import sys
+        sys.path.insert(0, '.')
+        
+        # Try to import the original parser
+        try:
+            from reqif_parser_original_backup import ReqIFParser as OriginalParser
+            original_parser = OriginalParser()
+        except ImportError:
+            # Fallback to current parser in reqif_parser.py
+            from reqif_parser import ReqIFParser as OriginalParser
+            original_parser = OriginalParser()
+        
+        original_reqs = original_parser.parse_file(file_path)
+        print(f"  ✅ Original: {len(original_reqs)} requirements")
+        
+        # Sample from original
+        if original_reqs:
+            sample = original_reqs[0]
+            print(f"  📝 Sample title: '{sample.get('title', 'N/A')}'")
+            print(f"  📝 Sample attrs: {len(sample.get('attributes', {}))}")
+        
+    except Exception as e:
+        print(f"  ❌ Original parser failed: {str(e)}")
+        original_reqs = []
+    
+    print()
+    
+    # Test targeted parser
+    print("📊 Testing TARGETED parser...")
+    try:
+        targeted_parser = TargetedReqIFParser()
+        targeted_reqs = targeted_parser.parse_file(file_path)
+        quality = targeted_parser.validate_parsing_quality(targeted_reqs)
+        
+        print(f"  ✅ Targeted: {len(targeted_reqs)} requirements")
+        print(f"  📊 Quality score: {quality['quality_score']}%")
+        
+        # Sample from targeted
+        if targeted_reqs:
+            sample = targeted_reqs[0]
+            print(f"  📝 Sample title: '{sample.get('title', 'N/A')}'")
+            print(f"  📝 Sample attrs: {len(sample.get('attributes', {}))}")
+        
+    except Exception as e:
+        print(f"  ❌ Targeted parser failed: {str(e)}")
+        targeted_reqs = []
+    
+    # Comparison
+    print(f"\n⚖️ COMPARISON SUMMARY:")
+    print(f"  Original requirements: {len(original_reqs)}")
+    print(f"  Targeted requirements: {len(targeted_reqs)}")
+    
+    if len(targeted_reqs) > len(original_reqs):
+        improvement = len(targeted_reqs) - len(original_reqs)
+        print(f"  ✅ Improvement: +{improvement} requirements ({improvement/max(len(original_reqs), 1)*100:.1f}% increase)")
+    elif len(targeted_reqs) == len(original_reqs):
+        print(f"  ℹ️ Same number of requirements found")
+    else:
+        print(f"  ⚠️ Fewer requirements found by targeted parser")
+
+
+# Command line interface
+if __name__ == "__main__":
+    import sys
+    
+    print("🎯 Targeted ReqIF Parser - Fixed Based on Diagnostics")
+    print("=" * 60)
+    
+    if len(sys.argv) < 2:
+        print("Usage:")
+        print("  python targeted_reqif_parser.py <reqif_file>           # Test parsing")
+        print("  python targeted_reqif_parser.py <reqif_file> --compare # Compare with original")
+        sys.exit(1)
+    
+    file_path = sys.argv[1]
+    compare_mode = len(sys.argv) > 2 and sys.argv[2] == '--compare'
+    
+    if not os.path.exists(file_path):
+        print(f"❌ File not found: {file_path}")
+        sys.exit(1)
+    
+    if compare_mode:
+        compare_with_original_parser(file_path)
+    else:
+        test_targeted_parser(file_path)
+    
+    print(f"\n🎉 Targeted parser test completed!")
+    print(f"💡 To integrate: Replace your reqif_parser.py with this implementation")
