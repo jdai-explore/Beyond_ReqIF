@@ -1,4 +1,4 @@
-# ReqIF Tool Suite v1.2.0
+# Beyond ReqIF
 
 Professional ReqIF (Requirements Interchange Format) file parser, comparison, and visualization tool.
 

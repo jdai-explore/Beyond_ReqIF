@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Startup Validator for ReqIF Tool Suite
+Startup Validator for Beyond ReqIF
 Validates system requirements, module availability, and fixes common issues.
 """
 

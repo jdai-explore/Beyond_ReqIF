@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Error Handler Module
-Provides enhanced error handling, logging, and recovery mechanisms for the ReqIF Tool Suite.
+Provides enhanced error handling, logging, and recovery mechanisms for the Beyond ReqIF.
 """
 
 import sys

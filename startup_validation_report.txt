@@ -1,5 +1,5 @@
 ============================================================
-ReqIF Tool Suite - Startup Validation Report
+Beyond ReqIF - Startup Validation Report
 ============================================================
 
 🎉 STATUS: READY TO RUN

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Enhanced Launcher for ReqIF Tool Suite
+Enhanced Launcher for Beyond ReqIF
 Provides comprehensive startup validation, error handling, and recovery.
 """
 

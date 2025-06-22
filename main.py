@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ReqIF Tool Suite MVP - Main Application (FIXED VERSION)
+Beyond ReqIF - Main Application
 A comprehensive ReqIF comparison and visualization tool with modern professional interface.
 """
 
