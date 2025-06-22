@@ -2,6 +2,7 @@
 """
 Minimal VisualizerGUI - No Theme Dependencies
 Pure functionality with basic Tkinter styling.
+Fixed CSV export functionality.
 """
 
 import tkinter as tk
@@ -426,7 +427,7 @@ class VisualizerGUI:
                 title="Export Requirements to CSV",
                 defaultextension=".csv",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialname=f"requirements_export_{len(self.filtered_requirements)}_items.csv"
+                initialfile=f"requirements_export_{len(self.filtered_requirements)}_items.csv"
             )
             
             if not filename:

@@ -576,7 +576,7 @@ class ComparisonResultsGUI:
                 title="Export All Results",
                 defaultextension=".csv",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialname="comparison_results_all.csv"
+                initialfile="comparison_results_all.csv"
             )
             
             if not filename:
@@ -1069,7 +1069,7 @@ class DiffViewerWindow:
                 title="Export Diff Report",
                 defaultextension=".txt",
                 filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-                initialname=f"diff_report_{self.req_id}.txt"
+                initialfile=f"diff_report_{self.req_id}.txt"
             )
             
             if not filename:
