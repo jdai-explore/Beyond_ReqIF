@@ -11,7 +11,6 @@ import os
 from typing import Dict, List, Any, Optional, Tuple
 from comparison_profile import ComparisonProfile, ProfileManager, AttributeConfig
 from attribute_analyzer import AttributeAnalyzer, AttributeStats, analyze_requirements_for_profile
-from theme_manager import apply_theme, AppleColors
 
 
 class AdvancedComparisonSettings:

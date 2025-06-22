@@ -10,7 +10,6 @@ from tkinter import ttk, messagebox, filedialog
 import csv
 import os
 from typing import List, Dict, Any, Optional
-from theme_manager import apply_theme, get_color, get_semantic_color, create_title_label, create_body_label, AppleColors, Spacing
 
 
 class VisualizerGUI:
@@ -28,10 +27,6 @@ class VisualizerGUI:
         self.window = tk.Toplevel(parent)
         self.window.title(f"Requirements Analysis - {os.path.basename(filename)}")
         self.window.geometry("1200x800")
-        
-        # Apply Apple Design Guidelines
-        apply_theme(widget=self.window)
-        self.window.configure(bg=AppleColors.WINDOW_BACKGROUND)
         
         # Ensure window independence
         self.window.transient(parent)
@@ -86,7 +81,11 @@ class VisualizerGUI:
         info_frame = ttk.Frame(header_frame)
         info_frame.grid(row=0, column=0, sticky=(tk.W))
         
-        title_label = create_title_label(info_frame, "Requirements Analysis", "title_2")
+        title_label = ttk.Label(
+            info_frame,
+            text="Requirements Analysis",
+            font=("Helvetica", 16, "bold")
+        )
         title_label.grid(row=0, column=0, sticky=(tk.W))
         
         file_label = ttk.Label(
