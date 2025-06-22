@@ -1,536 +1,482 @@
 #!/usr/bin/env python3
 """
-Comparison GUI Module
-Handles the display of comparison results in a tabbed interface.
+Cleaned ComparisonResultsGUI - Simple Theme Integration
+Performance optimized with minimal theme dependencies.
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox, filedialog
 import csv
-from typing import Dict, Any, List
+import os
+from typing import Dict, List, Any
+
+# Simple theme import
+from theme_manager import apply_theme, get_color
 
 
 class ComparisonResultsGUI:
-    """GUI for displaying comparison results in a tabbed interface"""
+    """
+    Comparison Results GUI with simple theme integration
+    """
     
-    def __init__(self, parent_window, comparison_results: Dict[str, Any]):
-        self.parent = parent_window
-        self.results = comparison_results
+    def __init__(self, parent: tk.Widget, results: Dict[str, Any]):
+        self.parent = parent
+        self.results = results
+        
+        # Create independent window
+        self.window = tk.Toplevel(parent)
+        self.window.title("Requirements Comparison Results")
+        self.window.geometry("1200x800")
+        
+        # Ensure window independence
+        self.window.transient(parent)
+        self.window.focus_set()
+        
+        # Apply simple theme
+        apply_theme(widget=self.window)
+        
+        # Setup GUI
         self.setup_gui()
         
+        # Handle window closing
+        self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
+    
     def setup_gui(self):
-        """Create the comparison results GUI"""
-        # Main frame
-        main_frame = ttk.Frame(self.parent, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        """Setup GUI using grid geometry manager"""
+        # Configure main window grid
+        self.window.columnconfigure(0, weight=1)
+        self.window.rowconfigure(0, weight=1)
+        
+        # Create main container
+        self.main_frame = ttk.Frame(self.window, padding="15")
+        self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Configure main frame grid
+        self.main_frame.columnconfigure(0, weight=1)
+        self.main_frame.rowconfigure(2, weight=1)
+        
+        # Create sections
+        self._create_header_section()
+        self._create_summary_section()
+        self._create_results_section()
+        self._create_controls_section()
+    
+    def _create_header_section(self):
+        """Create header"""
+        header_frame = ttk.Frame(self.main_frame)
+        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
+        header_frame.columnconfigure(1, weight=1)
         
         # Title
-        title_label = ttk.Label(main_frame, text="Comparison Results", 
-                               font=('Arial', 14, 'bold'))
-        title_label.pack(pady=(0, 10))
-        
-        # Statistics frame
-        self.create_statistics_panel(main_frame)
-        
-        # Create notebook for tabs
-        self.notebook = ttk.Notebook(main_frame)
-        self.notebook.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
-        
-        # Create tabs for each category
-        self.create_added_tab()
-        self.create_deleted_tab()
-        self.create_modified_tab()
-        self.create_unchanged_tab()
-        
-        # Export button frame
-        export_frame = ttk.Frame(main_frame)
-        export_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        ttk.Button(export_frame, text="Export Results to CSV", 
-                  command=self.export_to_csv).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(export_frame, text="Export Summary", 
-                  command=self.export_summary).pack(side=tk.LEFT)
-        
-    def create_statistics_panel(self, parent):
-        """Create the statistics summary panel"""
-        stats_frame = ttk.LabelFrame(parent, text="Summary Statistics", padding="5")
-        stats_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        stats = self.results['statistics']
-        
-        # Create grid of statistics
-        row = 0
-        col = 0
-        
-        stat_items = [
-            ("Original File:", f"{stats['total_file1']} requirements"),
-            ("Modified File:", f"{stats['total_file2']} requirements"),
-            ("Added:", f"{stats['added_count']} requirements"),
-            ("Deleted:", f"{stats['deleted_count']} requirements"),
-            ("Modified:", f"{stats['modified_count']} requirements"),
-            ("Unchanged:", f"{stats['unchanged_count']} requirements"),
-            ("Change Rate:", f"{stats['change_percentage']}%"),
-        ]
-        
-        for label_text, value_text in stat_items:
-            # Label
-            ttk.Label(stats_frame, text=label_text, font=('Arial', 9, 'bold')).grid(
-                row=row, column=col*2, sticky=tk.W, padx=(0, 5))
-            # Value
-            ttk.Label(stats_frame, text=value_text).grid(
-                row=row, column=col*2+1, sticky=tk.W, padx=(0, 20))
-            
-            col += 1
-            if col >= 3:  # 3 columns
-                col = 0
-                row += 1
-    
-    def create_added_tab(self):
-        """Create tab for added requirements"""
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text=f"Added ({len(self.results['added'])})")
-        
-        # Create treeview
-        columns = ('ID', 'Title', 'Description', 'Type')
-        tree = ttk.Treeview(frame, columns=columns, show='headings', height=15)
-        
-        # Configure columns
-        tree.heading('ID', text='Requirement ID')
-        tree.heading('Title', text='Title')
-        tree.heading('Description', text='Description')
-        tree.heading('Type', text='Type')
-        
-        tree.column('ID', width=120)
-        tree.column('Title', width=200)
-        tree.column('Description', width=300)
-        tree.column('Type', width=100)
-        
-        # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-        h_scrollbar = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
-        tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        # Pack treeview and scrollbars
-        tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_rowconfigure(0, weight=1)
-        
-        # Populate with data
-        for req in self.results['added']:
-            tree.insert('', tk.END, values=(
-                req.get('id', ''),
-                req.get('title', '')[:50] + ('...' if len(req.get('title', '')) > 50 else ''),
-                req.get('description', '')[:100] + ('...' if len(req.get('description', '')) > 100 else ''),
-                req.get('type', '')
-            ), tags=('added',))
-        
-        # Configure colors
-        tree.tag_configure('added', background='#e8f5e8')
-        
-        # Bind double-click
-        tree.bind('<Double-1>', lambda e: self.show_requirement_details(tree, self.results['added']))
-        
-    def create_deleted_tab(self):
-        """Create tab for deleted requirements"""
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text=f"Deleted ({len(self.results['deleted'])})")
-        
-        # Create treeview
-        columns = ('ID', 'Title', 'Description', 'Type')
-        tree = ttk.Treeview(frame, columns=columns, show='headings', height=15)
-        
-        # Configure columns
-        tree.heading('ID', text='Requirement ID')
-        tree.heading('Title', text='Title')
-        tree.heading('Description', text='Description')
-        tree.heading('Type', text='Type')
-        
-        tree.column('ID', width=120)
-        tree.column('Title', width=200)
-        tree.column('Description', width=300)
-        tree.column('Type', width=100)
-        
-        # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-        h_scrollbar = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
-        tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        # Pack treeview and scrollbars
-        tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_rowconfigure(0, weight=1)
-        
-        # Populate with data
-        for req in self.results['deleted']:
-            tree.insert('', tk.END, values=(
-                req.get('id', ''),
-                req.get('title', '')[:50] + ('...' if len(req.get('title', '')) > 50 else ''),
-                req.get('description', '')[:100] + ('...' if len(req.get('description', '')) > 100 else ''),
-                req.get('type', '')
-            ), tags=('deleted',))
-        
-        # Configure colors
-        tree.tag_configure('deleted', background='#ffe8e8')
-        
-        # Bind double-click
-        tree.bind('<Double-1>', lambda e: self.show_requirement_details(tree, self.results['deleted']))
-        
-    def create_modified_tab(self):
-        """Create tab for modified requirements"""
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text=f"Modified ({len(self.results['modified'])})")
-        
-        # Create treeview
-        columns = ('ID', 'Title', 'Changes', 'Old_Title', 'New_Title')
-        tree = ttk.Treeview(frame, columns=columns, show='headings', height=15)
-        
-        # Configure columns
-        tree.heading('ID', text='Requirement ID')
-        tree.heading('Title', text='New Title')
-        tree.heading('Changes', text='# Changes')
-        tree.heading('Old_Title', text='Original Title')
-        tree.heading('New_Title', text='Modified Title')
-        
-        tree.column('ID', width=120)
-        tree.column('Title', width=200)
-        tree.column('Changes', width=80)
-        tree.column('Old_Title', width=200)
-        tree.column('New_Title', width=200)
-        
-        # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-        h_scrollbar = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
-        tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        # Pack treeview and scrollbars
-        tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_rowconfigure(0, weight=1)
-        
-        # Populate with data
-        for mod in self.results['modified']:
-            old_req = mod['old']
-            new_req = mod['new']
-            changes = mod['changes']
-            
-            tree.insert('', tk.END, values=(
-                mod['id'],
-                new_req.get('title', '')[:50] + ('...' if len(new_req.get('title', '')) > 50 else ''),
-                len(changes),
-                old_req.get('title', '')[:40] + ('...' if len(old_req.get('title', '')) > 40 else ''),
-                new_req.get('title', '')[:40] + ('...' if len(new_req.get('title', '')) > 40 else '')
-            ), tags=('modified',))
-        
-        # Configure colors
-        tree.tag_configure('modified', background='#fff8e1')
-        
-        # Bind double-click
-        tree.bind('<Double-1>', lambda e: self.show_modified_details(tree))
-        
-    def create_unchanged_tab(self):
-        """Create tab for unchanged requirements"""
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text=f"Unchanged ({len(self.results['unchanged'])})")
-        
-        # Create treeview
-        columns = ('ID', 'Title', 'Description', 'Type')
-        tree = ttk.Treeview(frame, columns=columns, show='headings', height=15)
-        
-        # Configure columns
-        tree.heading('ID', text='Requirement ID')
-        tree.heading('Title', text='Title')
-        tree.heading('Description', text='Description')
-        tree.heading('Type', text='Type')
-        
-        tree.column('ID', width=120)
-        tree.column('Title', width=200)
-        tree.column('Description', width=300)
-        tree.column('Type', width=100)
-        
-        # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-        h_scrollbar = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
-        tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        # Pack treeview and scrollbars
-        tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_rowconfigure(0, weight=1)
-        
-        # Populate with data
-        for req in self.results['unchanged']:
-            tree.insert('', tk.END, values=(
-                req.get('id', ''),
-                req.get('title', '')[:50] + ('...' if len(req.get('title', '')) > 50 else ''),
-                req.get('description', '')[:100] + ('...' if len(req.get('description', '')) > 100 else ''),
-                req.get('type', '')
-            ), tags=('unchanged',))
-        
-        # Configure colors
-        tree.tag_configure('unchanged', background='white')
-        
-        # Bind double-click
-        tree.bind('<Double-1>', lambda e: self.show_requirement_details(tree, self.results['unchanged']))
-        
-    def show_requirement_details(self, tree, requirements_list):
-        """Show detailed view of a selected requirement"""
-        selection = tree.selection()
-        if not selection:
-            return
-            
-        item = tree.item(selection[0])
-        req_id = item['values'][0]
-        
-        # Find the requirement
-        requirement = None
-        for req in requirements_list:
-            if req.get('id') == req_id:
-                requirement = req
-                break
-                
-        if not requirement:
-            return
-            
-        # Create details window
-        details_window = tk.Toplevel(self.parent)
-        details_window.title(f"Requirement Details - {req_id}")
-        details_window.geometry("600x500")
-        
-        # Create text widget with scrollbar
-        text_frame = ttk.Frame(details_window)
-        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        text_widget = tk.Text(text_frame, wrap=tk.WORD, font=('Consolas', 10))
-        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
-        text_widget.configure(yscrollcommand=scrollbar.set)
-        
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Format requirement details
-        details = f"""Requirement ID: {requirement.get('id', 'N/A')}
-Title: {requirement.get('title', 'N/A')}
-Type: {requirement.get('type', 'N/A')}
-
-Description:
-{requirement.get('description', 'No description available')}
-
-Attributes:
-"""
-        
-        for attr_name, attr_value in requirement.get('attributes', {}).items():
-            details += f"  {attr_name}: {attr_value}\n"
-            
-        text_widget.insert(tk.END, details)
-        text_widget.configure(state=tk.DISABLED)
-        
-    def show_modified_details(self, tree):
-        """Show detailed view of a modified requirement with changes"""
-        selection = tree.selection()
-        if not selection:
-            return
-            
-        item = tree.item(selection[0])
-        req_id = item['values'][0]
-        
-        # Find the modified requirement
-        modified_req = None
-        for mod in self.results['modified']:
-            if mod['id'] == req_id:
-                modified_req = mod
-                break
-                
-        if not modified_req:
-            return
-            
-        # Create details window
-        details_window = tk.Toplevel(self.parent)
-        details_window.title(f"Modified Requirement - {req_id}")
-        details_window.geometry("800x600")
-        
-        # Create notebook for old/new comparison
-        notebook = ttk.Notebook(details_window)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Original version tab
-        old_frame = ttk.Frame(notebook)
-        notebook.add(old_frame, text="Original Version")
-        
-        old_text = tk.Text(old_frame, wrap=tk.WORD, font=('Consolas', 10))
-        old_scrollbar = ttk.Scrollbar(old_frame, orient=tk.VERTICAL, command=old_text.yview)
-        old_text.configure(yscrollcommand=old_scrollbar.set)
-        old_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        old_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Modified version tab
-        new_frame = ttk.Frame(notebook)
-        notebook.add(new_frame, text="Modified Version")
-        
-        new_text = tk.Text(new_frame, wrap=tk.WORD, font=('Consolas', 10))
-        new_scrollbar = ttk.Scrollbar(new_frame, orient=tk.VERTICAL, command=new_text.yview)
-        new_text.configure(yscrollcommand=new_scrollbar.set)
-        new_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        new_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Changes summary tab
-        changes_frame = ttk.Frame(notebook)
-        notebook.add(changes_frame, text="Changes Summary")
-        
-        changes_text = tk.Text(changes_frame, wrap=tk.WORD, font=('Consolas', 10))
-        changes_scrollbar = ttk.Scrollbar(changes_frame, orient=tk.VERTICAL, command=changes_text.yview)
-        changes_text.configure(yscrollcommand=changes_scrollbar.set)
-        changes_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        changes_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Populate old version
-        old_req = modified_req['old']
-        old_details = self._format_requirement_details(old_req)
-        old_text.insert(tk.END, old_details)
-        old_text.configure(state=tk.DISABLED)
-        
-        # Populate new version
-        new_req = modified_req['new']
-        new_details = self._format_requirement_details(new_req)
-        new_text.insert(tk.END, new_details)
-        new_text.configure(state=tk.DISABLED)
-        
-        # Populate changes
-        changes_details = f"Changes Summary for {req_id}\n{'='*50}\n\n"
-        for change in modified_req['changes']:
-            changes_details += f"Field: {change['field']}\n"
-            changes_details += f"Change Type: {change['change_type']}\n"
-            changes_details += f"Old Value: {change['old_value']}\n"
-            changes_details += f"New Value: {change['new_value']}\n"
-            changes_details += "-" * 30 + "\n\n"
-            
-        changes_text.insert(tk.END, changes_details)
-        changes_text.configure(state=tk.DISABLED)
-        
-    def _format_requirement_details(self, req):
-        """Format requirement details for display"""
-        details = f"""Requirement ID: {req.get('id', 'N/A')}
-Title: {req.get('title', 'N/A')}
-Type: {req.get('type', 'N/A')}
-
-Description:
-{req.get('description', 'No description available')}
-
-Attributes:
-"""
-        
-        for attr_name, attr_value in req.get('attributes', {}).items():
-            details += f"  {attr_name}: {attr_value}\n"
-            
-        return details
-        
-    def export_to_csv(self):
-        """Export comparison results to CSV file"""
-        filename = filedialog.asksaveasfilename(
-            title="Export Comparison Results",
-            defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        title_label = ttk.Label(
+            header_frame,
+            text="📊 Requirements Comparison Results",
+            font=("Helvetica", 16, "bold")
         )
+        title_label.grid(row=0, column=0, sticky=(tk.W))
         
-        if not filename:
+        # Timestamp
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp_label = ttk.Label(
+            header_frame,
+            text=f"Generated: {timestamp}",
+            font=("Helvetica", 9)
+        )
+        timestamp_label.grid(row=0, column=1, sticky=(tk.E))
+    
+    def _create_summary_section(self):
+        """Create summary statistics"""
+        summary_frame = ttk.LabelFrame(self.main_frame, text="📈 Summary Statistics", padding="10")
+        summary_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
+        
+        # Configure grid for 4 columns
+        for i in range(4):
+            summary_frame.columnconfigure(i, weight=1)
+        
+        # Get statistics
+        stats = self.results.get('statistics', {})
+        
+        # Create summary cards
+        self._create_summary_card(summary_frame, "➕ Added", 
+                                stats.get('added_count', 0), 0, 0)
+        self._create_summary_card(summary_frame, "➖ Deleted", 
+                                stats.get('deleted_count', 0), 0, 1)
+        self._create_summary_card(summary_frame, "✏️ Modified", 
+                                stats.get('modified_count', 0), 0, 2)
+        self._create_summary_card(summary_frame, "✅ Unchanged", 
+                                stats.get('unchanged_count', 0), 0, 3)
+    
+    def _create_summary_card(self, parent, title, count, row, col):
+        """Create a summary card"""
+        card_frame = ttk.Frame(parent, relief="ridge", borderwidth=1)
+        card_frame.grid(row=row, column=col, padx=5, pady=5, sticky=(tk.W, tk.E))
+        card_frame.columnconfigure(0, weight=1)
+        
+        # Title
+        title_label = ttk.Label(card_frame, text=title, font=("Helvetica", 10, "bold"))
+        title_label.grid(row=0, column=0, pady=(5, 0))
+        
+        # Count
+        count_label = ttk.Label(card_frame, text=str(count), font=("Helvetica", 16, "bold"))
+        count_label.grid(row=1, column=0, pady=(0, 5))
+    
+    def _create_results_section(self):
+        """Create results with tabs"""
+        self.notebook = ttk.Notebook(self.main_frame)
+        self.notebook.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Create tabs
+        self._create_added_tab()
+        self._create_deleted_tab()
+        self._create_modified_tab()
+        self._create_unchanged_tab()
+    
+    def _create_added_tab(self):
+        """Create added requirements tab"""
+        added_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(added_frame, text=f"➕ Added ({len(self.results.get('added', []))})")
+        self._create_requirements_tree(added_frame, self.results.get('added', []), "added")
+    
+    def _create_deleted_tab(self):
+        """Create deleted requirements tab"""
+        deleted_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(deleted_frame, text=f"➖ Deleted ({len(self.results.get('deleted', []))})")
+        self._create_requirements_tree(deleted_frame, self.results.get('deleted', []), "deleted")
+    
+    def _create_modified_tab(self):
+        """Create modified requirements tab"""
+        modified_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(modified_frame, text=f"✏️ Modified ({len(self.results.get('modified', []))})")
+        self._create_requirements_tree(modified_frame, self.results.get('modified', []), "modified")
+    
+    def _create_unchanged_tab(self):
+        """Create unchanged requirements tab"""
+        unchanged_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(unchanged_frame, text=f"✅ Unchanged ({len(self.results.get('unchanged', []))})")
+        self._create_requirements_tree(unchanged_frame, self.results.get('unchanged', []), "unchanged")
+    
+    def _create_requirements_tree(self, parent, requirements: List[Dict], category: str):
+        """Create treeview for requirements"""
+        # Configure parent grid
+        parent.columnconfigure(0, weight=1)
+        parent.rowconfigure(0, weight=1)
+        
+        # Create frame
+        tree_frame = ttk.Frame(parent)
+        tree_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        tree_frame.columnconfigure(0, weight=1)
+        tree_frame.rowconfigure(0, weight=1)
+        
+        # Define columns
+        columns = ['id', 'title', 'description', 'type']
+        if category == "modified":
+            columns.extend(['changes'])
+        
+        # Create treeview
+        tree = ttk.Treeview(tree_frame, columns=columns[1:], show='tree headings', selectmode='extended')
+        tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Configure columns
+        tree.heading('#0', text='ID', anchor=tk.W)
+        tree.column('#0', width=120, minwidth=80)
+        
+        for col in columns[1:]:
+            tree.heading(col, text=col.title(), anchor=tk.W)
+            if col == 'description':
+                tree.column(col, width=300, minwidth=200)
+            elif col == 'changes':
+                tree.column(col, width=200, minwidth=150)
+            else:
+                tree.column(col, width=150, minwidth=100)
+        
+        # Add scrollbars
+        v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
+        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        tree.configure(yscrollcommand=v_scrollbar.set)
+        
+        h_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        tree.configure(xscrollcommand=h_scrollbar.set)
+        
+        # Populate tree
+        self._populate_tree(tree, requirements, category)
+        
+        # Bind events
+        tree.bind('<Double-1>', lambda event: self._on_item_double_click(tree, requirements, category))
+        
+        # Store references
+        setattr(self, f"{category}_tree", tree)
+        setattr(self, f"{category}_data", requirements)
+    
+    def _populate_tree(self, tree, requirements: List[Dict], category: str):
+        """Populate treeview with data"""
+        for i, req in enumerate(requirements):
+            try:
+                req_id = str(req.get('id', f'{category.upper()}_{i}'))
+                title = str(req.get('title', ''))[:100]
+                description = str(req.get('description', ''))[:150]
+                req_type = str(req.get('type', ''))
+                
+                values = [title, description, req_type]
+                
+                if category == "modified":
+                    changes = req.get('changes', {})
+                    change_summary = ', '.join(changes.keys()) if changes else 'Unknown changes'
+                    values.append(change_summary[:100])
+                
+                tree.insert('', 'end', text=req_id, values=values)
+                
+            except Exception as e:
+                print(f"Error inserting {category} requirement {i}: {e}")
+                continue
+    
+    def _create_controls_section(self):
+        """Create control buttons"""
+        controls_frame = ttk.Frame(self.main_frame)
+        controls_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(15, 0))
+        controls_frame.columnconfigure(2, weight=1)
+        
+        # Export controls
+        export_frame = ttk.LabelFrame(controls_frame, text="💾 Export", padding="5")
+        export_frame.grid(row=0, column=0, sticky=(tk.W), padx=(0, 15))
+        
+        ttk.Button(export_frame, text="📄 Export All Results", 
+                  command=self._export_all_results).grid(row=0, column=0, padx=(0, 5))
+        
+        ttk.Button(export_frame, text="📋 Export Current Tab", 
+                  command=self._export_current_tab).grid(row=0, column=1, padx=(0, 5))
+        
+        ttk.Button(export_frame, text="📝 Export Summary", 
+                  command=self._export_summary).grid(row=0, column=2)
+        
+        # Close button
+        ttk.Button(controls_frame, text="✖️ Close", 
+                  command=self._on_closing).grid(row=0, column=3, sticky=(tk.E))
+    
+    def _on_item_double_click(self, tree, requirements: List[Dict], category: str):
+        """Handle double-click on tree item"""
+        selection = tree.selection()
+        if not selection:
             return
-            
+        
         try:
+            item = selection[0]
+            item_index = tree.index(item)
+            
+            if item_index < len(requirements):
+                req = requirements[item_index]
+                self._show_requirement_details(req, category)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to show details: {str(e)}")
+    
+    def _show_requirement_details(self, requirement: Dict, category: str):
+        """Show detailed requirement information"""
+        details_window = tk.Toplevel(self.window)
+        details_window.title(f"Requirement Details - {category.title()}")
+        details_window.geometry("600x500")
+        details_window.transient(self.window)
+        
+        # Apply theme
+        apply_theme(widget=details_window)
+        
+        # Configure grid
+        details_window.columnconfigure(0, weight=1)
+        details_window.rowconfigure(0, weight=1)
+        
+        main_frame = ttk.Frame(details_window, padding="20")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=1)
+        
+        # Title
+        title = requirement.get('title', requirement.get('id', 'Unknown'))
+        ttk.Label(main_frame, text=f"📋 {title}", 
+                 font=("Helvetica", 14, "bold")).grid(row=0, column=0, sticky=(tk.W), pady=(0, 15))
+        
+        # Details in scrollable text
+        text_frame = ttk.Frame(main_frame)
+        text_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        text_frame.columnconfigure(0, weight=1)
+        text_frame.rowconfigure(0, weight=1)
+        
+        details_text = tk.Text(text_frame, wrap=tk.WORD, state=tk.NORMAL)
+        details_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        details_text.configure(yscrollcommand=scrollbar.set)
+        
+        # Populate details
+        details_text.insert(tk.END, f"Category: {category.title()}\n\n")
+        details_text.insert(tk.END, f"ID: {requirement.get('id', 'N/A')}\n\n")
+        details_text.insert(tk.END, f"Title: {requirement.get('title', 'N/A')}\n\n")
+        details_text.insert(tk.END, f"Description: {requirement.get('description', 'N/A')}\n\n")
+        details_text.insert(tk.END, f"Type: {requirement.get('type', 'N/A')}\n\n")
+        
+        # Show changes for modified requirements
+        if category == "modified" and 'changes' in requirement:
+            details_text.insert(tk.END, "Changes:\n")
+            for field, change in requirement['changes'].items():
+                details_text.insert(tk.END, f"  {field}: {change}\n")
+            details_text.insert(tk.END, "\n")
+        
+        # Show attributes
+        attributes = requirement.get('attributes', {})
+        if attributes:
+            details_text.insert(tk.END, "Attributes:\n")
+            for attr_name, attr_value in attributes.items():
+                details_text.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+        
+        details_text.configure(state=tk.DISABLED)
+        
+        # Close button
+        ttk.Button(main_frame, text="Close", command=details_window.destroy).grid(
+            row=2, column=0, pady=(15, 0))
+    
+    def _export_all_results(self):
+        """Export all results to CSV"""
+        try:
+            filename = filedialog.asksaveasfilename(
+                title="Export All Results",
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                initialname="comparison_results_all.csv"
+            )
+            
+            if not filename:
+                return
+            
             with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile)
-                
-                # Write header
                 writer.writerow(['Category', 'ID', 'Title', 'Description', 'Type', 'Changes'])
                 
-                # Write added requirements
-                for req in self.results['added']:
-                    writer.writerow([
-                        'ADDED',
-                        req.get('id', ''),
-                        req.get('title', ''),
-                        req.get('description', ''),
-                        req.get('type', ''),
-                        ''
-                    ])
-                
-                # Write deleted requirements
-                for req in self.results['deleted']:
-                    writer.writerow([
-                        'DELETED',
-                        req.get('id', ''),
-                        req.get('title', ''),
-                        req.get('description', ''),
-                        req.get('type', ''),
-                        ''
-                    ])
-                
-                # Write modified requirements
-                for mod in self.results['modified']:
-                    changes_summary = f"{len(mod['changes'])} changes: " + \
-                                    ", ".join([f"{c['field']}({c['change_type']})" for c in mod['changes']])
-                    writer.writerow([
-                        'MODIFIED',
-                        mod['id'],
-                        mod['new'].get('title', ''),
-                        mod['new'].get('description', ''),
-                        mod['new'].get('type', ''),
-                        changes_summary
-                    ])
-                
-                # Write unchanged requirements
-                for req in self.results['unchanged']:
-                    writer.writerow([
-                        'UNCHANGED',
-                        req.get('id', ''),
-                        req.get('title', ''),
-                        req.get('description', ''),
-                        req.get('type', ''),
-                        ''
-                    ])
+                for category in ['added', 'deleted', 'modified', 'unchanged']:
+                    requirements = self.results.get(category, [])
+                    for req in requirements:
+                        changes = ''
+                        if category == 'modified' and 'changes' in req:
+                            changes = ', '.join(req['changes'].keys())
+                        
+                        writer.writerow([
+                            category.title(),
+                            req.get('id', ''),
+                            req.get('title', ''),
+                            req.get('description', ''),
+                            req.get('type', ''),
+                            changes
+                        ])
             
-            messagebox.showinfo("Export Complete", f"Results exported to {filename}")
+            messagebox.showinfo("Export Complete", f"Results exported to:\n{filename}")
             
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed to export results:\n{str(e)}")
-            
-    def export_summary(self):
-        """Export summary statistics to text file"""
-        filename = filedialog.asksaveasfilename(
-            title="Export Summary",
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
-        )
+    
+    def _export_current_tab(self):
+        """Export current tab to CSV"""
+        current_tab = self.notebook.index(self.notebook.select())
+        categories = ['added', 'deleted', 'modified', 'unchanged']
         
-        if not filename:
-            return
+        if current_tab < len(categories):
+            category = categories[current_tab]
+            requirements = self.results.get(category, [])
             
+            try:
+                filename = filedialog.asksaveasfilename(
+                    title=f"Export {category.title()} Requirements",
+                    defaultextension=".csv",
+                    filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                    initialname=f"comparison_results_{category}.csv"
+                )
+                
+                if not filename:
+                    return
+                
+                with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    
+                    header = ['ID', 'Title', 'Description', 'Type']
+                    if category == 'modified':
+                        header.append('Changes')
+                    writer.writerow(header)
+                    
+                    for req in requirements:
+                        row = [
+                            req.get('id', ''),
+                            req.get('title', ''),
+                            req.get('description', ''),
+                            req.get('type', '')
+                        ]
+                        
+                        if category == 'modified':
+                            changes = ', '.join(req.get('changes', {}).keys())
+                            row.append(changes)
+                        
+                        writer.writerow(row)
+                
+                messagebox.showinfo("Export Complete", 
+                                   f"{category.title()} requirements exported to:\n{filename}")
+                
+            except Exception as e:
+                messagebox.showerror("Export Error", f"Failed to export {category} requirements:\n{str(e)}")
+    
+    def _export_summary(self):
+        """Export summary to text file"""
         try:
-            # Import comparator to use summary generation
-            from reqif_comparator import ReqIFComparator
-            comparator = ReqIFComparator()
-            summary = comparator.export_comparison_summary(self.results)
+            filename = filedialog.asksaveasfilename(
+                title="Export Summary",
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+                initialname="comparison_summary.txt"
+            )
             
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(summary)
+            if not filename:
+                return
             
-            messagebox.showinfo("Export Complete", f"Summary exported to {filename}")
+            with open(filename, 'w', encoding='utf-8') as txtfile:
+                stats = self.results.get('statistics', {})
+                
+                txtfile.write("Requirements Comparison Summary\n")
+                txtfile.write("=" * 40 + "\n\n")
+                
+                txtfile.write(f"Added Requirements: {stats.get('added_count', 0)}\n")
+                txtfile.write(f"Deleted Requirements: {stats.get('deleted_count', 0)}\n")
+                txtfile.write(f"Modified Requirements: {stats.get('modified_count', 0)}\n")
+                txtfile.write(f"Unchanged Requirements: {stats.get('unchanged_count', 0)}\n\n")
+                
+                total = sum([stats.get('added_count', 0), stats.get('deleted_count', 0),
+                           stats.get('modified_count', 0), stats.get('unchanged_count', 0)])
+                txtfile.write(f"Total Requirements Analyzed: {total}\n\n")
+                
+                if total > 0:
+                    txtfile.write("Change Percentages:\n")
+                    txtfile.write(f"  Added: {stats.get('added_count', 0)/total*100:.1f}%\n")
+                    txtfile.write(f"  Deleted: {stats.get('deleted_count', 0)/total*100:.1f}%\n")
+                    txtfile.write(f"  Modified: {stats.get('modified_count', 0)/total*100:.1f}%\n")
+                    txtfile.write(f"  Unchanged: {stats.get('unchanged_count', 0)/total*100:.1f}%\n")
+                
+                import datetime
+                txtfile.write(f"\nGenerated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            
+            messagebox.showinfo("Export Complete", f"Summary exported to:\n{filename}")
             
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed to export summary:\n{str(e)}")
+    
+    def _on_closing(self):
+        """Handle window closing"""
+        try:
+            self.window.destroy()
+        except:
+            pass
 
 
 # Example usage
 if __name__ == "__main__":
-    # This would normally be called from the main application
-    print("Comparison GUI module loaded successfully.")
+    print("🔧 Cleaned ComparisonResultsGUI - Performance Optimized")
+    print("✅ Key features:")
+    print("  - Simple theme integration")
+    print("  - Fast, clean interface")
+    print("  - Full comparison functionality")
+    print("  - Professional appearance")
