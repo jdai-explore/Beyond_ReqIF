@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Cleaned VisualizerGUI - Simple Theme Integration
-Performance optimized with minimal theme dependencies.
+Minimal VisualizerGUI - No Theme Dependencies
+Pure functionality with basic Tkinter styling.
 """
 
 import tkinter as tk
@@ -10,13 +10,10 @@ import csv
 import os
 from typing import List, Dict, Any, Optional
 
-# Simple theme import
-from theme_manager import apply_theme, get_color
-
 
 class VisualizerGUI:
     """
-    Requirements Visualizer GUI with simple theme integration
+    Minimal Requirements Visualizer GUI - No theming
     """
     
     def __init__(self, parent: tk.Widget, requirements: List[Dict[str, Any]], filename: str):
@@ -33,9 +30,6 @@ class VisualizerGUI:
         # Ensure window independence
         self.window.transient(parent)
         self.window.focus_set()
-        
-        # Apply simple theme
-        apply_theme(widget=self.window)
         
         # Search and filter state
         self.search_var = tk.StringVar()
@@ -57,7 +51,7 @@ class VisualizerGUI:
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
     
     def setup_gui(self):
-        """Setup GUI using grid geometry manager"""
+        """Setup minimal GUI"""
         # Configure main window grid
         self.window.columnconfigure(0, weight=1)
         self.window.rowconfigure(0, weight=1)
@@ -88,23 +82,20 @@ class VisualizerGUI:
         
         title_label = ttk.Label(
             info_frame,
-            text="📊 Requirements Analysis",
+            text="Requirements Analysis",
             font=("Helvetica", 16, "bold")
         )
         title_label.grid(row=0, column=0, sticky=(tk.W))
         
         file_label = ttk.Label(
             info_frame,
-            text=f"File: {os.path.basename(self.filename)}",
-            font=("Helvetica", 10)
+            text=f"File: {os.path.basename(self.filename)}"
         )
         file_label.grid(row=1, column=0, sticky=(tk.W), pady=(2, 0))
         
         count_label = ttk.Label(
             info_frame,
-            text=f"Total Requirements: {len(self.requirements)}",
-            font=("Helvetica", 10),
-            foreground=get_color("success")
+            text=f"Total Requirements: {len(self.requirements)}"
         )
         count_label.grid(row=2, column=0, sticky=(tk.W), pady=(2, 0))
         
@@ -112,40 +103,30 @@ class VisualizerGUI:
         search_frame = ttk.Frame(header_frame)
         search_frame.grid(row=0, column=1, sticky=(tk.E), padx=(20, 0))
         
-        ttk.Label(search_frame, text="🔍 Search:", font=("Helvetica", 10, "bold")).grid(
+        ttk.Label(search_frame, text="Search:", font=("Helvetica", 10, "bold")).grid(
             row=0, column=0, sticky=(tk.W), padx=(0, 8))
         
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=30)
         search_entry.grid(row=0, column=1, sticky=(tk.W))
         
-        clear_btn = ttk.Button(search_frame, text="❌", width=3, command=self._clear_search)
+        clear_btn = ttk.Button(search_frame, text="Clear", width=8, command=self._clear_search)
         clear_btn.grid(row=0, column=2, padx=(8, 0))
     
     def _create_control_section(self):
-        """Create control buttons and options"""
+        """Create control buttons"""
         control_frame = ttk.Frame(self.main_frame)
         control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
         control_frame.columnconfigure(3, weight=1)
         
-        # View controls
-        view_frame = ttk.LabelFrame(control_frame, text="📋 View", padding="8")
-        view_frame.grid(row=0, column=0, sticky=(tk.W), padx=(0, 15))
+        # Buttons
+        ttk.Button(control_frame, text="Statistics", command=self._show_statistics).grid(
+            row=0, column=0, padx=(0, 10))
         
-        ttk.Button(view_frame, text="📊 Statistics", command=self._show_statistics).grid(
-            row=0, column=0, padx=(0, 8))
+        ttk.Button(control_frame, text="Export CSV", command=self._export_csv).grid(
+            row=0, column=1, padx=(0, 10))
         
-        ttk.Button(view_frame, text="🔄 Refresh", command=self._refresh_view).grid(
-            row=0, column=1)
-        
-        # Export controls
-        export_frame = ttk.LabelFrame(control_frame, text="💾 Export", padding="8")
-        export_frame.grid(row=0, column=1, sticky=(tk.W), padx=(0, 15))
-        
-        ttk.Button(export_frame, text="📄 Export CSV", command=self._export_csv).grid(
-            row=0, column=0, padx=(0, 8))
-        
-        ttk.Button(export_frame, text="📋 Copy Selected", command=self._copy_selected).grid(
-            row=0, column=1)
+        ttk.Button(control_frame, text="Refresh", command=self._refresh_view).grid(
+            row=0, column=2, padx=(0, 20))
         
         # Filter info
         self.filter_info_label = ttk.Label(
@@ -190,7 +171,7 @@ class VisualizerGUI:
         status_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(15, 0))
         status_frame.columnconfigure(1, weight=1)
         
-        self.status_label = ttk.Label(status_frame, text="✅ Ready")
+        self.status_label = ttk.Label(status_frame, text="Ready")
         self.status_label.grid(row=0, column=0, sticky=(tk.W))
         
         # Selection info
@@ -210,14 +191,14 @@ class VisualizerGUI:
             self._insert_requirements_data()
             
             # Update status
-            self.status_label.configure(text="✅ Data loaded successfully")
+            self.status_label.configure(text="Data loaded successfully")
             
         except Exception as e:
-            self.status_label.configure(text=f"❌ Error loading data: {str(e)}")
+            self.status_label.configure(text=f"Error loading data: {str(e)}")
             messagebox.showerror("Data Loading Error", f"Failed to load requirements data:\n{str(e)}")
     
     def _determine_optimal_columns(self):
-        """Determine which columns to show based on data quality"""
+        """Determine which columns to show"""
         if not self.requirements:
             self.visible_columns = ['id', 'title', 'description']
             return
@@ -391,17 +372,14 @@ class VisualizerGUI:
     def _refresh_view(self):
         """Refresh the view"""
         self.populate_data()
-        self.status_label.configure(text="🔄 View refreshed")
+        self.status_label.configure(text="View refreshed")
     
     def _show_statistics(self):
         """Show statistics dialog"""
         stats_window = tk.Toplevel(self.window)
         stats_window.title("Requirements Statistics")
-        stats_window.geometry("450x500")
+        stats_window.geometry("450x400")
         stats_window.transient(self.window)
-        
-        # Apply theme
-        apply_theme(widget=stats_window)
         
         # Configure grid
         stats_window.columnconfigure(0, weight=1)
@@ -411,7 +389,7 @@ class VisualizerGUI:
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Title
-        ttk.Label(main_frame, text="📊 Requirements Statistics", 
+        ttk.Label(main_frame, text="Requirements Statistics", 
                  font=("Helvetica", 14, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 15))
         
         # Statistics
@@ -433,26 +411,6 @@ class VisualizerGUI:
                 row=row, column=1, sticky=(tk.W), padx=(20, 0), pady=3)
             row += 1
         
-        # Types list
-        if self.stats['unique_types']:
-            ttk.Label(main_frame, text="Requirement Types:", 
-                     font=("Helvetica", 10, "bold")).grid(row=row, column=0, columnspan=2, sticky=(tk.W), pady=(15, 5))
-            row += 1
-            
-            types_frame = ttk.Frame(main_frame)
-            types_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
-            
-            types_text = tk.Text(types_frame, height=8, width=50)
-            types_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            
-            types_scroll = ttk.Scrollbar(types_frame, orient=tk.VERTICAL, command=types_text.yview)
-            types_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-            types_text.configure(yscrollcommand=types_scroll.set)
-            
-            for req_type in sorted(self.stats['unique_types']):
-                types_text.insert(tk.END, f"• {req_type}\n")
-            types_text.configure(state=tk.DISABLED)
-        
         # Close button
         ttk.Button(main_frame, text="Close", command=stats_window.destroy).grid(
             row=row+1, column=0, columnspan=2, pady=(15, 0))
@@ -464,29 +422,12 @@ class VisualizerGUI:
             return
         
         try:
-            # Use a safer approach for file dialog on macOS
-            filename = None
-            try:
-                filename = filedialog.asksaveasfilename(
-                    title="Export Requirements to CSV",
-                    defaultextension=".csv",
-                    filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                    initialname=f"requirements_export_{len(self.filtered_requirements)}_items.csv"
-                )
-            except Exception as dialog_error:
-                print(f"File dialog error: {dialog_error}")
-                # Fallback: create a default filename
-                import datetime
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"requirements_export_{timestamp}.csv"
-                
-                # Ask user to confirm the filename
-                response = messagebox.askyesno(
-                    "Export with Default Name", 
-                    f"File dialog had an issue. Export to:\n{filename}?"
-                )
-                if not response:
-                    return
+            filename = filedialog.asksaveasfilename(
+                title="Export Requirements to CSV",
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                initialname=f"requirements_export_{len(self.filtered_requirements)}_items.csv"
+            )
             
             if not filename:
                 return
@@ -519,32 +460,6 @@ class VisualizerGUI:
             
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed to export CSV:\n{str(e)}")
-    
-    def _copy_selected(self):
-        """Copy selected requirements to clipboard"""
-        selected_items = self.tree.selection()
-        if not selected_items:
-            messagebox.showwarning("No Selection", "Please select requirements to copy.")
-            return
-        
-        try:
-            # Build text representation
-            text_lines = []
-            text_lines.append('\t'.join(self.visible_columns))
-            
-            for item_id in selected_items:
-                values = [self.tree.item(item_id, 'text')]
-                values.extend(self.tree.item(item_id, 'values'))
-                text_lines.append('\t'.join(str(v) for v in values))
-            
-            # Copy to clipboard
-            self.window.clipboard_clear()
-            self.window.clipboard_append('\n'.join(text_lines))
-            
-            self.status_label.configure(text=f"✅ Copied {len(selected_items)} requirements to clipboard")
-            
-        except Exception as e:
-            messagebox.showerror("Copy Error", f"Failed to copy to clipboard:\n{str(e)}")
     
     def _on_double_click(self, event):
         """Handle double-click on requirement"""
@@ -587,9 +502,6 @@ class VisualizerGUI:
             details_window.geometry("600x500")
             details_window.transient(self.window)
             
-            # Apply theme
-            apply_theme(widget=details_window)
-            
             # Configure grid
             details_window.columnconfigure(0, weight=1)
             details_window.rowconfigure(0, weight=1)
@@ -600,7 +512,7 @@ class VisualizerGUI:
             main_frame.rowconfigure(1, weight=1)
             
             # Title
-            ttk.Label(main_frame, text=f"📋 {req_text}", 
+            ttk.Label(main_frame, text=f"Requirement: {req_text}", 
                      font=("Helvetica", 14, "bold")).grid(row=0, column=0, sticky=(tk.W), pady=(0, 15))
             
             # Details in scrollable text
@@ -616,7 +528,7 @@ class VisualizerGUI:
             scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
             details_text.configure(yscrollcommand=scrollbar.set)
             
-            # Populate details with actual requirement data
+            # Populate details
             details_text.insert(tk.END, f"ID: {req.get('id', 'N/A')}\n\n")
             details_text.insert(tk.END, f"Title: {req.get('title', 'N/A')}\n\n")
             details_text.insert(tk.END, f"Description: {req.get('description', 'N/A')}\n\n")
@@ -646,13 +558,3 @@ class VisualizerGUI:
             self.window.destroy()
         except:
             pass
-
-
-# Example usage
-if __name__ == "__main__":
-    print("🔧 Cleaned VisualizerGUI - Performance Optimized")
-    print("✅ Key features:")
-    print("  - Simple theme integration")
-    print("  - Fast, clean interface")
-    print("  - Full visualization functionality")
-    print("  - Professional appearance")
