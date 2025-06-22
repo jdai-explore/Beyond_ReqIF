@@ -3,6 +3,7 @@
 ReqIF Comparator Module
 Handles comparison logic between two sets of requirements.
 COMPREHENSIVE FIX: Addresses 'list' object has no attribute 'keys' error
+PHASE 1: Enhanced with comparison profile support
 """
 
 from typing import List, Dict, Any, Tuple
@@ -14,6 +15,15 @@ class ReqIFComparator:
     
     def __init__(self):
         self.similarity_threshold = 0.8  # For fuzzy matching (future use)
+        self.comparison_profile = None  # Phase 1: Support for comparison profiles
+        
+    def set_comparison_profile(self, profile):
+        """Set comparison profile for advanced comparison (Phase 1)"""
+        self.comparison_profile = profile
+        if profile:
+            print(f"Using comparison profile: {profile.name}")
+            print(f"Enabled attributes: {len(profile.get_enabled_attributes())}")
+            print(f"Total weight: {profile.calculate_total_weight():.2f}")
         
     def compare_requirements(self, file1_reqs: List[Dict[str, Any]], 
                            file2_reqs: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -265,12 +275,53 @@ class ReqIFComparator:
             return {}
     
     def _requirements_differ(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> bool:
-        """Check if two requirements are different with robust error handling"""
+        """Check if two requirements are different with robust error handling and profile support"""
         try:
             # Ensure we have dictionaries
             if not isinstance(req1, dict) or not isinstance(req2, dict):
                 return True  # Consider different if not both dicts
             
+            # Use comparison profile if available (Phase 1)
+            if self.comparison_profile:
+                return self._requirements_differ_with_profile(req1, req2)
+            
+            # Fallback to original comparison logic
+            return self._requirements_differ_original(req1, req2)
+            
+        except Exception as e:
+            print(f"Error in _requirements_differ: {e}")
+            return True  # Consider different if comparison fails
+    
+    def _requirements_differ_with_profile(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> bool:
+        """Phase 1: Compare requirements using comparison profile"""
+        try:
+            enabled_attributes = self.comparison_profile.get_enabled_attributes()
+            
+            if not enabled_attributes:
+                print("Warning: No enabled attributes in comparison profile")
+                return self._requirements_differ_original(req1, req2)
+            
+            # Check each enabled attribute
+            for attr_name, attr_config in enabled_attributes.items():
+                if attr_config.weight <= 0:
+                    continue  # Skip zero-weight attributes
+                
+                # Get values based on attribute type
+                val1, val2 = self._get_attribute_values(req1, req2, attr_name, attr_config)
+                
+                # Apply comparison rules from profile
+                if self._values_differ_with_rules(val1, val2):
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"Error in profile-based comparison: {e}")
+            return self._requirements_differ_original(req1, req2)
+    
+    def _requirements_differ_original(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> bool:
+        """Original comparison logic (fallback)"""
+        try:
             # Compare key fields
             fields_to_compare = ['title', 'description', 'type', 'priority', 'status']
             
@@ -316,18 +367,133 @@ class ReqIFComparator:
             return False
             
         except Exception as e:
-            print(f"Error in _requirements_differ: {e}")
-            return True  # Consider different if comparison fails
+            print(f"Error in _requirements_differ_original: {e}")
+            return True
+    
+    def _get_attribute_values(self, req1: Dict[str, Any], req2: Dict[str, Any], 
+                            attr_name: str, attr_config) -> Tuple[str, str]:
+        """Get attribute values from requirements based on attribute type"""
+        try:
+            if attr_config.field_type == "standard":
+                # Standard field
+                val1 = str(req1.get(attr_name, '') or '')
+                val2 = str(req2.get(attr_name, '') or '')
+            elif attr_name.startswith('attr_'):
+                # Custom attribute
+                clean_name = attr_name[5:]  # Remove 'attr_' prefix
+                attrs1 = req1.get('attributes', {})
+                attrs2 = req2.get('attributes', {})
+                val1 = str(attrs1.get(clean_name, '') or '') if isinstance(attrs1, dict) else ''
+                val2 = str(attrs2.get(clean_name, '') or '') if isinstance(attrs2, dict) else ''
+            else:
+                # Other field
+                val1 = str(req1.get(attr_name, '') or '')
+                val2 = str(req2.get(attr_name, '') or '')
+            
+            return val1.strip(), val2.strip()
+            
+        except Exception as e:
+            print(f"Error getting values for attribute {attr_name}: {e}")
+            return '', ''
+    
+    def _values_differ_with_rules(self, val1: str, val2: str) -> bool:
+        """Compare values using comparison profile rules"""
+        try:
+            # Apply ignore rules from profile
+            if self.comparison_profile.treat_empty_as_null:
+                if not val1 and not val2:
+                    return False
+            
+            if self.comparison_profile.ignore_case:
+                val1 = val1.lower()
+                val2 = val2.lower()
+            
+            if self.comparison_profile.ignore_whitespace:
+                val1 = ' '.join(val1.split())  # Normalize whitespace
+                val2 = ' '.join(val2.split())
+            
+            # Basic comparison
+            if val1 == val2:
+                return False
+            
+            # Fuzzy matching if enabled
+            if self.comparison_profile.use_fuzzy_matching and val1 and val2:
+                import difflib
+                similarity = difflib.SequenceMatcher(None, val1, val2).ratio()
+                return similarity < self.comparison_profile.similarity_threshold
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error in value comparison with rules: {e}")
+            return val1 != val2
     
     def _identify_changes(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> List[Dict[str, str]]:
-        """Identify specific changes between two requirements with robust error handling"""
-        changes = []
-        
+        """Identify specific changes between two requirements with robust error handling and profile support"""
         try:
             # Ensure we have valid dictionaries
             if not isinstance(req1, dict) or not isinstance(req2, dict):
                 return []
             
+            # Use comparison profile if available (Phase 1)
+            if self.comparison_profile:
+                return self._identify_changes_with_profile(req1, req2)
+            
+            # Fallback to original change identification
+            return self._identify_changes_original(req1, req2)
+        
+        except Exception as e:
+            print(f"Error in _identify_changes: {e}")
+            return []
+    
+    def _identify_changes_with_profile(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Phase 1: Identify changes using comparison profile"""
+        changes = []
+        
+        try:
+            enabled_attributes = self.comparison_profile.get_enabled_attributes()
+            
+            if not enabled_attributes:
+                return self._identify_changes_original(req1, req2)
+            
+            # Check each enabled attribute
+            for attr_name, attr_config in enabled_attributes.items():
+                try:
+                    # Get values
+                    val1, val2 = self._get_attribute_values(req1, req2, attr_name, attr_config)
+                    
+                    # Apply comparison rules and check for differences
+                    if self._values_differ_with_rules(val1, val2):
+                        change_type = 'modified'
+                        if not val1:
+                            change_type = 'added'
+                        elif not val2:
+                            change_type = 'deleted'
+                        
+                        changes.append({
+                            'field': attr_name,
+                            'old_value': val1,
+                            'new_value': val2,
+                            'change_type': change_type,
+                            'weight': attr_config.weight,
+                            'field_type': attr_config.field_type
+                        })
+                        
+                except Exception as e:
+                    print(f"Error processing attribute {attr_name}: {e}")
+                    continue
+            
+            return changes
+            
+        except Exception as e:
+            print(f"Error in profile-based change identification: {e}")
+            return self._identify_changes_original(req1, req2)
+    
+    def _identify_changes_original(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Original change identification logic (fallback)"""
+        changes = []
+        
+        try:
             # Check main field changes
             main_fields = ['title', 'description', 'type', 'priority', 'status']
             
@@ -392,8 +558,7 @@ class ReqIFComparator:
                 print(f"Error processing attributes: {e}")
         
         except Exception as e:
-            print(f"Error in _identify_changes: {e}")
-            return []
+            print(f"Error in _identify_changes_original: {e}")
         
         return changes
     
@@ -597,6 +762,7 @@ class ReqIFComparator:
 if __name__ == "__main__":
     print("ReqIF Comparator - Comprehensive Fix Version")
     print("Addresses 'list' object has no attribute 'keys' error")
+    print("Enhanced with Phase 1 comparison profile support")
     
     comparator = ReqIFComparator()
     
@@ -653,5 +819,28 @@ if __name__ == "__main__":
         print(f"Title: {mod_req['title']}")
         print(f"Changes Summary: {mod_req['changes_summary']}")
         print(f"Change Count: {mod_req['change_count']}")
+    
+    # Test with comparison profile
+    try:
+        from comparison_profile import ComparisonProfile
+        
+        print("\nTesting with comparison profile...")
+        profile = ComparisonProfile("Test Profile")
+        profile.set_attribute_weight("title", 1.0)
+        profile.set_attribute_weight("description", 0.8)
+        profile.set_attribute_enabled("type", False)  # Disable type comparison
+        
+        comparator.set_comparison_profile(profile)
+        profile_results = comparator.compare_requirements(reqs1, reqs2)
+        
+        print("Profile-based comparison results:")
+        print(f"Modified: {len(profile_results['modified'])}")
+        
+        if profile_results['modified']:
+            mod_req = profile_results['modified'][0]
+            print(f"Changes Summary: {mod_req['changes_summary']}")
+            
+    except ImportError:
+        print("Comparison profile not available for testing")
     
     print("\nReqIF Comparator comprehensive fix completed successfully.")
