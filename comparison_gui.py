@@ -225,6 +225,9 @@ class ComparisonResultsGUI:
             if item_index < len(requirements):
                 req = requirements[item_index]
                 self._show_requirement_details(req, category)
+        except Exception as e:
+            print(f"Error handling double-click: {e}")
+    
     def _show_requirement_details(self, requirement: Dict, category: str):
         """Show detailed requirement information"""
         details_window = tk.Toplevel(self.window)

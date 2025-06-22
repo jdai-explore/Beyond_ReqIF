@@ -93,10 +93,8 @@ class ReqIFToolMinimal:
         self.notebook = ttk.Notebook(self.main_frame)
         self.notebook.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
         
-        # Create compare tab
+        # Create tabs
         self._create_compare_tab()
-        
-        # Create visualize tab
         self._create_visualize_tab()
     
     def _create_compare_tab(self):
@@ -233,7 +231,10 @@ class ReqIFToolMinimal:
                 self.file1_path.set(filename)
                 self.status_label.configure(text=f"File 1 selected: {os.path.basename(filename)}")
         except Exception as e:
-            self.error_handler.handle_error(e, "Failed to select file 1")
+            self.error_handler.safe_execute(
+                lambda: messagebox.showerror("Error", f"Failed to select file 1:\n{str(e)}"),
+                error_message="Failed to select file 1"
+            )
     
     def _browse_file2(self):
         """Browse for second file"""
@@ -246,7 +247,10 @@ class ReqIFToolMinimal:
                 self.file2_path.set(filename)
                 self.status_label.configure(text=f"File 2 selected: {os.path.basename(filename)}")
         except Exception as e:
-            self.error_handler.handle_error(e, "Failed to select file 2")
+            self.error_handler.safe_execute(
+                lambda: messagebox.showerror("Error", f"Failed to select file 2:\n{str(e)}"),
+                error_message="Failed to select file 2"
+            )
     
     def _browse_visualize_file(self):
         """Browse for visualization file"""
@@ -259,7 +263,10 @@ class ReqIFToolMinimal:
                 self.visualize_file_path.set(filename)
                 self.status_label.configure(text=f"File selected for analysis: {os.path.basename(filename)}")
         except Exception as e:
-            self.error_handler.handle_error(e, "Failed to select analysis file")
+            self.error_handler.safe_execute(
+                lambda: messagebox.showerror("Error", f"Failed to select analysis file:\n{str(e)}"),
+                error_message="Failed to select analysis file"
+            )
     
     def _compare_files(self):
         """Compare files"""
@@ -295,7 +302,8 @@ class ReqIFToolMinimal:
                 
             except Exception as e:
                 def show_error():
-                    self.error_handler.handle_error(e, "File comparison failed")
+                    error_msg = f"File comparison failed:\n{str(e)}"
+                    messagebox.showerror("Comparison Error", error_msg)
                     self.status_label.configure(text="Comparison failed - Check error details")
                     self.compare_btn.configure(state=tk.NORMAL, text="Compare Files")
                 
@@ -334,7 +342,8 @@ class ReqIFToolMinimal:
                 
             except Exception as e:
                 def show_error():
-                    self.error_handler.handle_error(e, "File analysis failed")
+                    error_msg = f"File analysis failed:\n{str(e)}"
+                    messagebox.showerror("Analysis Error", error_msg)
                     self.status_label.configure(text="Analysis failed - Check error details")
                     self.visualize_btn.configure(state=tk.NORMAL, text="Load & Analyze")
                 
@@ -348,7 +357,8 @@ class ReqIFToolMinimal:
             self.status_label.configure(text="Ready - ReqIF Tool Suite")
             self.root.mainloop()
         except Exception as e:
-            self.error_handler.handle_error(e, "Application runtime error")
+            error_msg = f"Application runtime error:\n{str(e)}"
+            messagebox.showerror("Runtime Error", error_msg)
         finally:
             self._cleanup()
     
