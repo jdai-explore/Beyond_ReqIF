@@ -301,8 +301,9 @@ class ReqIFToolMinimal:
                 self.root.after_idle(show_results)
                 
             except Exception as e:
+                error_message = str(e)  # Capture the error message
                 def show_error():
-                    error_msg = f"File comparison failed:\n{str(e)}"
+                    error_msg = f"File comparison failed:\n{error_message}"
                     messagebox.showerror("Comparison Error", error_msg)
                     self.status_label.configure(text="Comparison failed - Check error details")
                     self.compare_btn.configure(state=tk.NORMAL, text="Compare Files")
@@ -341,8 +342,9 @@ class ReqIFToolMinimal:
                 self.root.after_idle(show_visualizer)
                 
             except Exception as e:
+                error_message = str(e)  # Capture the error message
                 def show_error():
-                    error_msg = f"File analysis failed:\n{str(e)}"
+                    error_msg = f"File analysis failed:\n{error_message}"
                     messagebox.showerror("Analysis Error", error_msg)
                     self.status_label.configure(text="Analysis failed - Check error details")
                     self.visualize_btn.configure(state=tk.NORMAL, text="Load & Analyze")
