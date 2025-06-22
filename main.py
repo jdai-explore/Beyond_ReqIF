@@ -29,7 +29,7 @@ class ReqIFToolMinimal:
         
         # Create main window
         self.root = tk.Tk()
-        self.root.title("ReqIF Tool Suite v1.2.0 - Minimal Edition")
+        self.root.title("Beyond ReqIF v1.2.0")
         self.root.geometry("1000x700")
         
         # Initialize components

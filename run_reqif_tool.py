@@ -202,7 +202,7 @@ Examples:
             main_frame.pack(fill=tk.BOTH, expand=True)
             
             # Title
-            title_label = tk.Label(main_frame, text="ReqIF Tool Suite - Safe Mode", 
+            title_label = tk.Label(main_frame, text="Beyond ReqIF - Safe Mode", 
                                  font=('Arial', 16, 'bold'))
             title_label.pack(pady=(0, 20))
             
@@ -284,7 +284,7 @@ Possible solutions:
     def run(self):
         """Main launcher execution"""
         print("=" * 60)
-        print("🚀 ReqIF Tool Suite - Professional Edition")
+        print("🚀 Beyond ReqIF - Professional Edition")
         print("=" * 60)
         
         # Parse command line arguments
@@ -317,7 +317,7 @@ Possible solutions:
         success = self.start_application()
         
         if success:
-            print("👋 ReqIF Tool Suite session ended")
+            print("👋 Beyond ReqIF session ended")
             return 0
         else:
             print("❌ Application failed to start")
@@ -328,7 +328,7 @@ def show_welcome_screen():
     """Show a welcome screen with options"""
     try:
         root = tk.Tk()
-        root.title("ReqIF Tool Suite - Welcome")
+        root.title("Beyond ReqIF - Welcome")
         root.geometry("500x400")
         root.resizable(False, False)
         
@@ -343,7 +343,7 @@ def show_welcome_screen():
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Logo/Title
-        title_label = tk.Label(main_frame, text="⚙️ ReqIF Tool Suite", 
+        title_label = tk.Label(main_frame, text="⚙️ Beyond ReqIF", 
                              font=('Arial', 20, 'bold'), fg='#2196F3')
         title_label.pack(pady=(0, 5))
         
