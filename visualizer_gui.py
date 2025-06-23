@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-VisualizerGUI - Simplified Version
-Removed all Apple theme dependencies, basic styling only
+VisualizerGUI - Native Version
+Pure tkinter without any theme dependencies
 """
 
 import tkinter as tk
@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Optional
 
 class VisualizerGUI:
     """
-    Simplified Requirements Visualizer GUI
+    Native Requirements Visualizer GUI
     """
     
     def __init__(self, parent: tk.Widget, requirements: List[Dict[str, Any]], filename: str):
@@ -26,7 +26,6 @@ class VisualizerGUI:
         self.window = tk.Toplevel(parent)
         self.window.title(f"Requirements Analysis - {os.path.basename(filename)}")
         self.window.geometry("1200x800")
-        self.window.configure(bg='#FFFFFF')
         
         # Ensure window independence
         self.window.transient(parent)
@@ -52,9 +51,9 @@ class VisualizerGUI:
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
     
     def setup_gui(self):
-        """Setup simplified GUI"""
+        """Setup native GUI"""
         # Create main container
-        self.main_frame = tk.Frame(self.window, bg='#FFFFFF', padx=15, pady=15)
+        self.main_frame = tk.Frame(self.window, padx=20, pady=20)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create sections
@@ -65,75 +64,74 @@ class VisualizerGUI:
     
     def _create_header_section(self):
         """Create header with file info and search"""
-        header_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
-        header_frame.pack(fill=tk.X, pady=(0, 15))
+        header_frame = tk.Frame(self.main_frame)
+        header_frame.pack(fill=tk.X, pady=(0, 20))
         
         # File info
-        info_frame = tk.Frame(header_frame, bg='#FFFFFF')
+        info_frame = tk.Frame(header_frame)
         info_frame.pack(side=tk.LEFT)
         
         title_label = tk.Label(info_frame, text="Requirements Analysis", 
-                              font=('Arial', 16, 'bold'), bg='#FFFFFF', fg='#000000')
+                              font=('Arial', 18, 'bold'))
         title_label.pack(anchor=tk.W)
         
         file_label = tk.Label(info_frame, text=f"File: {os.path.basename(self.filename)}",
-                             font=('Arial', 10), bg='#FFFFFF', fg='#666666')
-        file_label.pack(anchor=tk.W, pady=(2, 0))
+                             font=('Arial', 11))
+        file_label.pack(anchor=tk.W, pady=(5, 0))
         
         count_label = tk.Label(info_frame, text=f"Total Requirements: {len(self.requirements)}",
-                              font=('Arial', 10), bg='#FFFFFF', fg='#666666')
-        count_label.pack(anchor=tk.W, pady=(2, 0))
+                              font=('Arial', 11), fg='darkblue')
+        count_label.pack(anchor=tk.W, pady=(3, 0))
         
         # Search section
-        search_frame = tk.Frame(header_frame, bg='#FFFFFF')
-        search_frame.pack(side=tk.RIGHT, padx=(20, 0))
+        search_frame = tk.Frame(header_frame)
+        search_frame.pack(side=tk.RIGHT, padx=(25, 0))
         
-        tk.Label(search_frame, text="Search:", font=('Arial', 10, 'bold'), 
-                bg='#FFFFFF', fg='#000000').pack(side=tk.LEFT, padx=(0, 8))
+        tk.Label(search_frame, text="Search:", font=('Arial', 12, 'bold')).pack(side=tk.LEFT, padx=(0, 10))
         
-        search_entry = tk.Entry(search_frame, textvariable=self.search_var, width=30, font=('Arial', 10))
+        search_entry = tk.Entry(search_frame, textvariable=self.search_var, width=35, 
+                               font=('Arial', 11), relief='sunken', bd=2)
         search_entry.pack(side=tk.LEFT)
         
         clear_btn = tk.Button(search_frame, text="Clear", width=8, command=self._clear_search,
-                             bg='#F0F0F0', fg='#000000', font=('Arial', 10),
-                             relief='solid', borderwidth=1, padx=10, pady=2,
-                             activebackground='#E0E0E0', activeforeground='#000000')
-        clear_btn.pack(side=tk.LEFT, padx=(8, 0))
+                             font=('Arial', 10), relief='raised', bd=2, padx=12, pady=4,
+                             cursor='hand2')
+        clear_btn.pack(side=tk.LEFT, padx=(10, 0))
     
     def _create_control_section(self):
         """Create control buttons"""
-        control_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
-        control_frame.pack(fill=tk.X, pady=(0, 15))
+        control_frame = tk.Frame(self.main_frame)
+        control_frame.pack(fill=tk.X, pady=(0, 20))
         
-        # Buttons
-        tk.Button(control_frame, text="Statistics", command=self._show_statistics,
-                 bg='#0078D4', fg='white', font=('Arial', 10),
-                 relief='flat', borderwidth=0, padx=15, pady=5,
-                 activebackground='#005A9E', activeforeground='white').pack(side=tk.LEFT, padx=(0, 10))
+        # Left side buttons
+        left_buttons = tk.Frame(control_frame)
+        left_buttons.pack(side=tk.LEFT)
         
-        tk.Button(control_frame, text="Export CSV", command=self._export_csv,
-                 bg='#0078D4', fg='white', font=('Arial', 10),
-                 relief='flat', borderwidth=0, padx=15, pady=5,
-                 activebackground='#005A9E', activeforeground='white').pack(side=tk.LEFT, padx=(0, 10))
+        tk.Button(left_buttons, text="📊 Statistics", command=self._show_statistics,
+                 font=('Arial', 11, 'bold'), relief='raised', bd=2,
+                 padx=20, pady=6, cursor='hand2', bg='lightcyan').pack(side=tk.LEFT, padx=(0, 15))
         
-        tk.Button(control_frame, text="Refresh", command=self._refresh_view,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10),
-                 relief='solid', borderwidth=1, padx=15, pady=5,
-                 activebackground='#E0E0E0', activeforeground='#000000').pack(side=tk.LEFT, padx=(0, 20))
+        tk.Button(left_buttons, text="📄 Export CSV", command=self._export_csv,
+                 font=('Arial', 11, 'bold'), relief='raised', bd=2,
+                 padx=20, pady=6, cursor='hand2', bg='lightgreen').pack(side=tk.LEFT, padx=(0, 15))
         
-        # Filter info
+        tk.Button(left_buttons, text="🔄 Refresh", command=self._refresh_view,
+                 font=('Arial', 11), relief='raised', bd=2,
+                 padx=20, pady=6, cursor='hand2').pack(side=tk.LEFT, padx=(0, 25))
+        
+        # Filter info on the right
         self.filter_info_label = tk.Label(control_frame,
                                          text=f"Showing: {len(self.filtered_requirements)} of {len(self.requirements)} requirements",
-                                         font=('Arial', 10), bg='#FFFFFF', fg='#666666')
+                                         font=('Arial', 11))
         self.filter_info_label.pack(side=tk.RIGHT)
     
     def _create_content_section(self):
         """Create main content area with treeview"""
-        content_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
+        content_frame = tk.Frame(self.main_frame)
         content_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create treeview with scrollbars
-        tree_frame = tk.Frame(content_frame, bg='#FFFFFF')
+        tree_frame = tk.Frame(content_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True)
         
         # Treeview
@@ -155,17 +153,16 @@ class VisualizerGUI:
     
     def _create_status_section(self):
         """Create status bar"""
-        status_frame = tk.Frame(self.main_frame, bg='#F0F0F0', relief='sunken', bd=1)
-        status_frame.pack(fill=tk.X, pady=(15, 0))
+        status_frame = tk.Frame(self.main_frame, relief='sunken', bd=2)
+        status_frame.pack(fill=tk.X, pady=(20, 0))
         
         self.status_label = tk.Label(status_frame, text="Ready", font=('Arial', 10), 
-                                    bg='#F0F0F0', fg='#000000')
-        self.status_label.pack(side=tk.LEFT, padx=10, pady=5)
+                                    anchor=tk.W)
+        self.status_label.pack(side=tk.LEFT, padx=12, pady=8)
         
         # Selection info
-        self.selection_label = tk.Label(status_frame, text="", font=('Arial', 10), 
-                                       bg='#F0F0F0', fg='#666666')
-        self.selection_label.pack(side=tk.RIGHT, padx=10, pady=5)
+        self.selection_label = tk.Label(status_frame, text="", font=('Arial', 10))
+        self.selection_label.pack(side=tk.RIGHT, padx=12, pady=8)
     
     def populate_data(self):
         """Populate treeview with requirements data"""
@@ -180,10 +177,10 @@ class VisualizerGUI:
             self._insert_requirements_data()
             
             # Update status
-            self.status_label.configure(text="Data loaded successfully")
+            self.status_label.configure(text="Data loaded successfully", fg='darkgreen')
             
         except Exception as e:
-            self.status_label.configure(text=f"Error loading data: {str(e)}")
+            self.status_label.configure(text=f"Error loading data: {str(e)}", fg='red')
             messagebox.showerror("Data Loading Error", f"Failed to load requirements data:\n{str(e)}")
     
     def _determine_optimal_columns(self):
@@ -354,55 +351,76 @@ class VisualizerGUI:
     
     def _update_filter_info(self):
         """Update filter information display"""
-        self.filter_info_label.configure(
-            text=f"Showing: {len(self.filtered_requirements)} of {len(self.requirements)} requirements"
-        )
+        total = len(self.requirements)
+        showing = len(self.filtered_requirements)
+        
+        if showing == total:
+            self.filter_info_label.configure(
+                text=f"Showing: {showing} requirements", fg='black'
+            )
+        else:
+            self.filter_info_label.configure(
+                text=f"Showing: {showing} of {total} requirements (filtered)", fg='darkorange'
+            )
     
     def _refresh_view(self):
         """Refresh the view"""
         self.populate_data()
-        self.status_label.configure(text="View refreshed")
+        self.status_label.configure(text="View refreshed", fg='darkgreen')
     
     def _show_statistics(self):
         """Show statistics dialog"""
         stats_window = tk.Toplevel(self.window)
         stats_window.title("Requirements Statistics")
-        stats_window.geometry("450x400")
-        stats_window.configure(bg='#FFFFFF')
+        stats_window.geometry("500x450")
         stats_window.transient(self.window)
         
-        main_frame = tk.Frame(stats_window, bg='#FFFFFF', padx=20, pady=20)
+        main_frame = tk.Frame(stats_window, padx=25, pady=25)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title
         tk.Label(main_frame, text="Requirements Statistics", 
-                font=('Arial', 14, 'bold'), bg='#FFFFFF', fg='#000000').pack(pady=(0, 15))
+                font=('Arial', 16, 'bold')).pack(pady=(0, 20))
         
-        # Statistics
+        # Statistics frame
+        stats_frame = tk.Frame(main_frame)
+        stats_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Statistics data
         stats_data = [
-            ("Total Requirements", self.stats['total_count']),
-            ("With Titles", f"{self.stats['with_titles']} ({self.stats['with_titles']/self.stats['total_count']*100:.1f}%)"),
-            ("With Descriptions", f"{self.stats['with_descriptions']} ({self.stats['with_descriptions']/self.stats['total_count']*100:.1f}%)"),
-            ("With Types", f"{self.stats['with_types']} ({self.stats['with_types']/self.stats['total_count']*100:.1f}%)"),
-            ("Total Attributes", self.stats['attribute_count']),
-            ("Avg Attributes/Req", f"{self.stats['avg_attributes_per_req']:.1f}"),
-            ("Unique Types", len(self.stats['unique_types']))
+            ("Total Requirements", self.stats['total_count'], 'darkblue'),
+            ("With Titles", f"{self.stats['with_titles']} ({self.stats['with_titles']/self.stats['total_count']*100:.1f}%)", 'darkgreen'),
+            ("With Descriptions", f"{self.stats['with_descriptions']} ({self.stats['with_descriptions']/self.stats['total_count']*100:.1f}%)", 'darkgreen'),
+            ("With Types", f"{self.stats['with_types']} ({self.stats['with_types']/self.stats['total_count']*100:.1f}%)", 'darkgreen'),
+            ("Total Attributes", self.stats['attribute_count'], 'darkorange'),
+            ("Avg Attributes/Req", f"{self.stats['avg_attributes_per_req']:.1f}", 'darkorange'),
+            ("Unique Types", len(self.stats['unique_types']), 'purple')
         ]
         
-        for i, (label, value) in enumerate(stats_data):
-            frame = tk.Frame(main_frame, bg='#FFFFFF')
-            frame.pack(fill=tk.X, pady=3)
+        for i, (label, value, color) in enumerate(stats_data):
+            frame = tk.Frame(stats_frame)
+            frame.pack(fill=tk.X, pady=6)
             
-            tk.Label(frame, text=f"{label}:", font=('Arial', 10, 'bold'), 
-                    bg='#FFFFFF', fg='#000000').pack(side=tk.LEFT)
-            tk.Label(frame, text=str(value), font=('Arial', 10), 
-                    bg='#FFFFFF', fg='#0078D4').pack(side=tk.RIGHT)
+            tk.Label(frame, text=f"{label}:", font=('Arial', 12, 'bold')).pack(side=tk.LEFT)
+            tk.Label(frame, text=str(value), font=('Arial', 12), fg=color).pack(side=tk.RIGHT)
+        
+        # Types list if available
+        if self.stats['unique_types']:
+            types_frame = tk.LabelFrame(main_frame, text="Requirement Types", 
+                                       font=('Arial', 11, 'bold'), padx=10, pady=10)
+            types_frame.pack(fill=tk.X, pady=(20, 0))
+            
+            types_text = ', '.join(self.stats['unique_types'][:10])
+            if len(self.stats['unique_types']) > 10:
+                types_text += f"... and {len(self.stats['unique_types']) - 10} more"
+            
+            tk.Label(types_frame, text=types_text, font=('Arial', 10), 
+                    wraplength=400, justify=tk.LEFT).pack()
         
         # Close button
         tk.Button(main_frame, text="Close", command=stats_window.destroy,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10),
-                 relief='solid', borderwidth=1, padx=15, pady=5,
-                 activebackground='#E0E0E0', activeforeground='#000000').pack(pady=(15, 0))
+                 font=('Arial', 11), relief='raised', bd=2, padx=20, pady=6,
+                 cursor='hand2').pack(pady=(20, 0))
     
     def _export_csv(self):
         """Export filtered requirements to CSV"""
@@ -488,22 +506,21 @@ class VisualizerGUI:
             # Create details window
             details_window = tk.Toplevel(self.window)
             details_window.title(f"Requirement Details - {req_text}")
-            details_window.geometry("600x500")
-            details_window.configure(bg='#FFFFFF')
+            details_window.geometry("700x600")
             details_window.transient(self.window)
             
-            main_frame = tk.Frame(details_window, bg='#FFFFFF', padx=20, pady=20)
+            main_frame = tk.Frame(details_window, padx=25, pady=25)
             main_frame.pack(fill=tk.BOTH, expand=True)
             
             # Title
             tk.Label(main_frame, text=f"Requirement: {req_text}", 
-                    font=('Arial', 14, 'bold'), bg='#FFFFFF', fg='#000000').pack(anchor=tk.W, pady=(0, 15))
+                    font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
             
             # Details in scrollable text
-            text_frame = tk.Frame(main_frame, bg='#FFFFFF')
+            text_frame = tk.Frame(main_frame)
             text_frame.pack(fill=tk.BOTH, expand=True)
             
-            details_text = tk.Text(text_frame, wrap=tk.WORD, bg='#F8F8F8', fg='#000000', font=('Arial', 10))
+            details_text = tk.Text(text_frame, wrap=tk.WORD, font=('Arial', 11))
             details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
             scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
@@ -522,16 +539,25 @@ class VisualizerGUI:
             attributes = req.get('attributes', {})
             if attributes:
                 details_text.insert(tk.END, "Attributes:\n")
+                details_text.insert(tk.END, "-" * 20 + "\n")
                 for attr_name, attr_value in attributes.items():
-                    details_text.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+                    details_text.insert(tk.END, f"{attr_name}: {attr_value}\n")
+                details_text.insert(tk.END, "\n")
+            
+            # Add raw attributes if different
+            raw_attributes = req.get('raw_attributes', {})
+            if raw_attributes and raw_attributes != attributes:
+                details_text.insert(tk.END, "Raw Attributes:\n")
+                details_text.insert(tk.END, "-" * 20 + "\n")
+                for attr_ref, attr_value in raw_attributes.items():
+                    details_text.insert(tk.END, f"{attr_ref}: {attr_value}\n")
             
             details_text.configure(state=tk.DISABLED)
             
             # Close button
             tk.Button(main_frame, text="Close", command=details_window.destroy,
-                     bg='#F0F0F0', fg='#000000', font=('Arial', 10),
-                     relief='solid', borderwidth=1, padx=15, pady=5,
-                     activebackground='#E0E0E0', activeforeground='#000000').pack(pady=(15, 0))
+                     font=('Arial', 11), relief='raised', bd=2, padx=20, pady=6,
+                     cursor='hand2').pack(pady=(20, 0))
             
         except Exception as e:
             messagebox.showerror("Details Error", f"Failed to show requirement details:\n{str(e)}")

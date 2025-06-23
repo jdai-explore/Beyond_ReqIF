@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ComparisonResultsGUI - Simplified Version
-Removed all Apple theme dependencies
+ComparisonResultsGUI - Native Version
+Pure tkinter without any theme dependencies
 """
 
 import tkinter as tk
@@ -15,7 +15,7 @@ import re
 
 class ComparisonResultsGUI:
     """
-    Comparison Results GUI - Simplified Version
+    Comparison Results GUI - Native Version
     """
     
     def __init__(self, parent: tk.Widget, results: Dict[str, Any]):
@@ -26,7 +26,6 @@ class ComparisonResultsGUI:
         self.window = tk.Toplevel(parent)
         self.window.title("Requirements Comparison Results")
         self.window.geometry("1400x800")
-        self.window.configure(bg='#FFFFFF')
         
         # Ensure window independence
         self.window.transient(parent)
@@ -42,9 +41,9 @@ class ComparisonResultsGUI:
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
     
     def setup_gui(self):
-        """Setup simplified GUI"""
+        """Setup native GUI"""
         # Create main container
-        self.main_frame = tk.Frame(self.window, bg='#FFFFFF', padx=15, pady=15)
+        self.main_frame = tk.Frame(self.window, padx=20, pady=20)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create sections
@@ -55,49 +54,48 @@ class ComparisonResultsGUI:
     
     def _create_header_section(self):
         """Create header"""
-        header_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
-        header_frame.pack(fill=tk.X, pady=(0, 15))
+        header_frame = tk.Frame(self.main_frame)
+        header_frame.pack(fill=tk.X, pady=(0, 20))
         
         # Title
         title_label = tk.Label(header_frame, text="Requirements Comparison Results", 
-                              font=('Arial', 16, 'bold'), bg='#FFFFFF', fg='#000000')
+                              font=('Arial', 18, 'bold'))
         title_label.pack(anchor=tk.W)
         
         # Subtitle
         subtitle_label = tk.Label(header_frame,
                                  text="Select modified requirements and click 'Show Differences' for detailed comparison",
-                                 font=('Arial', 10), bg='#FFFFFF', fg='#666666')
-        subtitle_label.pack(anchor=tk.W, pady=(5, 0))
+                                 font=('Arial', 11))
+        subtitle_label.pack(anchor=tk.W, pady=(8, 0))
     
     def _create_summary_section(self):
         """Create summary statistics"""
         summary_frame = tk.LabelFrame(self.main_frame, text="Summary Statistics", 
-                                     font=('Arial', 10, 'bold'), bg='#FFFFFF', fg='#000000')
-        summary_frame.pack(fill=tk.X, pady=(0, 15))
+                                     font=('Arial', 12, 'bold'), padx=15, pady=15)
+        summary_frame.pack(fill=tk.X, pady=(0, 20))
         
         # Get statistics
         stats = self.results.get('statistics', {})
         
         # Create grid for statistics
-        stats_container = tk.Frame(summary_frame, bg='#FFFFFF')
-        stats_container.pack(fill=tk.X, padx=10, pady=10)
+        stats_container = tk.Frame(summary_frame)
+        stats_container.pack(fill=tk.X)
         
-        # Create summary labels
-        col = 0
-        for label, count in [("Added", stats.get('added_count', 0)),
-                            ("Deleted", stats.get('deleted_count', 0)),
-                            ("Modified", stats.get('modified_count', 0)),
-                            ("Unchanged", stats.get('unchanged_count', 0))]:
+        # Create summary labels with colors
+        summary_data = [
+            ("Added", stats.get('added_count', 0), 'darkgreen'),
+            ("Deleted", stats.get('deleted_count', 0), 'darkred'),
+            ("Modified", stats.get('modified_count', 0), 'darkorange'),
+            ("Unchanged", stats.get('unchanged_count', 0), 'darkblue')
+        ]
+        
+        for col, (label, count, color) in enumerate(summary_data):
+            frame = tk.Frame(stats_container)
+            frame.grid(row=0, column=col, padx=25, pady=10, sticky='n')
             
-            frame = tk.Frame(stats_container, bg='#FFFFFF')
-            frame.grid(row=0, column=col, padx=20, pady=5)
-            
-            tk.Label(frame, text=label, font=('Arial', 10, 'bold'), 
-                    bg='#FFFFFF', fg='#000000').pack()
-            tk.Label(frame, text=str(count), font=('Arial', 14), 
-                    bg='#FFFFFF', fg='#0078D4').pack()
-            
-            col += 1
+            tk.Label(frame, text=label, font=('Arial', 12, 'bold')).pack()
+            tk.Label(frame, text=str(count), font=('Arial', 16, 'bold'), 
+                    fg=color).pack()
     
     def _create_results_section(self):
         """Create results with tabs"""
@@ -112,51 +110,49 @@ class ComparisonResultsGUI:
     
     def _create_added_tab(self):
         """Create added requirements tab"""
-        added_frame = tk.Frame(self.notebook, bg='#FFFFFF')
-        self.notebook.add(added_frame, text=f"Added ({len(self.results.get('added', []))})")
+        added_frame = tk.Frame(self.notebook)
+        self.notebook.add(added_frame, text=f"➕ Added ({len(self.results.get('added', []))})")
         self._create_requirements_tree(added_frame, self.results.get('added', []), "added")
     
     def _create_deleted_tab(self):
         """Create deleted requirements tab"""
-        deleted_frame = tk.Frame(self.notebook, bg='#FFFFFF')
-        self.notebook.add(deleted_frame, text=f"Deleted ({len(self.results.get('deleted', []))})")
+        deleted_frame = tk.Frame(self.notebook)
+        self.notebook.add(deleted_frame, text=f"➖ Deleted ({len(self.results.get('deleted', []))})")
         self._create_requirements_tree(deleted_frame, self.results.get('deleted', []), "deleted")
     
     def _create_modified_tab(self):
         """Create modified requirements tab with diff functionality"""
-        modified_frame = tk.Frame(self.notebook, bg='#FFFFFF')
-        self.notebook.add(modified_frame, text=f"Modified ({len(self.results.get('modified', []))})")
+        modified_frame = tk.Frame(self.notebook)
+        self.notebook.add(modified_frame, text=f"📝 Modified ({len(self.results.get('modified', []))})")
         
         self._create_enhanced_modified_tree(modified_frame, self.results.get('modified', []))
     
     def _create_unchanged_tab(self):
         """Create unchanged requirements tab"""
-        unchanged_frame = tk.Frame(self.notebook, bg='#FFFFFF')
-        self.notebook.add(unchanged_frame, text=f"Unchanged ({len(self.results.get('unchanged', []))})")
+        unchanged_frame = tk.Frame(self.notebook)
+        self.notebook.add(unchanged_frame, text=f"✓ Unchanged ({len(self.results.get('unchanged', []))})")
         self._create_requirements_tree(unchanged_frame, self.results.get('unchanged', []), "unchanged")
     
     def _create_enhanced_modified_tree(self, parent, requirements: List[Dict]):
         """Create enhanced modified requirements tree with diff functionality"""
-        # Configure parent
-        parent.configure(bg='#FFFFFF')
-        
         # Controls frame for Show Differences button
-        controls_frame = tk.Frame(parent, bg='#FFFFFF')
-        controls_frame.pack(fill=tk.X, padx=10, pady=10)
+        controls_frame = tk.Frame(parent)
+        controls_frame.pack(fill=tk.X, padx=15, pady=15)
         
-        self.show_diff_btn = tk.Button(controls_frame, text="Show Differences",
+        self.show_diff_btn = tk.Button(controls_frame, text="👁️ Show Differences",
                                       command=self._show_differences, state=tk.DISABLED,
-                                      bg='#0078D4', fg='white', font=('Arial', 10))
-        self.show_diff_btn.pack(side=tk.LEFT, padx=(0, 10))
+                                      font=('Arial', 11, 'bold'), relief='raised', bd=2,
+                                      padx=15, pady=5, cursor='hand2')
+        self.show_diff_btn.pack(side=tk.LEFT, padx=(0, 15))
         
         self.selection_info_label = tk.Label(controls_frame,
                                            text="Select a modified requirement to view differences",
-                                           font=('Arial', 9), bg='#FFFFFF', fg='#666666')
+                                           font=('Arial', 10))
         self.selection_info_label.pack(side=tk.LEFT)
         
         # Tree frame
-        tree_frame = tk.Frame(parent, bg='#FFFFFF')
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        tree_frame = tk.Frame(parent)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
         # Define columns for modified requirements
         columns = ['title', 'description', 'type', 'changes_summary', 'change_count']
@@ -169,20 +165,18 @@ class ComparisonResultsGUI:
         self.modified_tree.heading('#0', text='ID', anchor=tk.W)
         self.modified_tree.column('#0', width=120, minwidth=80)
         
+        column_config = {
+            'title': ('Title', 200, 150),
+            'description': ('Description', 300, 200),
+            'type': ('Type', 120, 100),
+            'changes_summary': ('Changes Summary', 200, 150),
+            'change_count': ('Changes', 80, 60)
+        }
+        
         for col in columns:
-            display_name = col.replace('_', ' ').title()
+            display_name, width, minwidth = column_config[col]
             self.modified_tree.heading(col, text=display_name, anchor=tk.W)
-            
-            if col == 'description':
-                self.modified_tree.column(col, width=300, minwidth=200)
-            elif col == 'changes_summary':
-                self.modified_tree.column(col, width=200, minwidth=150)
-            elif col == 'change_count':
-                self.modified_tree.column(col, width=80, minwidth=60)
-            elif col == 'title':
-                self.modified_tree.column(col, width=200, minwidth=150)
-            else:
-                self.modified_tree.column(col, width=120, minwidth=100)
+            self.modified_tree.column(col, width=width, minwidth=minwidth)
         
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.modified_tree.yview)
@@ -198,11 +192,9 @@ class ComparisonResultsGUI:
     
     def _create_requirements_tree(self, parent, requirements: List[Dict], category: str):
         """Create standard treeview for non-modified requirements"""
-        parent.configure(bg='#FFFFFF')
-        
         # Create frame
-        tree_frame = tk.Frame(parent, bg='#FFFFFF')
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        tree_frame = tk.Frame(parent)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
         # Define columns
         columns = ['title', 'description', 'type']
@@ -215,14 +207,16 @@ class ComparisonResultsGUI:
         tree.heading('#0', text='ID', anchor=tk.W)
         tree.column('#0', width=120, minwidth=80)
         
+        column_config = {
+            'title': ('Title', 200, 150),
+            'description': ('Description', 300, 200),
+            'type': ('Type', 120, 100)
+        }
+        
         for col in columns:
-            tree.heading(col, text=col.title(), anchor=tk.W)
-            if col == 'description':
-                tree.column(col, width=300, minwidth=200)
-            elif col == 'title':
-                tree.column(col, width=200, minwidth=150)
-            else:
-                tree.column(col, width=120, minwidth=100)
+            display_name, width, minwidth = column_config[col]
+            tree.heading(col, text=display_name, anchor=tk.W)
+            tree.column(col, width=width, minwidth=minwidth)
         
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
@@ -264,13 +258,13 @@ class ComparisonResultsGUI:
             self.selected_modified_items = list(selection)
             
             if len(selection) == 1:
-                self.show_diff_btn.configure(state=tk.NORMAL)
+                self.show_diff_btn.configure(state=tk.NORMAL, bg='lightgreen')
                 self.selection_info_label.configure(text="1 requirement selected - click 'Show Differences' to view changes")
             elif len(selection) > 1:
-                self.show_diff_btn.configure(state=tk.DISABLED)
+                self.show_diff_btn.configure(state=tk.DISABLED, bg='lightgray')
                 self.selection_info_label.configure(text=f"{len(selection)} requirements selected - select only one to view differences")
             else:
-                self.show_diff_btn.configure(state=tk.DISABLED)
+                self.show_diff_btn.configure(state=tk.DISABLED, bg='lightgray')
                 self.selection_info_label.configure(text="Select a modified requirement to view differences")
                 
         except Exception as e:
@@ -322,19 +316,21 @@ class ComparisonResultsGUI:
     
     def _create_controls_section(self):
         """Create control buttons"""
-        controls_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
-        controls_frame.pack(fill=tk.X, pady=(15, 0))
+        controls_frame = tk.Frame(self.main_frame)
+        controls_frame.pack(fill=tk.X, pady=(20, 0))
         
         # Export button
-        export_btn = tk.Button(controls_frame, text="Export All Results", 
+        export_btn = tk.Button(controls_frame, text="📄 Export All Results", 
                               command=self._export_all_results,
-                              bg='#0078D4', fg='white', font=('Arial', 10))
-        export_btn.pack(side=tk.LEFT, padx=(0, 10))
+                              font=('Arial', 11, 'bold'), relief='raised', bd=2,
+                              padx=20, pady=6, cursor='hand2', bg='lightblue')
+        export_btn.pack(side=tk.LEFT, padx=(0, 15))
         
         # Close button
-        close_btn = tk.Button(controls_frame, text="Close", 
+        close_btn = tk.Button(controls_frame, text="✖️ Close", 
                              command=self._on_closing,
-                             bg='#F0F0F0', fg='#000000', font=('Arial', 10))
+                             font=('Arial', 11), relief='raised', bd=2,
+                             padx=20, pady=6, cursor='hand2')
         close_btn.pack(side=tk.RIGHT)
     
     def _on_item_double_click(self, tree, requirements: List[Dict], category: str):
@@ -360,22 +356,21 @@ class ComparisonResultsGUI:
         """Show options for modified requirements (details or diff)"""
         choice_window = tk.Toplevel(self.window)
         choice_window.title("View Options")
-        choice_window.geometry("400x200")
-        choice_window.configure(bg='#FFFFFF')
+        choice_window.geometry("450x250")
         choice_window.transient(self.window)
         choice_window.grab_set()
         
-        main_frame = tk.Frame(choice_window, bg='#FFFFFF', padx=20, pady=20)
+        main_frame = tk.Frame(choice_window, padx=25, pady=25)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         req_id = requirement.get('id', 'Unknown')
         tk.Label(main_frame, text=f"View options for requirement: {req_id}", 
-                font=('Arial', 12, 'bold'), bg='#FFFFFF', fg='#000000').pack(pady=(0, 15))
+                font=('Arial', 14, 'bold')).pack(pady=(0, 20))
         
         tk.Label(main_frame, text="How would you like to view this modified requirement?",
-                bg='#FFFFFF', fg='#000000').pack(pady=(0, 20))
+                font=('Arial', 11)).pack(pady=(0, 25))
         
-        button_frame = tk.Frame(main_frame, bg='#FFFFFF')
+        button_frame = tk.Frame(main_frame)
         button_frame.pack(fill=tk.X)
         
         def show_details():
@@ -386,34 +381,36 @@ class ComparisonResultsGUI:
             choice_window.destroy()
             self._launch_diff_viewer(requirement)
         
-        tk.Button(button_frame, text="Show Details", command=show_details, 
-                 bg='#0078D4', fg='white', font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
-        tk.Button(button_frame, text="Show Differences", command=show_diff,
-                 bg='#0078D4', fg='white', font=('Arial', 10)).pack(side=tk.LEFT)
+        tk.Button(button_frame, text="📋 Show Details", command=show_details, 
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
+        tk.Button(button_frame, text="🔍 Show Differences", command=show_diff,
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.LEFT)
         tk.Button(button_frame, text="Cancel", command=choice_window.destroy,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10)).pack(side=tk.RIGHT)
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.RIGHT)
     
     def _show_requirement_details(self, requirement: Dict, category: str):
         """Show detailed requirement information"""
         details_window = tk.Toplevel(self.window)
         details_window.title(f"Requirement Details - {category.title()}")
-        details_window.geometry("700x600")
-        details_window.configure(bg='#FFFFFF')
+        details_window.geometry("750x650")
         details_window.transient(self.window)
         
-        main_frame = tk.Frame(details_window, bg='#FFFFFF', padx=20, pady=20)
+        main_frame = tk.Frame(details_window, padx=25, pady=25)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title
         title = requirement.get('title', requirement.get('id', 'Unknown'))
         tk.Label(main_frame, text=f"Requirement: {title}", 
-                font=('Arial', 14, 'bold'), bg='#FFFFFF', fg='#000000').pack(anchor=tk.W, pady=(0, 15))
+                font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
         
         # Details in scrollable text
-        text_frame = tk.Frame(main_frame, bg='#FFFFFF')
+        text_frame = tk.Frame(main_frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
         
-        details_text = tk.Text(text_frame, wrap=tk.WORD, bg='#FFFFFF', fg='#000000', font=('Arial', 10))
+        details_text = tk.Text(text_frame, wrap=tk.WORD, font=('Arial', 11))
         details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
@@ -429,16 +426,18 @@ class ComparisonResultsGUI:
         details_text.configure(state=tk.DISABLED)
         
         # Buttons frame
-        buttons_frame = tk.Frame(main_frame, bg='#FFFFFF')
-        buttons_frame.pack(fill=tk.X, pady=(15, 0))
+        buttons_frame = tk.Frame(main_frame)
+        buttons_frame.pack(fill=tk.X, pady=(20, 0))
         
         if category == "modified":
-            tk.Button(buttons_frame, text="Show Differences", 
+            tk.Button(buttons_frame, text="🔍 Show Differences", 
                      command=lambda: [details_window.destroy(), self._launch_diff_viewer(requirement)],
-                     bg='#0078D4', fg='white', font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
+                     font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                     cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
         
         tk.Button(buttons_frame, text="Close", command=details_window.destroy,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10)).pack(side=tk.RIGHT)
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.RIGHT)
     
     def _populate_standard_details(self, text_widget, requirement: Dict, category: str):
         """Populate details for non-modified requirements"""
@@ -570,7 +569,7 @@ class ComparisonResultsGUI:
 
 class DiffViewerWindow:
     """
-    Side-by-side diff viewer window - simplified version
+    Side-by-side diff viewer window - native version
     """
     
     def __init__(self, parent: tk.Widget, req_id: str, old_req: Dict, new_req: Dict, changes: List[Dict]):
@@ -584,7 +583,6 @@ class DiffViewerWindow:
         self.window = tk.Toplevel(parent)
         self.window.title(f"Show Differences - {req_id}")
         self.window.geometry("1200x800")
-        self.window.configure(bg='#FFFFFF')
         self.window.transient(parent)
         
         # Track current field being viewed
@@ -634,7 +632,7 @@ class DiffViewerWindow:
     
     def _create_diff_viewer_ui(self):
         """Create the side-by-side diff viewer UI"""
-        main_frame = tk.Frame(self.window, bg='#FFFFFF', padx=10, pady=10)
+        main_frame = tk.Frame(self.window, padx=15, pady=15)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Header
@@ -649,13 +647,20 @@ class DiffViewerWindow:
         # Controls
         self._create_diff_controls(main_frame)
     
+    def _create_diff_header(self, parent):
+        """Create diff header"""
+        header_frame = tk.Frame(parent)
+        header_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        tk.Label(header_frame, text=f"Requirement Differences: {self.req_id}", 
+                font=('Arial', 16, 'bold')).pack(anchor=tk.W)
+    
     def _create_field_selector(self, parent):
         """Create field selector dropdown"""
-        selector_frame = tk.Frame(parent, bg='#FFFFFF')
-        selector_frame.pack(fill=tk.X, pady=(0, 15))
+        selector_frame = tk.Frame(parent)
+        selector_frame.pack(fill=tk.X, pady=(0, 20))
         
-        tk.Label(selector_frame, text="Field:", font=('Arial', 10, 'bold'), 
-                bg='#FFFFFF', fg='#000000').pack(side=tk.LEFT, padx=(0, 10))
+        tk.Label(selector_frame, text="Field:", font=('Arial', 12, 'bold')).pack(side=tk.LEFT, padx=(0, 15))
         
         # Create field options
         self.field_options = []
@@ -672,35 +677,34 @@ class DiffViewerWindow:
         
         self.field_combo = ttk.Combobox(selector_frame, textvariable=self.field_var,
                                        values=[option[1] for option in self.field_options],
-                                       state='readonly', width=50)
-        self.field_combo.pack(side=tk.LEFT, padx=(0, 10))
+                                       state='readonly', width=50, font=('Arial', 10))
+        self.field_combo.pack(side=tk.LEFT, padx=(0, 15))
         self.field_combo.bind('<<ComboboxSelected>>', self._on_field_change)
         
         # Navigation buttons
         self.prev_btn = tk.Button(selector_frame, text="← Previous", command=self._show_previous_field,
-                                 bg='#F0F0F0', fg='#000000', font=('Arial', 9))
-        self.prev_btn.pack(side=tk.LEFT, padx=(0, 5))
+                                 font=('Arial', 10), relief='raised', bd=2, padx=10, pady=3)
+        self.prev_btn.pack(side=tk.LEFT, padx=(0, 8))
         
         self.next_btn = tk.Button(selector_frame, text="Next →", command=self._show_next_field,
-                                 bg='#F0F0F0', fg='#000000', font=('Arial', 9))
-        self.next_btn.pack(side=tk.LEFT, padx=(0, 10))
+                                 font=('Arial', 10), relief='raised', bd=2, padx=10, pady=3)
+        self.next_btn.pack(side=tk.LEFT, padx=(0, 15))
         
         # Change indicator
-        self.change_indicator = tk.Label(selector_frame, text="", font=('Arial', 9), 
-                                        bg='#FFFFFF', fg='#666666')
+        self.change_indicator = tk.Label(selector_frame, text="", font=('Arial', 10))
         self.change_indicator.pack(side=tk.LEFT)
     
     def _create_diff_panes(self, parent):
         """Create side-by-side diff panes"""
-        panes_frame = tk.Frame(parent, bg='#FFFFFF')
+        panes_frame = tk.Frame(parent)
         panes_frame.pack(fill=tk.BOTH, expand=True)
         
         # Left pane (Original)
-        left_frame = tk.LabelFrame(panes_frame, text="Original", bg='#FFFFFF', fg='#000000')
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        left_frame = tk.LabelFrame(panes_frame, text="Original", font=('Arial', 12, 'bold'))
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
         
-        self.left_text = tk.Text(left_frame, wrap=tk.WORD, font=('Consolas', 10),
-                                bg='#F8F8F8', fg='#000000', state=tk.DISABLED)
+        self.left_text = tk.Text(left_frame, wrap=tk.WORD, font=('Consolas', 11),
+                                state=tk.DISABLED)
         self.left_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         left_scroll = ttk.Scrollbar(left_frame, orient=tk.VERTICAL, command=self.left_text.yview)
@@ -708,11 +712,11 @@ class DiffViewerWindow:
         self.left_text.configure(yscrollcommand=left_scroll.set)
         
         # Right pane (Modified)
-        right_frame = tk.LabelFrame(panes_frame, text="Modified", bg='#FFFFFF', fg='#000000')
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        right_frame = tk.LabelFrame(panes_frame, text="Modified", font=('Arial', 12, 'bold'))
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(8, 0))
         
-        self.right_text = tk.Text(right_frame, wrap=tk.WORD, font=('Consolas', 10),
-                                 bg='#F8F8F8', fg='#000000', state=tk.DISABLED)
+        self.right_text = tk.Text(right_frame, wrap=tk.WORD, font=('Consolas', 11),
+                                 state=tk.DISABLED)
         self.right_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         right_scroll = ttk.Scrollbar(right_frame, orient=tk.VERTICAL, command=self.right_text.yview)
@@ -736,23 +740,27 @@ class DiffViewerWindow:
     
     def _create_diff_controls(self, parent):
         """Create diff viewer controls"""
-        controls_frame = tk.Frame(parent, bg='#FFFFFF')
-        controls_frame.pack(fill=tk.X, pady=(15, 0))
+        controls_frame = tk.Frame(parent)
+        controls_frame.pack(fill=tk.X, pady=(20, 0))
         
         # Export diff button
-        tk.Button(controls_frame, text="Export Diff Report", command=self._export_diff_report,
-                 bg='#0078D4', fg='white', font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
+        tk.Button(controls_frame, text="📄 Export Diff Report", command=self._export_diff_report,
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
         
         # Copy buttons
-        tk.Button(controls_frame, text="Copy Original", command=self._copy_original,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
+        tk.Button(controls_frame, text="📋 Copy Original", command=self._copy_original,
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
         
-        tk.Button(controls_frame, text="Copy Modified", command=self._copy_modified,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 20))
+        tk.Button(controls_frame, text="📋 Copy Modified", command=self._copy_modified,
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 25))
         
         # Close button
-        tk.Button(controls_frame, text="Close", command=self.window.destroy,
-                 bg='#F0F0F0', fg='#000000', font=('Arial', 10)).pack(side=tk.RIGHT)
+        tk.Button(controls_frame, text="✖️ Close", command=self.window.destroy,
+                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                 cursor='hand2').pack(side=tk.RIGHT)
     
     def _show_first_changed_field(self):
         """Show the first field that has changes"""
@@ -781,9 +789,9 @@ class DiffViewerWindow:
         
         # Update change indicator
         if field_info['has_changes']:
-            self.change_indicator.configure(text="✓ Modified", fg="#FF8C00")
+            self.change_indicator.configure(text="✓ Modified", fg="darkorange")
         else:
-            self.change_indicator.configure(text="= Unchanged", fg="#107C10")
+            self.change_indicator.configure(text="= Unchanged", fg="darkgreen")
         
         # Show field content
         self._display_field_content(field_info)
