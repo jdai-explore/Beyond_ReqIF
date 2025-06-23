@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Minimal VisualizerGUI - No Theme Dependencies
-Pure functionality with basic Tkinter styling.
-Fixed CSV export functionality.
+VisualizerGUI - Simplified Version
+Removed all Apple theme dependencies, basic styling only
 """
 
 import tkinter as tk
@@ -10,12 +9,11 @@ from tkinter import ttk, messagebox, filedialog
 import csv
 import os
 from typing import List, Dict, Any, Optional
-from theme_manager import apply_theme, get_color, get_semantic_color, create_title_label, create_body_label, AppleColors, Spacing
 
 
 class VisualizerGUI:
     """
-    Minimal Requirements Visualizer GUI - No theming
+    Simplified Requirements Visualizer GUI
     """
     
     def __init__(self, parent: tk.Widget, requirements: List[Dict[str, Any]], filename: str):
@@ -28,10 +26,7 @@ class VisualizerGUI:
         self.window = tk.Toplevel(parent)
         self.window.title(f"Requirements Analysis - {os.path.basename(filename)}")
         self.window.geometry("1200x800")
-        
-        # Apply Apple Design Guidelines
-        apply_theme(widget=self.window)
-        self.window.configure(bg=AppleColors.WINDOW_BACKGROUND)
+        self.window.configure(bg='#FFFFFF')
         
         # Ensure window independence
         self.window.transient(parent)
@@ -57,18 +52,10 @@ class VisualizerGUI:
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
     
     def setup_gui(self):
-        """Setup minimal GUI"""
-        # Configure main window grid
-        self.window.columnconfigure(0, weight=1)
-        self.window.rowconfigure(0, weight=1)
-        
+        """Setup simplified GUI"""
         # Create main container
-        self.main_frame = ttk.Frame(self.window, padding="15")
-        self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        # Configure main frame grid
-        self.main_frame.columnconfigure(0, weight=1)
-        self.main_frame.rowconfigure(2, weight=1)
+        self.main_frame = tk.Frame(self.window, bg='#FFFFFF', padx=15, pady=15)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create sections
         self._create_header_section()
@@ -78,89 +65,88 @@ class VisualizerGUI:
     
     def _create_header_section(self):
         """Create header with file info and search"""
-        header_frame = ttk.Frame(self.main_frame)
-        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
-        header_frame.columnconfigure(1, weight=1)
+        header_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
+        header_frame.pack(fill=tk.X, pady=(0, 15))
         
         # File info
-        info_frame = ttk.Frame(header_frame)
-        info_frame.grid(row=0, column=0, sticky=(tk.W))
+        info_frame = tk.Frame(header_frame, bg='#FFFFFF')
+        info_frame.pack(side=tk.LEFT)
         
-        title_label = create_title_label(info_frame, "Requirements Analysis", "title_2")
-        title_label.grid(row=0, column=0, sticky=(tk.W))
+        title_label = tk.Label(info_frame, text="Requirements Analysis", 
+                              font=('Arial', 16, 'bold'), bg='#FFFFFF', fg='#000000')
+        title_label.pack(anchor=tk.W)
         
-        file_label = ttk.Label(
-            info_frame,
-            text=f"File: {os.path.basename(self.filename)}"
-        )
-        file_label.grid(row=1, column=0, sticky=(tk.W), pady=(2, 0))
+        file_label = tk.Label(info_frame, text=f"File: {os.path.basename(self.filename)}",
+                             font=('Arial', 10), bg='#FFFFFF', fg='#666666')
+        file_label.pack(anchor=tk.W, pady=(2, 0))
         
-        count_label = ttk.Label(
-            info_frame,
-            text=f"Total Requirements: {len(self.requirements)}"
-        )
-        count_label.grid(row=2, column=0, sticky=(tk.W), pady=(2, 0))
+        count_label = tk.Label(info_frame, text=f"Total Requirements: {len(self.requirements)}",
+                              font=('Arial', 10), bg='#FFFFFF', fg='#666666')
+        count_label.pack(anchor=tk.W, pady=(2, 0))
         
         # Search section
-        search_frame = ttk.Frame(header_frame)
-        search_frame.grid(row=0, column=1, sticky=(tk.E), padx=(20, 0))
+        search_frame = tk.Frame(header_frame, bg='#FFFFFF')
+        search_frame.pack(side=tk.RIGHT, padx=(20, 0))
         
-        ttk.Label(search_frame, text="Search:", font=("Helvetica", 10, "bold")).grid(
-            row=0, column=0, sticky=(tk.W), padx=(0, 8))
+        tk.Label(search_frame, text="Search:", font=('Arial', 10, 'bold'), 
+                bg='#FFFFFF', fg='#000000').pack(side=tk.LEFT, padx=(0, 8))
         
-        search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=30)
-        search_entry.grid(row=0, column=1, sticky=(tk.W))
+        search_entry = tk.Entry(search_frame, textvariable=self.search_var, width=30, font=('Arial', 10))
+        search_entry.pack(side=tk.LEFT)
         
-        clear_btn = ttk.Button(search_frame, text="Clear", width=8, command=self._clear_search)
-        clear_btn.grid(row=0, column=2, padx=(8, 0))
+        clear_btn = tk.Button(search_frame, text="Clear", width=8, command=self._clear_search,
+                             bg='#F0F0F0', fg='#000000', font=('Arial', 10),
+                             relief='solid', borderwidth=1, padx=10, pady=2,
+                             activebackground='#E0E0E0', activeforeground='#000000')
+        clear_btn.pack(side=tk.LEFT, padx=(8, 0))
     
     def _create_control_section(self):
         """Create control buttons"""
-        control_frame = ttk.Frame(self.main_frame)
-        control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
-        control_frame.columnconfigure(3, weight=1)
+        control_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
+        control_frame.pack(fill=tk.X, pady=(0, 15))
         
         # Buttons
-        ttk.Button(control_frame, text="Statistics", command=self._show_statistics).grid(
-            row=0, column=0, padx=(0, 10))
+        tk.Button(control_frame, text="Statistics", command=self._show_statistics,
+                 bg='#0078D4', fg='white', font=('Arial', 10),
+                 relief='flat', borderwidth=0, padx=15, pady=5,
+                 activebackground='#005A9E', activeforeground='white').pack(side=tk.LEFT, padx=(0, 10))
         
-        ttk.Button(control_frame, text="Export CSV", command=self._export_csv).grid(
-            row=0, column=1, padx=(0, 10))
+        tk.Button(control_frame, text="Export CSV", command=self._export_csv,
+                 bg='#0078D4', fg='white', font=('Arial', 10),
+                 relief='flat', borderwidth=0, padx=15, pady=5,
+                 activebackground='#005A9E', activeforeground='white').pack(side=tk.LEFT, padx=(0, 10))
         
-        ttk.Button(control_frame, text="Refresh", command=self._refresh_view).grid(
-            row=0, column=2, padx=(0, 20))
+        tk.Button(control_frame, text="Refresh", command=self._refresh_view,
+                 bg='#F0F0F0', fg='#000000', font=('Arial', 10),
+                 relief='solid', borderwidth=1, padx=15, pady=5,
+                 activebackground='#E0E0E0', activeforeground='#000000').pack(side=tk.LEFT, padx=(0, 20))
         
         # Filter info
-        self.filter_info_label = ttk.Label(
-            control_frame,
-            text=f"Showing: {len(self.filtered_requirements)} of {len(self.requirements)} requirements"
-        )
-        self.filter_info_label.grid(row=0, column=4, sticky=(tk.E))
+        self.filter_info_label = tk.Label(control_frame,
+                                         text=f"Showing: {len(self.filtered_requirements)} of {len(self.requirements)} requirements",
+                                         font=('Arial', 10), bg='#FFFFFF', fg='#666666')
+        self.filter_info_label.pack(side=tk.RIGHT)
     
     def _create_content_section(self):
         """Create main content area with treeview"""
-        content_frame = ttk.Frame(self.main_frame)
-        content_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        content_frame.columnconfigure(0, weight=1)
-        content_frame.rowconfigure(0, weight=1)
+        content_frame = tk.Frame(self.main_frame, bg='#FFFFFF')
+        content_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create treeview with scrollbars
-        tree_frame = ttk.Frame(content_frame)
-        tree_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        tree_frame.columnconfigure(0, weight=1)
-        tree_frame.rowconfigure(0, weight=1)
+        tree_frame = tk.Frame(content_frame, bg='#FFFFFF')
+        tree_frame.pack(fill=tk.BOTH, expand=True)
         
         # Treeview
         self.tree = ttk.Treeview(tree_frame, selectmode='extended')
-        self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.configure(yscrollcommand=v_scrollbar.set)
         
         h_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.tree.configure(xscrollcommand=h_scrollbar.set)
         
         # Bind events
@@ -169,16 +155,17 @@ class VisualizerGUI:
     
     def _create_status_section(self):
         """Create status bar"""
-        status_frame = ttk.Frame(self.main_frame)
-        status_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(15, 0))
-        status_frame.columnconfigure(1, weight=1)
+        status_frame = tk.Frame(self.main_frame, bg='#F0F0F0', relief='sunken', bd=1)
+        status_frame.pack(fill=tk.X, pady=(15, 0))
         
-        self.status_label = ttk.Label(status_frame, text="Ready")
-        self.status_label.grid(row=0, column=0, sticky=(tk.W))
+        self.status_label = tk.Label(status_frame, text="Ready", font=('Arial', 10), 
+                                    bg='#F0F0F0', fg='#000000')
+        self.status_label.pack(side=tk.LEFT, padx=10, pady=5)
         
         # Selection info
-        self.selection_label = ttk.Label(status_frame, text="")
-        self.selection_label.grid(row=0, column=2, sticky=(tk.E))
+        self.selection_label = tk.Label(status_frame, text="", font=('Arial', 10), 
+                                       bg='#F0F0F0', fg='#666666')
+        self.selection_label.pack(side=tk.RIGHT, padx=10, pady=5)
     
     def populate_data(self):
         """Populate treeview with requirements data"""
@@ -381,21 +368,17 @@ class VisualizerGUI:
         stats_window = tk.Toplevel(self.window)
         stats_window.title("Requirements Statistics")
         stats_window.geometry("450x400")
+        stats_window.configure(bg='#FFFFFF')
         stats_window.transient(self.window)
         
-        # Configure grid
-        stats_window.columnconfigure(0, weight=1)
-        stats_window.rowconfigure(0, weight=1)
-        
-        main_frame = ttk.Frame(stats_window, padding="20")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame = tk.Frame(stats_window, bg='#FFFFFF', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title
-        ttk.Label(main_frame, text="Requirements Statistics", 
-                 font=("Helvetica", 14, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 15))
+        tk.Label(main_frame, text="Requirements Statistics", 
+                font=('Arial', 14, 'bold'), bg='#FFFFFF', fg='#000000').pack(pady=(0, 15))
         
         # Statistics
-        row = 1
         stats_data = [
             ("Total Requirements", self.stats['total_count']),
             ("With Titles", f"{self.stats['with_titles']} ({self.stats['with_titles']/self.stats['total_count']*100:.1f}%)"),
@@ -406,16 +389,20 @@ class VisualizerGUI:
             ("Unique Types", len(self.stats['unique_types']))
         ]
         
-        for label, value in stats_data:
-            ttk.Label(main_frame, text=f"{label}:", font=("Helvetica", 10, "bold")).grid(
-                row=row, column=0, sticky=(tk.W), pady=3)
-            ttk.Label(main_frame, text=str(value)).grid(
-                row=row, column=1, sticky=(tk.W), padx=(20, 0), pady=3)
-            row += 1
+        for i, (label, value) in enumerate(stats_data):
+            frame = tk.Frame(main_frame, bg='#FFFFFF')
+            frame.pack(fill=tk.X, pady=3)
+            
+            tk.Label(frame, text=f"{label}:", font=('Arial', 10, 'bold'), 
+                    bg='#FFFFFF', fg='#000000').pack(side=tk.LEFT)
+            tk.Label(frame, text=str(value), font=('Arial', 10), 
+                    bg='#FFFFFF', fg='#0078D4').pack(side=tk.RIGHT)
         
         # Close button
-        ttk.Button(main_frame, text="Close", command=stats_window.destroy).grid(
-            row=row+1, column=0, columnspan=2, pady=(15, 0))
+        tk.Button(main_frame, text="Close", command=stats_window.destroy,
+                 bg='#F0F0F0', fg='#000000', font=('Arial', 10),
+                 relief='solid', borderwidth=1, padx=15, pady=5,
+                 activebackground='#E0E0E0', activeforeground='#000000').pack(pady=(15, 0))
     
     def _export_csv(self):
         """Export filtered requirements to CSV"""
@@ -502,32 +489,25 @@ class VisualizerGUI:
             details_window = tk.Toplevel(self.window)
             details_window.title(f"Requirement Details - {req_text}")
             details_window.geometry("600x500")
+            details_window.configure(bg='#FFFFFF')
             details_window.transient(self.window)
             
-            # Configure grid
-            details_window.columnconfigure(0, weight=1)
-            details_window.rowconfigure(0, weight=1)
-            
-            main_frame = ttk.Frame(details_window, padding="20")
-            main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-            main_frame.columnconfigure(0, weight=1)
-            main_frame.rowconfigure(1, weight=1)
+            main_frame = tk.Frame(details_window, bg='#FFFFFF', padx=20, pady=20)
+            main_frame.pack(fill=tk.BOTH, expand=True)
             
             # Title
-            ttk.Label(main_frame, text=f"Requirement: {req_text}", 
-                     font=("Helvetica", 14, "bold")).grid(row=0, column=0, sticky=(tk.W), pady=(0, 15))
+            tk.Label(main_frame, text=f"Requirement: {req_text}", 
+                    font=('Arial', 14, 'bold'), bg='#FFFFFF', fg='#000000').pack(anchor=tk.W, pady=(0, 15))
             
             # Details in scrollable text
-            text_frame = ttk.Frame(main_frame)
-            text_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-            text_frame.columnconfigure(0, weight=1)
-            text_frame.rowconfigure(0, weight=1)
+            text_frame = tk.Frame(main_frame, bg='#FFFFFF')
+            text_frame.pack(fill=tk.BOTH, expand=True)
             
-            details_text = tk.Text(text_frame, wrap=tk.WORD)
-            details_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+            details_text = tk.Text(text_frame, wrap=tk.WORD, bg='#F8F8F8', fg='#000000', font=('Arial', 10))
+            details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
             scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
-            scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             details_text.configure(yscrollcommand=scrollbar.set)
             
             # Populate details
@@ -548,8 +528,10 @@ class VisualizerGUI:
             details_text.configure(state=tk.DISABLED)
             
             # Close button
-            ttk.Button(main_frame, text="Close", command=details_window.destroy).grid(
-                row=2, column=0, pady=(15, 0))
+            tk.Button(main_frame, text="Close", command=details_window.destroy,
+                     bg='#F0F0F0', fg='#000000', font=('Arial', 10),
+                     relief='solid', borderwidth=1, padx=15, pady=5,
+                     activebackground='#E0E0E0', activeforeground='#000000').pack(pady=(15, 0))
             
         except Exception as e:
             messagebox.showerror("Details Error", f"Failed to show requirement details:\n{str(e)}")
