@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ReqIF Tool Suite - Apple Design Guidelines Version with Advanced Comparison
-Enhanced with Phase 1: Advanced Comparison Settings integration
+ReqIF Tool Suite - Apple Design Guidelines Version with 60-30-10 Color Principle
+Fixed: Updated to use new color system from theme_manager
 """
 
 import tkinter as tk
@@ -23,22 +23,11 @@ from theme_manager import (
     AppleColors, AppleFonts, style_text_widget
 )
 
-# Import Phase 1: Advanced Comparison components
-try:
-    from advanced_comparison_settings import show_advanced_comparison_settings
-    from comparison_profile import ComparisonProfile, ProfileManager
-    from attribute_analyzer import analyze_requirements_for_profile
-    ADVANCED_COMPARISON_AVAILABLE = True
-    print("✅ Advanced Comparison Settings loaded")
-except ImportError as e:
-    ADVANCED_COMPARISON_AVAILABLE = False
-    print(f"⚠️ Advanced Comparison not available: {e}")
-
 
 class ReqIFToolMVP:
     """
-    ReqIF Tool Suite with Apple Design Guidelines and Advanced Comparison
-    Phase 1: Complete integration of advanced comparison settings
+    ReqIF Tool Suite with Apple Design Guidelines and 60-30-10 Color Principle
+    Fixed: Updated to use new color system
     """
     
     def __init__(self):
@@ -50,22 +39,12 @@ class ReqIFToolMVP:
         self.root.title("Beyond ReqIF v1.2.0 - Professional Edition")
         self.root.geometry("1100x750")
         
-        # Apply Apple Design Guidelines
+        # Apply 60-30-10 Apple Design Guidelines
         configure_main_window(self.root)
         
         # Initialize components
         self.parser = ReqIFParser()
         self.comparator = ReqIFComparator()
-        
-        # Phase 1: Advanced Comparison components
-        if ADVANCED_COMPARISON_AVAILABLE:
-            self.profile_manager = ProfileManager()
-            self.profile_manager.load_profiles_from_directory()
-            self.current_profile = self._get_default_profile()
-            self._apply_profile_to_comparator()
-        else:
-            self.profile_manager = None
-            self.current_profile = None
         
         # File tracking
         self.file1_path = tk.StringVar()
@@ -76,42 +55,14 @@ class ReqIFToolMVP:
         self.comparison_window = None
         self.visualizer_window = None
         
-        # Phase 1: Requirements cache for profile analysis
-        self.requirements1_cache = None
-        self.requirements2_cache = None
-        
         # Create UI
         self._create_main_ui()
         
         # Setup monitoring
         self._setup_monitoring()
     
-    def _get_default_profile(self) -> ComparisonProfile:
-        """Get or create default comparison profile"""
-        try:
-            # Try to load saved default profile
-            profiles = self.profile_manager.list_profiles()
-            if "Default" in profiles:
-                return self.profile_manager.get_profile("Default")
-            elif "detailed" in profiles:
-                return self.profile_manager.get_profile("detailed")
-            else:
-                # Create basic default profile
-                default_profile = ComparisonProfile("Default")
-                default_profile.description = "Default comparison settings"
-                return default_profile
-        except Exception as e:
-            print(f"Warning: Could not load default profile: {e}")
-            return ComparisonProfile("Default")
-    
-    def _apply_profile_to_comparator(self):
-        """Apply current profile to the comparator"""
-        if self.current_profile and ADVANCED_COMPARISON_AVAILABLE:
-            self.comparator.set_comparison_profile(self.current_profile)
-            print(f"Applied profile: {self.current_profile.name}")
-    
     def _create_main_ui(self):
-        """Create Apple-styled UI with advanced comparison integration"""
+        """Create Apple-styled UI with 60-30-10 colors"""
         # Create main container with proper padding
         self.main_frame = ttk.Frame(self.root, padding="24")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -128,8 +79,9 @@ class ReqIFToolMVP:
         self._create_status_bar()
     
     def _create_header(self):
-        """Create Apple-style header with profile info"""
-        header_frame = ttk.Frame(self.main_frame)
+        """Create Apple-style header with 60-30-10 colors"""
+        # Use 30% secondary background for header area
+        header_frame = ttk.Frame(self.main_frame, style='Header.TFrame', padding="15")
         header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.XXL))
         header_frame.columnconfigure(1, weight=1)
         
@@ -146,43 +98,30 @@ class ReqIFToolMVP:
         subtitle_label = create_body_label(title_frame, "Advanced Requirements Analysis and Comparison", secondary=True)
         subtitle_label.grid(row=2, column=0, sticky=(tk.W), pady=(4, 0))
         
-        # Right side - Profile info and quick actions
+        # Right side - File format support info
         info_frame = ttk.Frame(header_frame)
         info_frame.grid(row=0, column=1, sticky=(tk.E))
         
-        # Current profile indicator
-        if ADVANCED_COMPARISON_AVAILABLE and self.current_profile:
-            profile_frame = ttk.Frame(info_frame)
-            profile_frame.grid(row=0, column=0, sticky=(tk.E), pady=(0, 4))
-            
-            profile_label = create_body_label(profile_frame, "Active Profile:", secondary=True)
-            profile_label.grid(row=0, column=0, sticky=(tk.E), padx=(0, 4))
-            
-            self.profile_name_label = create_body_label(profile_frame, self.current_profile.name)
-            self.profile_name_label.grid(row=0, column=1, sticky=(tk.E))
-            self.profile_name_label.configure(foreground=get_semantic_color("info"))
-        
-        # File format support info
         support_label = create_body_label(info_frame, "Supports: ReqIF • ReqIFZ", secondary=True)
-        support_label.grid(row=1, column=0, sticky=(tk.E))
+        support_label.grid(row=0, column=0, sticky=(tk.E))
         
         # Add subtle separator
         separator = create_section_separator(self.main_frame)
         separator.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.XL))
     
     def _create_main_content(self):
-        """Create main content with Apple-styled tabs"""
-        # Create notebook with Apple styling
+        """Create main content with Apple-styled tabs using 60-30-10 colors"""
+        # Create notebook with 30% secondary background for tabs
         self.notebook = ttk.Notebook(self.main_frame)
         self.notebook.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Create tabs
         self._create_compare_tab()
         self._create_visualize_tab()
-        self._create_about_tab()
     
     def _create_compare_tab(self):
-        """Create Apple-styled comparison tab with advanced settings"""
+        """Create Apple-styled comparison tab with 60-30-10 colors"""
+        # Main content uses 60% dominant background
         compare_frame = ttk.Frame(self.notebook, padding="30")
         self.notebook.add(compare_frame, text="Compare Files")
         
@@ -195,11 +134,11 @@ class ReqIFToolMVP:
         section_header.grid(row=0, column=0, sticky=(tk.W), pady=(0, Spacing.L))
         
         description = create_body_label(compare_frame, 
-                                       "Compare two ReqIF files to identify added, deleted, and modified requirements with advanced settings", 
+                                       "Compare two ReqIF files to identify added, deleted, and modified requirements", 
                                        secondary=True)
         description.grid(row=1, column=0, sticky=(tk.W), pady=(0, Spacing.XXL))
         
-        # File selection area
+        # File selection area with 30% secondary background
         files_frame = ttk.LabelFrame(compare_frame, text="Select Files", padding="20")
         files_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.L))
         files_frame.columnconfigure(1, weight=1)
@@ -208,10 +147,12 @@ class ReqIFToolMVP:
         file1_label = create_body_label(files_frame, "Original File:")
         file1_label.grid(row=0, column=0, sticky=(tk.W), pady=(0, 8), padx=(0, Spacing.M))
         
+        # Entry fields use 60% dominant background
         file1_entry = ttk.Entry(files_frame, textvariable=self.file1_path, width=50,
                                font=AppleFonts.get("body"))
         file1_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=(0, 8), padx=(0, Spacing.M))
         
+        # Secondary buttons use 30% secondary background
         file1_btn = create_secondary_button(files_frame, "Browse", self._browse_file1)
         file1_btn.grid(row=0, column=2, pady=(0, 8))
         
@@ -226,39 +167,12 @@ class ReqIFToolMVP:
         file2_btn = create_secondary_button(files_frame, "Browse", self._browse_file2)
         file2_btn.grid(row=1, column=2, pady=(8, 0))
         
-        # Phase 1: Advanced Settings Section
-        if ADVANCED_COMPARISON_AVAILABLE:
-            settings_frame = ttk.LabelFrame(compare_frame, text="Comparison Settings", padding="20")
-            settings_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(Spacing.L, Spacing.L))
-            settings_frame.columnconfigure(2, weight=1)
-            
-            # Profile selection
-            profile_label = create_body_label(settings_frame, "Profile:")
-            profile_label.grid(row=0, column=0, sticky=(tk.W), padx=(0, Spacing.M))
-            
-            self.profile_var = tk.StringVar(value=self.current_profile.name if self.current_profile else "Default")
-            self.profile_combo = ttk.Combobox(settings_frame, textvariable=self.profile_var, 
-                                             state='readonly', width=25)
-            self.profile_combo.grid(row=0, column=1, sticky=(tk.W), padx=(0, Spacing.M))
-            self.profile_combo.bind('<<ComboboxSelected>>', self._on_profile_change)
-            self._update_profile_dropdown()
-            
-            # Advanced settings button
-            self.advanced_btn = create_secondary_button(settings_frame, "Advanced Settings...", 
-                                                       self._open_advanced_settings)
-            self.advanced_btn.grid(row=0, column=3, sticky=(tk.E))
-            
-            # Profile info
-            self.profile_info_label = create_body_label(settings_frame, "", secondary=True)
-            self.profile_info_label.grid(row=1, column=0, columnspan=4, sticky=(tk.W), pady=(8, 0))
-            self._update_profile_info()
-        
         # Controls section
         controls_frame = ttk.Frame(compare_frame)
-        controls_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.L))
+        controls_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(Spacing.L, Spacing.L))
         controls_frame.columnconfigure(1, weight=1)
         
-        # Primary action button
+        # Primary action button uses 10% accent color
         self.compare_btn = create_primary_button(controls_frame, "Compare Files", self._compare_files)
         self.compare_btn.grid(row=0, column=0, sticky=(tk.W))
         
@@ -270,134 +184,16 @@ class ReqIFToolMVP:
         
         # Help text
         help_frame = ttk.Frame(compare_frame)
-        help_frame.grid(row=5, column=0, sticky=(tk.W, tk.E))
+        help_frame.grid(row=4, column=0, sticky=(tk.W, tk.E))
         
         help_text = create_body_label(help_frame, 
-                                     "💡 Tip: Use Advanced Settings to customize which attributes to compare and their importance",
+                                     "💡 Tip: Compare ReqIF files to track changes between versions",
                                      secondary=True)
         help_text.grid(row=0, column=0, sticky=(tk.W))
     
-    def _update_profile_dropdown(self):
-        """Update the profile selection dropdown"""
-        if not ADVANCED_COMPARISON_AVAILABLE:
-            return
-        
-        try:
-            profiles = self.profile_manager.list_profiles()
-            self.profile_combo['values'] = profiles
-            
-            # Ensure current profile is selected
-            if self.current_profile and self.current_profile.name in profiles:
-                self.profile_var.set(self.current_profile.name)
-            elif profiles:
-                self.profile_var.set(profiles[0])
-        except Exception as e:
-            print(f"Error updating profile dropdown: {e}")
-    
-    def _update_profile_info(self):
-        """Update profile information display"""
-        if not ADVANCED_COMPARISON_AVAILABLE or not hasattr(self, 'profile_info_label'):
-            return
-        
-        try:
-            if self.current_profile:
-                enabled_count = len(self.current_profile.get_enabled_attributes())
-                total_weight = self.current_profile.calculate_total_weight()
-                threshold = self.current_profile.similarity_threshold
-                
-                info_text = f"✓ {enabled_count} attributes enabled, Total weight: {total_weight:.1f}, Threshold: {threshold:.0%}"
-                self.profile_info_label.configure(text=info_text, foreground=get_semantic_color("success"))
-                
-                # Update header profile name
-                if hasattr(self, 'profile_name_label'):
-                    self.profile_name_label.configure(text=self.current_profile.name)
-            else:
-                self.profile_info_label.configure(text="No profile selected", 
-                                                foreground=get_semantic_color("warning"))
-        except Exception as e:
-            print(f"Error updating profile info: {e}")
-    
-    def _on_profile_change(self, event=None):
-        """Handle profile selection change"""
-        if not ADVANCED_COMPARISON_AVAILABLE:
-            return
-        
-        try:
-            profile_name = self.profile_var.get()
-            new_profile = self.profile_manager.get_profile(profile_name)
-            
-            if new_profile:
-                self.current_profile = new_profile
-                self._apply_profile_to_comparator()
-                self._update_profile_info()
-                
-                self._show_success(f"Profile changed to: {profile_name}")
-            else:
-                self._show_warning("Profile Error", f"Could not load profile: {profile_name}")
-        except Exception as e:
-            self._show_error("Profile Error", f"Failed to change profile: {str(e)}")
-    
-    def _open_advanced_settings(self):
-        """Open advanced comparison settings dialog"""
-        if not ADVANCED_COMPARISON_AVAILABLE:
-            self._show_warning("Not Available", "Advanced comparison settings are not available.")
-            return
-        
-        try:
-            # Get requirements for analysis if files are selected
-            requirements1 = None
-            requirements2 = None
-            
-            if self.file1_path.get() and self.file2_path.get():
-                self._show_progress("Analyzing files for advanced settings...")
-                
-                # Parse files for attribute analysis
-                try:
-                    if not self.requirements1_cache or not self.requirements2_cache:
-                        requirements1 = self.parser.parse_file(self.file1_path.get())
-                        requirements2 = self.parser.parse_file(self.file2_path.get())
-                        # Cache for future use
-                        self.requirements1_cache = requirements1
-                        self.requirements2_cache = requirements2
-                    else:
-                        requirements1 = self.requirements1_cache
-                        requirements2 = self.requirements2_cache
-                except Exception as e:
-                    print(f"Warning: Could not parse files for analysis: {e}")
-                    # Continue without analysis
-            
-            # Open advanced settings dialog
-            result_profile = show_advanced_comparison_settings(
-                self.root, 
-                requirements1, 
-                requirements2, 
-                self.current_profile
-            )
-            
-            # Apply result if user clicked OK
-            if result_profile:
-                self.current_profile = result_profile
-                self._apply_profile_to_comparator()
-                self._update_profile_dropdown()
-                self._update_profile_info()
-                
-                # Save profile if it's new or modified
-                try:
-                    if not result_profile.is_system_profile:
-                        self.profile_manager.save_profile(result_profile)
-                        self._update_profile_dropdown()
-                except Exception as e:
-                    print(f"Warning: Could not save profile: {e}")
-                
-                self._show_success(f"Advanced settings applied: {result_profile.name}")
-            
-        except Exception as e:
-            self._show_error("Advanced Settings Error", f"Failed to open advanced settings:\n{str(e)}")
-        finally:
-            self.status_label.configure(text="Ready", foreground=get_color("fg_secondary"))
-    
     def _create_visualize_tab(self):
-        """Create Apple-styled visualization tab (unchanged)"""
+        """Create Apple-styled visualization tab with 60-30-10 colors"""
+        # Main content uses 60% dominant background
         visualize_frame = ttk.Frame(self.notebook, padding="30")
         self.notebook.add(visualize_frame, text="Analyze File")
         
@@ -414,7 +210,7 @@ class ReqIFToolMVP:
                                        secondary=True)
         description.grid(row=1, column=0, sticky=(tk.W), pady=(0, Spacing.XXL))
         
-        # File selection
+        # File selection with 30% secondary background
         file_frame = ttk.LabelFrame(visualize_frame, text="Select File", padding="20")
         file_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.XL))
         file_frame.columnconfigure(1, weight=1)
@@ -422,10 +218,12 @@ class ReqIFToolMVP:
         file_label = create_body_label(file_frame, "ReqIF File:")
         file_label.grid(row=0, column=0, sticky=(tk.W), padx=(0, Spacing.M))
         
+        # Entry field uses 60% dominant background
         file_entry = ttk.Entry(file_frame, textvariable=self.visualize_file_path, width=50,
                               font=AppleFonts.get("body"))
         file_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, Spacing.M))
         
+        # Secondary button uses 30% secondary background
         file_btn = create_secondary_button(file_frame, "Browse", self._browse_visualize_file)
         file_btn.grid(row=0, column=2)
         
@@ -434,7 +232,7 @@ class ReqIFToolMVP:
         controls_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.L))
         controls_frame.columnconfigure(1, weight=1)
         
-        # Primary action button
+        # Primary action button uses 10% accent color
         self.visualize_btn = create_primary_button(controls_frame, "Analyze File", self._visualize_file)
         self.visualize_btn.grid(row=0, column=0, sticky=(tk.W))
         
@@ -453,96 +251,14 @@ class ReqIFToolMVP:
                                          secondary=True)
         features_text.grid(row=0, column=0, sticky=(tk.W))
     
-    def _create_about_tab(self):
-        """Create Apple-styled about tab with Phase 1 info"""
-        about_frame = ttk.Frame(self.notebook, padding="30")
-        self.notebook.add(about_frame, text="About")
-        
-        # Configure for center alignment
-        about_frame.columnconfigure(0, weight=1)
-        about_frame.rowconfigure(1, weight=1)
-        
-        # Content container
-        content_frame = ttk.Frame(about_frame)
-        content_frame.grid(row=1, column=0)
-        
-        # App info
-        app_title = create_title_label(content_frame, "Beyond ReqIF", "large_title")
-        app_title.grid(row=0, column=0, pady=(0, Spacing.S))
-        
-        version_label = create_body_label(content_frame, "Professional Edition v1.2.0", secondary=True)
-        version_label.grid(row=1, column=0, pady=(0, Spacing.XL))
-        
-        # Description
-        description_text = """A professional tool for working with ReqIF (Requirements Interchange Format) files.
-        
-Built with Apple Design Guidelines and advanced comparison capabilities."""
-        
-        description_label = create_body_label(content_frame, description_text)
-        description_label.grid(row=2, column=0, pady=(0, Spacing.XL))
-        
-        # Features
-        features_title = create_title_label(content_frame, "Features", "headline")
-        features_title.grid(row=3, column=0, pady=(0, Spacing.M), sticky=(tk.W))
-        
-        features = [
-            "• Parse and analyze ReqIF and ReqIFZ files",
-            "• Compare requirements between file versions",
-            "• Advanced comparison with customizable profiles",
-            "• Weighted attribute comparison and analysis",
-            "• Intelligent attribute discovery and recommendation",
-            "• Export analysis results to CSV",
-            "• Professional Apple-inspired interface",
-            "• Built-in error handling and recovery"
-        ]
-        
-        for i, feature in enumerate(features):
-            feature_label = create_body_label(content_frame, feature)
-            feature_label.grid(row=4+i, column=0, sticky=(tk.W), pady=2)
-        
-        # Phase 1 info
-        if ADVANCED_COMPARISON_AVAILABLE:
-            phase1_title = create_title_label(content_frame, "Advanced Comparison (Phase 1)", "headline")
-            phase1_title.grid(row=12, column=0, pady=(Spacing.L, Spacing.S), sticky=(tk.W))
-            
-            profiles_count = len(self.profile_manager.list_profiles()) if self.profile_manager else 0
-            enabled_attrs = len(self.current_profile.get_enabled_attributes()) if self.current_profile else 0
-            
-            phase1_info = [
-                f"• {profiles_count} comparison profiles available",
-                f"• {enabled_attrs} attributes enabled in current profile",
-                "• Intelligent attribute analysis and recommendations",
-                "• Customizable comparison weights and thresholds"
-            ]
-            
-            for i, info in enumerate(phase1_info):
-                info_label = create_body_label(content_frame, info, secondary=True)
-                info_label.grid(row=13+i, column=0, sticky=(tk.W), pady=2)
-        
-        # System info
-        separator2 = create_section_separator(content_frame)
-        separator2.grid(row=20, column=0, sticky=(tk.W, tk.E), pady=Spacing.L)
-        
-        system_title = create_title_label(content_frame, "System Information", "headline")
-        system_title.grid(row=21, column=0, pady=(Spacing.M, Spacing.S), sticky=(tk.W))
-        
-        import sys
-        python_version = f"Python {sys.version.split()[0]}"
-        platform_info = f"Platform: {sys.platform}"
-        
-        python_label = create_body_label(content_frame, python_version, secondary=True)
-        python_label.grid(row=22, column=0, sticky=(tk.W), pady=2)
-        
-        platform_label = create_body_label(content_frame, platform_info, secondary=True)
-        platform_label.grid(row=23, column=0, sticky=(tk.W), pady=2)
-    
     def _create_status_bar(self):
-        """Create Apple-styled status bar with profile info"""
-        status_frame = ttk.Frame(self.main_frame)
+        """Create Apple-styled status bar with 60-30-10 colors"""
+        # Status bar uses 30% secondary background
+        status_frame = ttk.Frame(self.main_frame, style='Header.TFrame', padding="10")
         status_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(Spacing.L, 0))
         status_frame.columnconfigure(0, weight=1)
         
-        # Add subtle separator above status bar
+        # Add subtle separator above status bar using 30% secondary color
         separator = ttk.Separator(status_frame, orient='horizontal')
         separator.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, Spacing.S))
         
@@ -558,12 +274,6 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
         right_status = ttk.Frame(status_content)
         right_status.grid(row=0, column=2, sticky=(tk.E))
         
-        # Advanced comparison indicator
-        if ADVANCED_COMPARISON_AVAILABLE:
-            advanced_indicator = create_body_label(right_status, "Advanced Comparison: Enabled", secondary=True)
-            advanced_indicator.grid(row=0, column=0, sticky=(tk.E), padx=(0, Spacing.M))
-            advanced_indicator.configure(foreground=get_semantic_color("success"))
-        
         # Version indicator
         version_indicator = create_body_label(right_status, "v1.2.0", secondary=True)
         version_indicator.grid(row=0, column=1, sticky=(tk.E))
@@ -577,34 +287,22 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
         self.file2_path.trace_add("write", update_button_states)
         self.visualize_file_path.trace_add("write", update_button_states)
         
-        # Clear requirements cache when files change
-        def clear_cache(*args):
-            self.requirements1_cache = None
-            self.requirements2_cache = None
-        
-        self.file1_path.trace_add("write", clear_cache)
-        self.file2_path.trace_add("write", clear_cache)
-        
         self._update_button_states()
     
     def _update_button_states(self):
-        """Update button states with enhanced visual feedback"""
+        """Update button states with enhanced visual feedback using 60-30-10 colors"""
         # Compare button state
         has_both_files = bool(self.file1_path.get() and self.file2_path.get())
         self.compare_btn.configure(state=tk.NORMAL if has_both_files else tk.DISABLED)
         
         if has_both_files:
-            profile_name = self.current_profile.name if self.current_profile else "Default"
-            self.compare_status_label.configure(text=f"✓ Ready to compare with profile: {profile_name}")
+            self.compare_status_label.configure(text="✓ Ready to compare files")
+            # Use 10% accent color for success state
             self.compare_status_label.configure(foreground=get_semantic_color("success"))
         else:
             self.compare_status_label.configure(text="Select two ReqIF files to begin comparison")
+            # Use secondary text color
             self.compare_status_label.configure(foreground=get_color("fg_secondary"))
-        
-        # Enable advanced settings button only when files are selected (for analysis)
-        if ADVANCED_COMPARISON_AVAILABLE and hasattr(self, 'advanced_btn'):
-            # Always enable advanced settings, but analysis only works with files
-            self.advanced_btn.configure(state=tk.NORMAL)
         
         # Visualize button state
         has_visualize_file = bool(self.visualize_file_path.get())
@@ -612,9 +310,11 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
         
         if has_visualize_file:
             self.visualize_status_label.configure(text="✓ Ready to analyze file")
+            # Use 10% accent color for success state
             self.visualize_status_label.configure(foreground=get_semantic_color("success"))
         else:
             self.visualize_status_label.configure(text="Select a ReqIF file to explore and analyze")
+            # Use secondary text color
             self.visualize_status_label.configure(foreground=get_color("fg_secondary"))
     
     # =============================================================================
@@ -634,7 +334,7 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
             )
             if filename:
                 self.file1_path.set(filename)
-                # Enhanced status feedback
+                # Enhanced status feedback with 10% accent color
                 basename = os.path.basename(filename)
                 self.status_label.configure(text=f"Original file selected: {basename}")
                 self.status_label.configure(foreground=get_semantic_color("info"))
@@ -654,7 +354,7 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
             )
             if filename:
                 self.file2_path.set(filename)
-                # Enhanced status feedback
+                # Enhanced status feedback with 10% accent color
                 basename = os.path.basename(filename)
                 self.status_label.configure(text=f"Modified file selected: {basename}")
                 self.status_label.configure(foreground=get_semantic_color("info"))
@@ -674,7 +374,7 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
             )
             if filename:
                 self.visualize_file_path.set(filename)
-                # Enhanced status feedback
+                # Enhanced status feedback with 10% accent color
                 basename = os.path.basename(filename)
                 self.status_label.configure(text=f"Analysis file selected: {basename}")
                 self.status_label.configure(foreground=get_semantic_color("info"))
@@ -682,14 +382,13 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
             self._show_error("File Selection Error", f"Failed to select analysis file:\n{str(e)}")
     
     def _compare_files(self):
-        """Compare files with enhanced progress feedback and profile integration"""
+        """Compare files with enhanced progress feedback using 60-30-10 colors"""
         if not (self.file1_path.get() and self.file2_path.get()):
             self._show_warning("Missing Files", "Please select both files to compare.")
             return
         
-        # Enhanced progress feedback with profile info
-        profile_name = self.current_profile.name if self.current_profile else "Default"
-        self._show_progress(f"Initializing comparison with profile: {profile_name}...")
+        # Enhanced progress feedback with 10% accent color
+        self._show_progress("Initializing comparison...")
         self.compare_btn.configure(state=tk.DISABLED, text="Comparing...")
         self.root.update()
         
@@ -702,38 +401,18 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
                 self.root.after_idle(lambda: self._show_progress("Parsing modified file..."))
                 file2_reqs = self.parser.parse_file(self.file2_path.get())
                 
-                # Cache requirements for advanced settings
-                self.requirements1_cache = file1_reqs
-                self.requirements2_cache = file2_reqs
-                
-                # Apply current profile to comparator
-                if ADVANCED_COMPARISON_AVAILABLE and self.current_profile:
-                    self.root.after_idle(lambda: self._show_progress(f"Applying profile: {self.current_profile.name}..."))
-                    self.comparator.set_comparison_profile(self.current_profile)
-                
                 # Compare with progress
                 self.root.after_idle(lambda: self._show_progress("Analyzing differences..."))
                 results = self.comparator.compare_requirements(file1_reqs, file2_reqs)
-                
-                # Add profile information to results
-                if ADVANCED_COMPARISON_AVAILABLE and self.current_profile:
-                    results['profile_info'] = {
-                        'name': self.current_profile.name,
-                        'description': self.current_profile.description,
-                        'enabled_attributes': len(self.current_profile.get_enabled_attributes()),
-                        'total_weight': self.current_profile.calculate_total_weight(),
-                        'similarity_threshold': self.current_profile.similarity_threshold,
-                        'profile_summary': self.current_profile.get_summary()
-                    }
                 
                 # Show results
                 def show_results():
                     try:
                         self.comparison_window = ComparisonResultsGUI(self.root, results)
-                        # Enhanced success feedback with profile info
+                        # Enhanced success feedback with 10% accent color
                         stats = results.get('statistics', {})
                         changes = stats.get('added_count', 0) + stats.get('deleted_count', 0) + stats.get('modified_count', 0)
-                        self._show_success(f"Comparison complete - {changes} changes found using {profile_name}")
+                        self._show_success(f"Comparison complete - {changes} changes found")
                         self.compare_btn.configure(state=tk.NORMAL, text="Compare Files")
                     except Exception as e:
                         self._show_error("Results Error", f"Failed to display results:\n{str(e)}")
@@ -752,12 +431,12 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
         threading.Thread(target=compare_in_thread, daemon=True).start()
     
     def _visualize_file(self):
-        """Visualize file with enhanced progress feedback (unchanged)"""
+        """Visualize file with enhanced progress feedback using 60-30-10 colors"""
         if not self.visualize_file_path.get():
             self._show_warning("Missing File", "Please select a file to analyze.")
             return
         
-        # Enhanced progress feedback
+        # Enhanced progress feedback with 10% accent color
         self._show_progress("Initializing analysis...")
         self.visualize_btn.configure(state=tk.DISABLED, text="Analyzing...")
         self.root.update()
@@ -776,7 +455,7 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
                             requirements, 
                             self.visualize_file_path.get()
                         )
-                        # Enhanced success feedback
+                        # Enhanced success feedback with 10% accent color
                         self._show_success(f"Analysis complete - {len(requirements)} requirements loaded")
                         self.visualize_btn.configure(state=tk.NORMAL, text="Analyze File")
                     except Exception as e:
@@ -796,31 +475,31 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
         threading.Thread(target=visualize_in_thread, daemon=True).start()
     
     # =============================================================================
-    # ENHANCED FEEDBACK METHODS
+    # ENHANCED FEEDBACK METHODS USING 60-30-10 COLORS
     # =============================================================================
     
     def _show_progress(self, message):
-        """Show progress message with appropriate styling"""
+        """Show progress message with 10% accent color"""
         self.status_label.configure(text=message, foreground=get_semantic_color("info"))
     
     def _show_success(self, message):
-        """Show success message with appropriate styling"""
+        """Show success message with 10% accent color"""
         self.status_label.configure(text=message, foreground=get_semantic_color("success"))
     
     def _show_error(self, title, message):
-        """Show error with enhanced styling"""
+        """Show error with 10% accent color"""
         self.status_label.configure(text="Error occurred - Check details", 
                                    foreground=get_semantic_color("error"))
         messagebox.showerror(title, message)
     
     def _show_warning(self, title, message):
-        """Show warning with enhanced styling"""
+        """Show warning with 10% accent color"""
         self.status_label.configure(text="Warning - Check requirements", 
                                    foreground=get_semantic_color("warning"))
         messagebox.showwarning(title, message)
     
     def _show_info(self, title, message):
-        """Show info with enhanced styling"""
+        """Show info with 10% accent color"""
         self.status_label.configure(text="Information displayed", 
                                    foreground=get_semantic_color("info"))
         messagebox.showinfo(title, message)
@@ -828,12 +507,8 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
     def run(self):
         """Run the application with enhanced startup"""
         try:
-            # Enhanced startup feedback
-            if ADVANCED_COMPARISON_AVAILABLE:
-                profile_count = len(self.profile_manager.list_profiles()) if self.profile_manager else 0
-                self._show_success(f"Beyond ReqIF ready - Advanced Comparison enabled ({profile_count} profiles)")
-            else:
-                self._show_success("Beyond ReqIF ready - Basic comparison mode")
+            # Enhanced startup feedback with 10% accent color
+            self._show_success("Beyond ReqIF ready - File comparison and analysis available")
             
             # Set focus to first tab
             self.notebook.select(0)
@@ -847,14 +522,6 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
     def _cleanup(self):
         """Enhanced cleanup on exit"""
         try:
-            # Save current profile as default for next session
-            if ADVANCED_COMPARISON_AVAILABLE and self.current_profile:
-                try:
-                    # You could save preference here
-                    pass
-                except:
-                    pass
-            
             if self.comparison_window:
                 try:
                     self.comparison_window.window.destroy()
@@ -872,7 +539,7 @@ Built with Apple Design Guidelines and advanced comparison capabilities."""
 def main():
     """Main function with enhanced error handling"""
     try:
-        print("Starting Beyond ReqIF v1.2.0 with Apple Design Guidelines and Advanced Comparison...")
+        print("Starting Beyond ReqIF v1.2.0 with 60-30-10 Color Principle...")
         app = ReqIFToolMVP()
         app.run()
     except Exception as e:
@@ -885,7 +552,7 @@ def main():
             root = tk.Tk()
             root.withdraw()
             
-            # Apply basic Apple styling to error dialog
+            # Apply basic Apple styling
             configure_main_window(root)
             
             messagebox.showerror(

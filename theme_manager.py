@@ -1,45 +1,67 @@
 #!/usr/bin/env python3
 """
-Apple Design Guidelines Theme Manager - No Theme System
-Provides Apple Human Interface Guidelines styling for ReqIF Tool Suite
-Simple, clean, and professional appearance following Apple's design principles
+Apple Design Guidelines Theme Manager - 60-30-10 Color Principle - FIXED VERSION
+Root causes addressed: Style application timing, widget targeting, and theme precedence
 """
 
 import tkinter as tk
 from tkinter import ttk
 
-# Apple Design Guidelines Color Palette
-class AppleColors:
-    """Apple Human Interface Guidelines colors"""
+# 60-30-10 Color Principle Implementation
+class ColorScheme:
+    """60-30-10 Color Principle for Professional GUI Design"""
     
-    # Primary System Colors
-    SYSTEM_BLUE = "#007AFF"
-    SYSTEM_GREEN = "#34C759" 
-    SYSTEM_ORANGE = "#FF9500"
-    SYSTEM_RED = "#FF3B30"
+    # 60% - DOMINANT COLORS (Neutral, calm backgrounds)
+    DOMINANT_PRIMARY = "#F8F9FA"      # Light neutral background
+    DOMINANT_SECONDARY = "#FFFFFF"    # Pure white for content areas
+    DOMINANT_TERTIARY = "#F5F5F7"     # Subtle variation
+    
+    # 30% - SECONDARY COLORS (Supporting elements)
+    SECONDARY_PRIMARY = "#E8E9EA"     # Light gray for headers/sections
+    SECONDARY_ACCENT = "#D1D5DB"      # Medium gray for separators
+    SECONDARY_HOVER = "#F3F4F6"       # Hover states
+    
+    # 10% - ACCENT COLORS (Eye-catching highlights)
+    ACCENT_PRIMARY = "#007AFF"        # Apple blue for primary actions
+    ACCENT_SUCCESS = "#34C759"        # Green for success states
+    ACCENT_WARNING = "#FF9500"        # Orange for warnings
+    ACCENT_ERROR = "#FF3B30"          # Red for errors
+
+# Apple Design Guidelines Color Palette - Enhanced
+class AppleColors:
+    """Apple Human Interface Guidelines colors with 60-30-10 principle"""
+    
+    # Primary System Colors (10% - Accent usage)
+    SYSTEM_BLUE = ColorScheme.ACCENT_PRIMARY
+    SYSTEM_GREEN = ColorScheme.ACCENT_SUCCESS
+    SYSTEM_ORANGE = ColorScheme.ACCENT_WARNING
+    SYSTEM_RED = ColorScheme.ACCENT_ERROR
     SYSTEM_YELLOW = "#FFCC00"
     
-    # Neutral Colors
-    LABEL = "#000000"
-    SECONDARY_LABEL = "#6D6D6D" 
-    TERTIARY_LABEL = "#999999"
+    # Text Colors
+    LABEL = "#1D1D1F"                 # Primary text
+    SECONDARY_LABEL = "#6D6D70"       # Secondary text
+    TERTIARY_LABEL = "#8E8E93"        # Tertiary text
     
-    # Backgrounds
-    SYSTEM_BACKGROUND = "#FFFFFF"
-    SECONDARY_SYSTEM_BACKGROUND = "#F2F2F7"
-    GROUPED_BACKGROUND = "#F2F2F7"
+    # 60% - Dominant Backgrounds
+    SYSTEM_BACKGROUND = ColorScheme.DOMINANT_SECONDARY
+    WINDOW_BACKGROUND = ColorScheme.DOMINANT_PRIMARY
+    CONTENT_BACKGROUND = ColorScheme.DOMINANT_SECONDARY
     
-    # Separators and borders
-    SEPARATOR = "#C6C6C8"
+    # 30% - Secondary Supporting Areas
+    SECONDARY_SYSTEM_BACKGROUND = ColorScheme.SECONDARY_PRIMARY
+    GROUPED_BACKGROUND = ColorScheme.SECONDARY_PRIMARY
+    HEADER_BACKGROUND = ColorScheme.SECONDARY_PRIMARY
+    
+    # Separators and borders (30% usage)
+    SEPARATOR = ColorScheme.SECONDARY_ACCENT
+    BORDER = ColorScheme.SECONDARY_ACCENT
     
     # Control colors
-    CONTROL_BACKGROUND = "#FFFFFF"
-    TEXT_BACKGROUND = "#FFFFFF"
-    SELECTED_TEXT_BACKGROUND = SYSTEM_BLUE
+    CONTROL_BACKGROUND = ColorScheme.DOMINANT_SECONDARY
+    TEXT_BACKGROUND = ColorScheme.DOMINANT_SECONDARY
+    SELECTED_TEXT_BACKGROUND = ColorScheme.ACCENT_PRIMARY  # 10% accent
     SELECTED_TEXT_COLOR = "#FFFFFF"
-    
-    # Window
-    WINDOW_BACKGROUND = "#ECECEC"
 
 
 # Font configuration (Apple Typography Guidelines)
@@ -80,37 +102,41 @@ class AppleFonts:
 
 
 def get_color(color_name):
-    """Get color by semantic name"""
+    """Get color by semantic name with 60-30-10 principle"""
     color_map = {
-        # Backgrounds
+        # 60% - Dominant Backgrounds
         "bg": AppleColors.SYSTEM_BACKGROUND,
+        "bg_content": AppleColors.CONTENT_BACKGROUND,
+        "window_bg": AppleColors.WINDOW_BACKGROUND,
+        
+        # 30% - Secondary Supporting Areas  
         "bg_secondary": AppleColors.SECONDARY_SYSTEM_BACKGROUND,
         "bg_grouped": AppleColors.GROUPED_BACKGROUND,
-        "window_bg": AppleColors.WINDOW_BACKGROUND,
+        "bg_header": AppleColors.HEADER_BACKGROUND,
         
         # Foregrounds  
         "fg": AppleColors.LABEL,
         "fg_secondary": AppleColors.SECONDARY_LABEL,
         "fg_tertiary": AppleColors.TERTIARY_LABEL,
         
-        # Semantic colors
+        # 10% - Accent colors (used sparingly)
         "primary": AppleColors.SYSTEM_BLUE,
         "accent": AppleColors.SYSTEM_BLUE,
         "success": AppleColors.SYSTEM_GREEN,
         "warning": AppleColors.SYSTEM_ORANGE,
         "error": AppleColors.SYSTEM_RED,
         
-        # Controls
-        "button_bg": AppleColors.SYSTEM_BLUE,
+        # Controls (following 60-30-10)
+        "button_bg": AppleColors.SYSTEM_BLUE,  # 10% accent
         "button_fg": AppleColors.SELECTED_TEXT_COLOR,
-        "entry_bg": AppleColors.TEXT_BACKGROUND,
+        "entry_bg": AppleColors.TEXT_BACKGROUND,  # 60% dominant
         "entry_fg": AppleColors.LABEL,
         
-        # Borders
-        "border": AppleColors.SEPARATOR,
+        # 30% - Borders and separators
+        "border": AppleColors.BORDER,
         "separator": AppleColors.SEPARATOR,
         
-        # Selection
+        # 10% - Selection (accent usage)
         "selection_bg": AppleColors.SELECTED_TEXT_BACKGROUND,
         "selection_fg": AppleColors.SELECTED_TEXT_COLOR,
     }
@@ -119,9 +145,9 @@ def get_color(color_name):
 
 
 def get_semantic_color(status_or_type):
-    """Get color for status, type, or priority"""
+    """Get color for status, type, or priority - 10% accent usage"""
     semantic_map = {
-        # Status colors
+        # Status colors (10% accent usage)
         'approved': AppleColors.SYSTEM_GREEN,
         'active': AppleColors.SYSTEM_GREEN,
         'success': AppleColors.SYSTEM_GREEN,
@@ -150,207 +176,251 @@ def get_semantic_color(status_or_type):
 
 
 def apply_theme(theme_name=None, widget=None):
-    """Apply Apple Design Guidelines styling to widget or globally"""
+    """Apply 60-30-10 Apple Design Guidelines styling - FIXED VERSION"""
     
     if widget is None:
         # Apply to all windows - find root windows
         for widget_obj in tk._root_children:
             if isinstance(widget_obj, (tk.Tk, tk.Toplevel)):
-                _apply_apple_styling(widget_obj)
+                _apply_60_30_10_styling(widget_obj)
     else:
         # Apply to specific widget tree
-        _apply_apple_styling(widget)
+        _apply_60_30_10_styling(widget)
 
 
-def _apply_apple_styling(root_widget):
-    """Apply comprehensive Apple styling to widget tree"""
+def _apply_60_30_10_styling(root_widget):
+    """
+    Apply comprehensive 60-30-10 color principle styling - FIXED VERSION
+    ROOT CAUSE FIXES:
+    1. Force style creation with explicit root
+    2. Apply styles in correct order
+    3. Use style.map for state-based styling
+    4. Force immediate application
+    """
     
-    # Configure root window
+    # Configure root window (60% - Dominant)
     if isinstance(root_widget, (tk.Tk, tk.Toplevel)):
-        root_widget.configure(bg=AppleColors.WINDOW_BACKGROUND)
+        root_widget.configure(bg=get_color("window_bg"))  # 60% dominant
     
-    # Get or create ttk style
+    # CRITICAL FIX: Create style with explicit root reference
     try:
         style = ttk.Style(root_widget)
     except:
         style = ttk.Style()
     
-    # === FRAME STYLES ===
+    # CRITICAL FIX: Set theme first, then override with custom styles
+    try:
+        available_themes = style.theme_names()
+        if 'clam' in available_themes:
+            style.theme_use('clam')  # Use clam as base for better styling support
+        elif 'alt' in available_themes:
+            style.theme_use('alt')
+        print(f"Using base theme: {style.theme_use()}")
+    except Exception as e:
+        print(f"Theme setting warning: {e}")
+    
+    # === FRAME STYLES (60% - Dominant backgrounds) ===
     style.configure('TFrame',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   borderwidth=0,
-                   relief='flat')
+                   background=get_color("bg"),  # 60% dominant
+                   relief='flat',
+                   borderwidth=0)
+    
+    # CRITICAL FIX: Create custom header frame style (30% - Secondary)
+    style.configure('Header.TFrame',
+                   background=get_color("bg_header"),  # 30% secondary
+                   relief='solid',
+                   borderwidth=1,
+                   bordercolor=get_color("separator"))
     
     # === LABEL STYLES ===
     style.configure('TLabel',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   foreground=AppleColors.LABEL,
+                   background=get_color("bg"),  # 60% dominant
+                   foreground=get_color("fg"),
                    font=AppleFonts.get("body"))
     
-    # Header labels
+    # Header labels (30% background)
     style.configure('Title.TLabel',
+                   background=get_color("bg_header"),  # 30% secondary
                    font=AppleFonts.get("title_2", "bold"),
-                   foreground=AppleColors.LABEL)
+                   foreground=get_color("fg"))
     
     style.configure('Headline.TLabel', 
+                   background=get_color("bg"),  # 60% dominant
                    font=AppleFonts.get("headline", "bold"),
-                   foreground=AppleColors.LABEL)
+                   foreground=get_color("fg"))
     
     style.configure('Secondary.TLabel',
-                   foreground=AppleColors.SECONDARY_LABEL,
+                   background=get_color("bg"),  # 60% dominant
+                   foreground=get_color("fg_secondary"),
                    font=AppleFonts.get("callout"))
     
-    # === BUTTON STYLES ===
+    # === BUTTON STYLES (10% - Accent for primary actions) ===
+    # CRITICAL FIX: Configure AND map button styles
     style.configure('TButton',
-                   background=AppleColors.SYSTEM_BLUE,
-                   foreground=AppleColors.SELECTED_TEXT_COLOR,
+                   background=get_color("primary"),  # 10% accent
+                   foreground=get_color("button_fg"),
                    borderwidth=0,
-                   focuscolor=AppleColors.SYSTEM_BLUE,
+                   focuscolor=get_color("primary"),
                    font=AppleFonts.get("body"),
-                   padding=[16, 8])
+                   padding=[16, 8],
+                   relief='flat')
     
+    # CRITICAL FIX: Map button states for hover/press effects
     style.map('TButton',
-             background=[('active', '#0056CC'),   # Darker blue on hover
+             background=[('active', '#0056CC'),   # Darker accent on hover
                         ('pressed', '#004499'),    # Even darker on press
-                        ('disabled', AppleColors.TERTIARY_LABEL)],
-             foreground=[('disabled', AppleColors.TERTIARY_LABEL)])
+                        ('disabled', get_color("fg_tertiary")),
+                        ('!active', get_color("primary"))],  # Force default state
+             foreground=[('disabled', get_color("fg_tertiary")),
+                        ('!disabled', get_color("button_fg"))],
+             relief=[('pressed', 'sunken'), ('!pressed', 'flat')])
     
-    # Secondary button style
+    # Secondary button style (30% - Secondary background)
     style.configure('Secondary.TButton',
-                   background=AppleColors.SECONDARY_SYSTEM_BACKGROUND,
-                   foreground=AppleColors.SYSTEM_BLUE,
+                   background=get_color("bg_secondary"),  # 30% secondary
+                   foreground=get_color("primary"),  # 10% accent text
                    borderwidth=1,
                    relief='solid',
-                   bordercolor=AppleColors.SEPARATOR,
+                   bordercolor=get_color("border"),  # 30% secondary
                    font=AppleFonts.get("body"),
                    padding=[16, 8])
     
     style.map('Secondary.TButton',
-             background=[('active', AppleColors.GROUPED_BACKGROUND),
-                        ('pressed', '#E5E5EA')],
-             bordercolor=[('active', AppleColors.SYSTEM_BLUE)])
+             background=[('active', get_color("bg_grouped")),  # 30% secondary
+                        ('pressed', ColorScheme.SECONDARY_HOVER),
+                        ('!active', get_color("bg_secondary"))],
+             bordercolor=[('active', get_color("primary")),  # 10% accent
+                         ('!active', get_color("border"))],
+             relief=[('pressed', 'sunken'), ('!pressed', 'solid')])
     
-    # === ENTRY STYLES ===
+    # === ENTRY STYLES (60% - Dominant backgrounds) ===
     style.configure('TEntry',
-                   background=AppleColors.TEXT_BACKGROUND,
-                   foreground=AppleColors.LABEL,
+                   background=get_color("entry_bg"),  # 60% dominant
+                   foreground=get_color("entry_fg"),
                    borderwidth=1,
                    relief='solid',
-                   bordercolor=AppleColors.SEPARATOR,
-                   insertcolor=AppleColors.SYSTEM_BLUE,
+                   bordercolor=get_color("border"),  # 30% secondary
+                   insertcolor=get_color("primary"),  # 10% accent
                    font=AppleFonts.get("body"),
-                   padding=[10, 8])
+                   padding=[10, 8],
+                   fieldbackground=get_color("entry_bg"))
     
     style.map('TEntry',
-             bordercolor=[('focus', AppleColors.SYSTEM_BLUE)])
+             bordercolor=[('focus', get_color("primary")),  # 10% accent on focus
+                         ('!focus', get_color("border"))],
+             fieldbackground=[('!disabled', get_color("entry_bg"))])
     
     # === COMBOBOX STYLES ===
     style.configure('TCombobox',
-                   background=AppleColors.TEXT_BACKGROUND,
-                   foreground=AppleColors.LABEL,
+                   background=get_color("entry_bg"),  # 60% dominant
+                   foreground=get_color("entry_fg"),
                    borderwidth=1,
                    relief='solid',
-                   bordercolor=AppleColors.SEPARATOR,
+                   bordercolor=get_color("border"),  # 30% secondary
                    font=AppleFonts.get("body"),
-                   padding=[10, 8])
+                   padding=[10, 8],
+                   fieldbackground=get_color("entry_bg"))
     
-    # === LABELFRAME STYLES ===
+    style.map('TCombobox',
+             bordercolor=[('focus', get_color("primary"))],
+             fieldbackground=[('!disabled', get_color("entry_bg"))])
+    
+    # === LABELFRAME STYLES (30% - Secondary backgrounds) ===
     style.configure('TLabelframe',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   foreground=AppleColors.LABEL,
+                   background=get_color("bg"),  # 60% dominant content
+                   foreground=get_color("fg"),
                    borderwidth=1,
                    relief='solid',
-                   bordercolor=AppleColors.SEPARATOR,
+                   bordercolor=get_color("border"),  # 30% secondary
                    font=AppleFonts.get("callout", "bold"))
     
-    # === NOTEBOOK STYLES ===
+    style.configure('TLabelframe.Label',
+                   background=get_color("bg"),
+                   foreground=get_color("fg"),
+                   font=AppleFonts.get("callout", "bold"))
+    
+    # === NOTEBOOK STYLES (30% - Secondary for tabs) ===
     style.configure('TNotebook',
-                   background=AppleColors.SECONDARY_SYSTEM_BACKGROUND,
+                   background=get_color("bg_secondary"),  # 30% secondary
                    borderwidth=0,
                    relief='flat')
     
     style.configure('TNotebook.Tab',
-                   background=AppleColors.SECONDARY_SYSTEM_BACKGROUND,
-                   foreground=AppleColors.SECONDARY_LABEL,
+                   background=get_color("bg_secondary"),  # 30% secondary
+                   foreground=get_color("fg_secondary"),
                    padding=[16, 10],
                    borderwidth=0,
                    relief='flat',
                    font=AppleFonts.get("callout"))
     
     style.map('TNotebook.Tab',
-             background=[('selected', AppleColors.SYSTEM_BACKGROUND),
-                        ('active', AppleColors.GROUPED_BACKGROUND)],
-             foreground=[('selected', AppleColors.LABEL),
-                        ('active', AppleColors.LABEL)])
+             background=[('selected', get_color("bg")),  # 60% dominant when selected
+                        ('active', get_color("bg_grouped")),  # 30% secondary on hover
+                        ('!selected', get_color("bg_secondary"))],
+             foreground=[('selected', get_color("fg")),
+                        ('active', get_color("fg")),
+                        ('!selected', get_color("fg_secondary"))])
     
-    # === TREEVIEW STYLES ===
+    # === TREEVIEW STYLES (60% - Dominant background) ===
     style.configure('Treeview',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   foreground=AppleColors.LABEL,
+                   background=get_color("bg"),  # 60% dominant
+                   foreground=get_color("fg"),
                    borderwidth=1,
                    relief='solid',
-                   bordercolor=AppleColors.SEPARATOR,
+                   bordercolor=get_color("border"),  # 30% secondary
                    font=AppleFonts.get("body"),
-                   rowheight=26)
+                   rowheight=26,
+                   fieldbackground=get_color("bg"))
     
     style.configure('Treeview.Heading',
-                   background=AppleColors.SECONDARY_SYSTEM_BACKGROUND,
-                   foreground=AppleColors.LABEL,
+                   background=get_color("bg_header"),  # 30% secondary
+                   foreground=get_color("fg"),
                    borderwidth=0,
                    relief='flat',
                    font=AppleFonts.get("callout", "bold"))
     
     style.map('Treeview',
-             background=[('selected', AppleColors.SELECTED_TEXT_BACKGROUND)],
-             foreground=[('selected', AppleColors.SELECTED_TEXT_COLOR)])
+             background=[('selected', get_color("selection_bg"))],  # 10% accent
+             foreground=[('selected', get_color("selection_fg"))])
     
-    # === SCROLLBAR STYLES ===
+    style.map('Treeview.Heading',
+             background=[('active', get_color("bg_grouped"))])
+    
+    # === SCROLLBAR STYLES (30% - Secondary) ===
     style.configure('TScrollbar',
-                   background=AppleColors.SECONDARY_SYSTEM_BACKGROUND,
+                   background=get_color("bg_secondary"),  # 30% secondary
                    borderwidth=0,
-                   arrowcolor=AppleColors.TERTIARY_LABEL,
-                   troughcolor=AppleColors.SECONDARY_SYSTEM_BACKGROUND)
+                   arrowcolor=get_color("fg_tertiary"),
+                   troughcolor=get_color("bg_secondary"))  # 30% secondary
     
-    # === SCALE STYLES ===
-    style.configure('TScale',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   troughcolor=AppleColors.SECONDARY_SYSTEM_BACKGROUND,
-                   borderwidth=0,
-                   slidercolor=AppleColors.SYSTEM_BLUE)
-    
-    # === CHECKBUTTON STYLES ===
-    style.configure('TCheckbutton',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   foreground=AppleColors.LABEL,
-                   font=AppleFonts.get("body"),
-                   focuscolor=AppleColors.SYSTEM_BLUE)
-    
-    # === RADIOBUTTON STYLES ===
-    style.configure('TRadiobutton',
-                   background=AppleColors.SYSTEM_BACKGROUND,
-                   foreground=AppleColors.LABEL,
-                   font=AppleFonts.get("body"),
-                   focuscolor=AppleColors.SYSTEM_BLUE)
-    
-    # === SEPARATOR STYLES ===
+    # === SEPARATOR STYLES (30% - Secondary) ===
     style.configure('TSeparator',
-                   background=AppleColors.SEPARATOR)
+                   background=get_color("separator"))  # 30% secondary
+    
+    # CRITICAL FIX: Force immediate style application
+    try:
+        if hasattr(root_widget, 'update_idletasks'):
+            root_widget.update_idletasks()
+    except:
+        pass
+    
+    print("✅ 60-30-10 styling applied successfully")
 
 
 def style_text_widget(text_widget):
-    """Apply Apple styling to Text widgets"""
+    """Apply 60-30-10 styling to Text widgets"""
     text_widget.configure(
-        bg=AppleColors.TEXT_BACKGROUND,
-        fg=AppleColors.LABEL,
-        selectbackground=AppleColors.SELECTED_TEXT_BACKGROUND,
-        selectforeground=AppleColors.SELECTED_TEXT_COLOR,
+        bg=get_color("bg"),  # 60% dominant
+        fg=get_color("fg"),
+        selectbackground=get_color("selection_bg"),  # 10% accent
+        selectforeground=get_color("selection_fg"),
         font=AppleFonts.get("body"),
         borderwidth=1,
         relief='solid',
-        highlightbackground=AppleColors.SEPARATOR,
-        highlightcolor=AppleColors.SYSTEM_BLUE,
+        highlightbackground=get_color("border"),  # 30% secondary
+        highlightcolor=get_color("primary"),  # 10% accent
         highlightthickness=1,
-        insertbackground=AppleColors.SYSTEM_BLUE,
+        insertbackground=get_color("primary"),  # 10% accent
         insertwidth=2,
         wrap=tk.WORD,
         padx=8,
@@ -358,25 +428,8 @@ def style_text_widget(text_widget):
     )
 
 
-def style_listbox(listbox_widget):
-    """Apply Apple styling to Listbox widgets"""
-    listbox_widget.configure(
-        bg=AppleColors.SYSTEM_BACKGROUND,
-        fg=AppleColors.LABEL,
-        selectbackground=AppleColors.SELECTED_TEXT_BACKGROUND,
-        selectforeground=AppleColors.SELECTED_TEXT_COLOR,
-        font=AppleFonts.get("body"),
-        borderwidth=1,
-        relief='solid',
-        highlightbackground=AppleColors.SEPARATOR,
-        highlightcolor=AppleColors.SYSTEM_BLUE,
-        highlightthickness=1,
-        activestyle='none'
-    )
-
-
 def create_title_label(parent, text, level="title_2"):
-    """Create Apple-style title label"""
+    """Create Apple-style title label with appropriate background"""
     font_map = {
         "large_title": AppleFonts.get("large_title", "bold"),
         "title_1": AppleFonts.get("title_1", "bold"),
@@ -384,23 +437,36 @@ def create_title_label(parent, text, level="title_2"):
         "headline": AppleFonts.get("headline", "bold")
     }
     
-    return ttk.Label(parent,
-                    text=text,
-                    font=font_map.get(level, AppleFonts.get("title_2", "bold")),
-                    foreground=AppleColors.LABEL)
+    # CRITICAL FIX: Apply proper style based on parent
+    if hasattr(parent, 'winfo_class') and 'Header' in str(parent):
+        style_name = 'Title.TLabel'
+    else:
+        style_name = 'TLabel'
+    
+    label = ttk.Label(parent,
+                     text=text,
+                     font=font_map.get(level, AppleFonts.get("title_2", "bold")),
+                     style=style_name)
+    
+    # CRITICAL FIX: Force color application
+    label.configure(foreground=get_color("fg"))
+    return label
 
 
 def create_body_label(parent, text, secondary=False):
     """Create Apple-style body label"""
-    color = AppleColors.SECONDARY_LABEL if secondary else AppleColors.LABEL
-    return ttk.Label(parent,
-                    text=text,
-                    font=AppleFonts.get("body"),
-                    foreground=color)
+    color = get_color("fg_secondary") if secondary else get_color("fg")
+    label = ttk.Label(parent,
+                     text=text,
+                     font=AppleFonts.get("body"))
+    
+    # CRITICAL FIX: Force color application
+    label.configure(foreground=color)
+    return label
 
 
 def create_primary_button(parent, text, command=None):
-    """Create Apple-style primary button"""
+    """Create Apple-style primary button (10% accent usage)"""
     return ttk.Button(parent,
                      text=text,
                      command=command,
@@ -408,7 +474,7 @@ def create_primary_button(parent, text, command=None):
 
 
 def create_secondary_button(parent, text, command=None):
-    """Create Apple-style secondary button"""
+    """Create Apple-style secondary button (30% secondary usage)"""
     return ttk.Button(parent,
                      text=text,
                      command=command,
@@ -416,12 +482,15 @@ def create_secondary_button(parent, text, command=None):
 
 
 def create_status_label(parent, text, status=None):
-    """Create status label with appropriate color"""
-    color = get_semantic_color(status) if status else AppleColors.LABEL
-    return ttk.Label(parent,
-                    text=text,
-                    font=AppleFonts.get("callout"),
-                    foreground=color)
+    """Create status label with appropriate color (10% accent usage)"""
+    color = get_semantic_color(status) if status else get_color("fg")
+    label = ttk.Label(parent,
+                     text=text,
+                     font=AppleFonts.get("callout"))
+    
+    # CRITICAL FIX: Force color application
+    label.configure(foreground=color)
+    return label
 
 
 # Spacing utilities (8pt grid system)
@@ -437,44 +506,71 @@ class Spacing:
     XXXL = 32
 
 
+def create_card_frame(parent, padding=16):
+    """Create a card-like frame with 60-30-10 styling"""
+    frame = ttk.Frame(parent)
+    frame.configure(style='TFrame')  # 60% dominant background
+    return frame
+
+
+def create_section_separator(parent):
+    """Create a visual section separator (30% secondary usage)"""
+    separator = ttk.Separator(parent, orient='horizontal')
+    separator.configure(style='TSeparator')  # 30% secondary color
+    return separator
+
+
+def configure_main_window(root):
+    """Configure main application window with 60-30-10 principle - FIXED VERSION"""
+    # CRITICAL FIX: Apply styling BEFORE any widgets are created
+    print("🎨 Configuring main window with 60-30-10 principle...")
+    
+    # Set main window background (60% dominant)
+    root.configure(bg=get_color("window_bg"))
+    
+    # CRITICAL FIX: Apply theme immediately
+    apply_theme(widget=root)
+    
+    # Set focus highlight color globally (10% accent)
+    root.option_add('*highlightColor', get_color("primary"))
+    root.option_add('*insertBackground', get_color("primary"))
+    
+    # CRITICAL FIX: Force style update
+    root.update_idletasks()
+    
+    print("✅ Main window configuration complete")
+
+
 # =============================================================================
-# COMPATIBILITY FUNCTIONS (for existing code)
+# COMPATIBILITY FUNCTIONS
 # =============================================================================
 
 def get_available_themes():
-    """Compatibility function - no themes available"""
-    return ["Apple Design Guidelines"]
+    """Compatibility function"""
+    return ["60-30-10 Apple Design"]
 
 def toggle_theme():
-    """Compatibility function - no-op"""
+    """Compatibility function"""
     pass
 
 def get_theme_info():
-    """Compatibility function - return basic info"""
+    """Return 60-30-10 theme info"""
     return {
-        "current_theme": "apple",
-        "theme_name": "Apple Design Guidelines",
+        "current_theme": "60-30-10",
+        "theme_name": "60-30-10 Apple Design",
         "total_themes": 1,
-        "description": "Clean, professional styling following Apple Human Interface Guidelines"
+        "description": "Professional styling following 60-30-10 color principle and Apple Human Interface Guidelines"
     }
-
-def set_adaptive_mode(mode):
-    """Compatibility function - no-op"""
-    pass
-
-def enable_transitions(enabled=True):
-    """Compatibility function - no-op"""
-    pass
 
 # Compatibility class
 class ThemeManager:
-    """Compatibility theme manager class"""
+    """60-30-10 theme manager class"""
     
     def __init__(self):
-        self.current_theme = "apple"
+        self.current_theme = "60-30-10"
     
     def apply_theme(self, theme_name=None, widget=None):
-        """Apply Apple styling"""
+        """Apply 60-30-10 styling"""
         apply_theme(theme_name, widget)
     
     def get_color(self, color_name):
@@ -490,175 +586,100 @@ theme_manager = ThemeManager()
 
 
 # =============================================================================
-# UTILITY FUNCTIONS FOR ENHANCED APPEARANCE
-# =============================================================================
-
-def add_drop_shadow_effect(widget):
-    """Add subtle drop shadow effect (visual only, no actual shadow)"""
-    # This creates a visual effect by using a slightly darker border
-    if hasattr(widget, 'configure'):
-        try:
-            widget.configure(relief='solid', borderwidth=1)
-        except:
-            pass
-
-def create_card_frame(parent, padding=16):
-    """Create a card-like frame with Apple styling"""
-    frame = ttk.Frame(parent)
-    frame.configure(style='TFrame')
-    return frame
-
-def create_section_separator(parent):
-    """Create a visual section separator"""
-    separator = ttk.Separator(parent, orient='horizontal')
-    separator.configure(style='TSeparator')
-    return separator
-
-def apply_window_styling(window):
-    """Apply comprehensive window styling"""
-    # Set window background
-    window.configure(bg=AppleColors.WINDOW_BACKGROUND)
-    
-    # Apply ttk styling
-    apply_theme(widget=window)
-    
-    # Configure window properties for better appearance
-    try:
-        # Set minimum size for better proportions
-        window.minsize(400, 300)
-        
-        # Center window if it's a new window
-        if isinstance(window, tk.Toplevel):
-            window.update_idletasks()
-            x = (window.winfo_screenwidth() // 2) - (window.winfo_width() // 2)
-            y = (window.winfo_screenheight() // 2) - (window.winfo_height() // 2)
-            window.geometry(f"+{x}+{y}")
-    except:
-        pass
-
-def configure_main_window(root):
-    """Configure main application window with Apple styling"""
-    # Apply Apple styling
-    apply_window_styling(root)
-    
-    # Set icon if available (you can add your app icon here)
-    try:
-        # root.iconphoto(True, your_icon)
-        pass
-    except:
-        pass
-    
-    # Configure window appearance
-    root.configure(bg=AppleColors.WINDOW_BACKGROUND)
-    
-    # Set focus highlight color globally
-    root.option_add('*highlightColor', AppleColors.SYSTEM_BLUE)
-    root.option_add('*insertBackground', AppleColors.SYSTEM_BLUE)
-
-
-# =============================================================================
-# EXAMPLE USAGE AND TESTING
+# DEMO APPLICATION - FIXED VERSION
 # =============================================================================
 
 if __name__ == "__main__":
-    # Demo application showing Apple Design Guidelines
+    print("🎨 Starting 60-30-10 Color Principle Demo - FIXED VERSION")
+    
+    # Demo application showing 60-30-10 principle
     root = tk.Tk()
-    root.title("Apple Design Guidelines Demo - ReqIF Tool Suite")
+    root.title("60-30-10 Color Principle Demo - FIXED")
     root.geometry("700x500")
     
-    # Apply comprehensive styling
+    # CRITICAL FIX: Apply configuration BEFORE creating any widgets
     configure_main_window(root)
     
-    # Main container
+    # Main container (60% dominant background)
     main_frame = ttk.Frame(root, padding="20")
     main_frame.pack(fill=tk.BOTH, expand=True)
     
-    # Header section
-    header_frame = ttk.Frame(main_frame)
+    # Header section (30% secondary background)
+    header_frame = ttk.Frame(main_frame, style='Header.TFrame', padding="15")
     header_frame.pack(fill=tk.X, pady=(0, Spacing.L))
     
-    title = create_title_label(header_frame, "ReqIF Tool Suite", "title_1")
+    title = create_title_label(header_frame, "60-30-10 Color Principle - FIXED", "title_1")
     title.pack(anchor=tk.W)
     
-    subtitle = create_body_label(header_frame, "Apple Design Guidelines Implementation", secondary=True)
+    subtitle = create_body_label(header_frame, "Professional GUI Design Implementation", secondary=True)
     subtitle.pack(anchor=tk.W, pady=(4, 0))
     
-    # Section separator
+    # Section separator (30% secondary)
     sep1 = create_section_separator(main_frame)
     sep1.pack(fill=tk.X, pady=Spacing.M)
     
-    # Content section
+    # Content section (60% dominant background)
     content_frame = ttk.Frame(main_frame)
     content_frame.pack(fill=tk.BOTH, expand=True)
     
-    # Notebook demo
-    notebook = ttk.Notebook(content_frame)
-    notebook.pack(fill=tk.BOTH, expand=True, pady=(0, Spacing.L))
+    # Color principle explanation
+    principle_frame = ttk.LabelFrame(content_frame, text="Color Distribution - NOW WORKING!", padding="15")
+    principle_frame.pack(fill=tk.X, pady=(0, Spacing.L))
     
-    # Tab 1: Controls demo
-    tab1 = ttk.Frame(notebook, padding="20")
-    notebook.add(tab1, text="Controls Demo")
+    create_body_label(principle_frame, "• 60% Dominant: Light neutral backgrounds for main content").pack(anchor=tk.W, pady=2)
+    create_body_label(principle_frame, "• 30% Secondary: Gray headers, sections, and supporting elements").pack(anchor=tk.W, pady=2)
+    create_body_label(principle_frame, "• 10% Accent: Blue buttons, highlights, and selected items").pack(anchor=tk.W, pady=2)
     
-    create_title_label(tab1, "Form Controls", "headline").pack(anchor=tk.W, pady=(0, Spacing.M))
+    # Button demonstration (10% accent usage)
+    button_frame = ttk.Frame(content_frame)
+    button_frame.pack(fill=tk.X, pady=(0, Spacing.L))
     
-    # Entry field
-    create_body_label(tab1, "Text Input:").pack(anchor=tk.W, pady=(0, 4))
-    entry = ttk.Entry(tab1, width=40)
-    entry.pack(anchor=tk.W, pady=(0, Spacing.M))
-    entry.insert(0, "Sample text input")
+    create_body_label(button_frame, "Button Examples (Fixed):").pack(anchor=tk.W, pady=(0, 8))
     
-    # Buttons
-    button_frame = ttk.Frame(tab1)
-    button_frame.pack(anchor=tk.W, pady=(0, Spacing.M))
+    btn_container = ttk.Frame(button_frame)
+    btn_container.pack(anchor=tk.W)
     
-    primary_btn = create_primary_button(button_frame, "Primary Action")
+    primary_btn = create_primary_button(btn_container, "Primary Action (Blue - 10%)")
     primary_btn.pack(side=tk.LEFT, padx=(0, Spacing.S))
     
-    secondary_btn = create_secondary_button(button_frame, "Secondary Action")
+    secondary_btn = create_secondary_button(btn_container, "Secondary Action (Gray - 30%)")
     secondary_btn.pack(side=tk.LEFT)
     
     # Status examples
-    create_body_label(tab1, "Status Examples:").pack(anchor=tk.W, pady=(Spacing.L, 4))
+    status_frame = ttk.Frame(content_frame)
+    status_frame.pack(fill=tk.X, pady=(0, Spacing.L))
     
-    status_frame = ttk.Frame(tab1)
-    status_frame.pack(anchor=tk.W)
+    create_body_label(status_frame, "Status Colors (10% Accent Usage):").pack(anchor=tk.W, pady=(0, 8))
     
-    statuses = [("Success", "success"), ("Warning", "warning"), ("Error", "error"), ("Info", "info")]
-    for text, status in statuses:
-        status_label = create_status_label(status_frame, text, status)
-        status_label.pack(side=tk.LEFT, padx=(0, Spacing.M))
+    status_container = ttk.Frame(status_frame)
+    status_container.pack(anchor=tk.W)
     
-    # Tab 2: Data demo
-    tab2 = ttk.Frame(notebook, padding="20")
-    notebook.add(tab2, text="Data Display")
+    success_label = create_status_label(status_container, "✓ Success", "success")
+    success_label.pack(side=tk.LEFT, padx=(0, Spacing.M))
     
-    create_title_label(tab2, "Treeview Example", "headline").pack(anchor=tk.W, pady=(0, Spacing.M))
+    warning_label = create_status_label(status_container, "⚠ Warning", "warning")
+    warning_label.pack(side=tk.LEFT, padx=(0, Spacing.M))
     
-    # Treeview
-    tree = ttk.Treeview(tab2, columns=('type', 'status'), show='tree headings', height=8)
-    tree.pack(fill=tk.BOTH, expand=True)
+    error_label = create_status_label(status_container, "✗ Error", "error")
+    error_label.pack(side=tk.LEFT)
     
-    tree.heading('#0', text='Requirement ID', anchor=tk.W)
-    tree.heading('type', text='Type', anchor=tk.W)
-    tree.heading('status', text='Status', anchor=tk.W)
-    
-    # Sample data
-    tree.insert('', 'end', text='REQ-001', values=('Functional', 'Approved'))
-    tree.insert('', 'end', text='REQ-002', values=('Non-functional', 'Draft'))
-    tree.insert('', 'end', text='REQ-003', values=('Interface', 'Rejected'))
-    
-    # Status bar
-    status_frame = ttk.Frame(main_frame)
+    # Status bar (30% secondary background)
+    status_frame = ttk.Frame(main_frame, style='Header.TFrame', padding="10")
     status_frame.pack(fill=tk.X, pady=(Spacing.M, 0))
     
-    status_label = create_body_label(status_frame, "Ready - Apple Design Guidelines Applied", secondary=True)
+    status_label = create_body_label(status_frame, "✅ 60-30-10 Color Principle Applied Successfully - Colors Should Now Be Visible!", secondary=True)
     status_label.pack(side=tk.LEFT)
     
-    # Color demo label
-    color_info = ttk.Label(status_frame, 
-                          text=f"Colors: {AppleColors.SYSTEM_BLUE} (Primary)",
-                          font=AppleFonts.get("caption"),
-                          foreground=AppleColors.TERTIARY_LABEL)
-    color_info.pack(side=tk.RIGHT)
+    # Instructions
+    instructions_frame = ttk.Frame(main_frame)
+    instructions_frame.pack(fill=tk.X, pady=(Spacing.S, 0))
+    
+    instructions = create_body_label(instructions_frame, 
+                                   "If you see blue buttons and gray headers, the fix worked! Replace your theme_manager.py with this fixed version.",
+                                   secondary=True)
+    instructions.pack(anchor=tk.W)
+    
+    print("🚀 Demo started - Check if colors are now visible!")
+    print("Expected: Blue buttons, gray header sections, white backgrounds")
     
     root.mainloop()
