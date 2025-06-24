@@ -37,6 +37,9 @@ class FolderComparisonResultsGUI:
         # Individual file statistics (NEW)
         self.individual_stats = results.get('individual_file_statistics', {})
         
+        # Storage for file data (to avoid treeview column issues)
+        self.item_file_data = {}
+        
         # Setup GUI
         self.setup_gui()
         
@@ -966,8 +969,11 @@ class FolderComparisonResultsGUI:
                                       values=values,
                                       tags=[tag])
             
-            # Store file data for drill-down
-            self.tree.set(item_id, 'file_data', file_node)
+            # Store file data for drill-down using item tags
+            # Note: Cannot use tree.set() for non-column data, so we'll store in a separate dict
+            if not hasattr(self, 'item_file_data'):
+                self.item_file_data = {}
+            self.item_file_data[item_id] = file_node
         
         # Insert subfolders
         for folder_name, folder_data in structure.get('folders', {}).items():
@@ -1163,8 +1169,8 @@ class FolderComparisonResultsGUI:
         tags = self.tree.item(item_id, 'tags')
         
         if 'matched_file' in tags:
-            # Show detailed file comparison
-            file_data = self.tree.set(item_id, 'file_data')
+            # Show detailed file comparison - get data from our storage dict
+            file_data = self.item_file_data.get(item_id)
             if file_data:
                 self._show_file_comparison(file_data)
         elif 'folder' in tags:
