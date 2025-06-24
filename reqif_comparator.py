@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-ReqIF Comparator Module
+ReqIF Comparator Module - Updated Version
 Handles comparison logic between two sets of requirements.
-Fixed: Removed profile management dependencies
+Enhanced with filename similarity for folder comparison functionality.
 """
 
 from typing import List, Dict, Any, Tuple
 import difflib
+import os
 
 
 class ReqIFComparator:
@@ -525,6 +526,52 @@ class ReqIFComparator:
         
         return similar
     
+    def calculate_filename_similarity(self, filename1: str, filename2: str) -> float:
+        """
+        Calculate similarity between two filenames for folder comparison
+        
+        Args:
+            filename1: First filename
+            filename2: Second filename
+            
+        Returns:
+            Similarity score between 0 and 1
+        """
+        try:
+            # Remove extensions for comparison
+            name1 = os.path.splitext(filename1.lower())[0]
+            name2 = os.path.splitext(filename2.lower())[0]
+            
+            # Use SequenceMatcher for similarity
+            matcher = difflib.SequenceMatcher(None, name1, name2)
+            return matcher.ratio()
+        except Exception as e:
+            print(f"Error calculating filename similarity: {e}")
+            return 0.0
+    
+    def calculate_path_similarity(self, path1: str, path2: str) -> float:
+        """
+        Calculate similarity between two file paths for folder comparison
+        
+        Args:
+            path1: First file path
+            path2: Second file path
+            
+        Returns:
+            Similarity score between 0 and 1
+        """
+        try:
+            # Normalize paths
+            norm_path1 = os.path.normpath(path1.lower())
+            norm_path2 = os.path.normpath(path2.lower())
+            
+            # Use SequenceMatcher for similarity
+            matcher = difflib.SequenceMatcher(None, norm_path1, norm_path2)
+            return matcher.ratio()
+        except Exception as e:
+            print(f"Error calculating path similarity: {e}")
+            return 0.0
+    
     def export_comparison_summary(self, comparison_results: Dict[str, Any]) -> str:
         """Generate a text summary of the comparison results"""
         try:
@@ -591,63 +638,33 @@ class ReqIFComparator:
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("ReqIF Comparator - Fixed Version")
-    print("Removed profile management dependencies")
+    print("ReqIF Comparator - Enhanced Version with Folder Support")
+    print("Added filename and path similarity calculation methods")
     
     comparator = ReqIFComparator()
     
-    # Example requirements for testing
-    reqs1 = [
-        {
-            'id': 'REQ-001', 
-            'title': 'System shall start', 
-            'description': 'The system shall start within 5 seconds', 
-            'type': 'functional', 
-            'attributes': {'priority': 'high'}
-        },
-        {
-            'id': 'REQ-002', 
-            'title': 'System shall stop', 
-            'description': 'The system shall stop safely', 
-            'type': 'functional', 
-            'attributes': {}
-        },
+    # Test filename similarity
+    print("\nTesting filename similarity:")
+    files = [
+        ("requirements_v1.reqif", "requirements_v2.reqif"),
+        ("system_specs.reqif", "system_specifications.reqif"),
+        ("old_file.reqif", "completely_different.reqif")
     ]
     
-    reqs2 = [
-        {
-            'id': 'REQ-001', 
-            'title': 'System shall start quickly', 
-            'description': 'The system shall start within 3 seconds', 
-            'type': 'functional', 
-            'attributes': {'priority': 'critical'}
-        },
-        {
-            'id': 'REQ-003', 
-            'title': 'System shall restart', 
-            'description': 'The system shall restart after failure', 
-            'type': 'functional', 
-            'attributes': {}
-        },
+    for file1, file2 in files:
+        similarity = comparator.calculate_filename_similarity(file1, file2)
+        print(f"'{file1}' vs '{file2}': {similarity:.2f}")
+    
+    # Test path similarity
+    print("\nTesting path similarity:")
+    paths = [
+        ("folder1/subfolder/file.reqif", "folder1/subfolder/file.reqif"),
+        ("folder1/subfolder/file.reqif", "folder2/subfolder/file.reqif"),
+        ("project/specs/requirements.reqif", "project/requirements/specs.reqif")
     ]
     
-    # Test comparison
-    print("\nTesting comparison...")
-    results = comparator.compare_requirements(reqs1, reqs2)
+    for path1, path2 in paths:
+        similarity = comparator.calculate_path_similarity(path1, path2)
+        print(f"'{path1}' vs '{path2}': {similarity:.2f}")
     
-    print("Comparison test results:")
-    print(f"Added: {len(results['added'])}")
-    print(f"Deleted: {len(results['deleted'])}")
-    print(f"Modified: {len(results['modified'])}")
-    print(f"Unchanged: {len(results['unchanged'])}")
-    
-    # Test modified entry structure
-    if results['modified']:
-        mod_req = results['modified'][0]
-        print(f"\nModified requirement structure:")
-        print(f"ID: {mod_req['id']}")
-        print(f"Title: {mod_req['title']}")
-        print(f"Changes Summary: {mod_req['changes_summary']}")
-        print(f"Change Count: {mod_req['change_count']}")
-    
-    print("\nReqIF Comparator fix completed successfully.")
+    print("\nReqIF Comparator enhancement completed successfully!")
