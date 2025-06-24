@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ReqIF Tool Suite - Native GUI Version with Folder Comparison
-Completely native tkinter with no theme dependencies
+ReqIF Tool Suite - Native GUI Version with Enhanced Folder Comparison
+Completely native tkinter with individual file statistics support
 """
 
 import tkinter as tk
@@ -23,8 +23,8 @@ from progress_dialog import ProgressDialog
 
 class ReqIFToolNative:
     """
-    ReqIF Tool Suite - Native GUI Version with Folder Comparison
-    Pure tkinter without any theme dependencies
+    ReqIF Tool Suite - Native GUI Version with Enhanced Folder Comparison
+    Pure tkinter with individual file statistics support
     """
     
     def __init__(self):
@@ -33,8 +33,8 @@ class ReqIFToolNative:
         
         # Create main window
         self.root = tk.Tk()
-        self.root.title("Beyond ReqIF v1.3.0 - Native Edition with Folder Comparison")
-        self.root.geometry("1100x750")
+        self.root.title("Beyond ReqIF v1.3.0 - Enhanced Edition with Individual File Statistics")
+        self.root.geometry("1150x750")
         
         # Initialize components
         self.parser = ReqIFParser()
@@ -74,17 +74,17 @@ class ReqIFToolNative:
         self._create_status_bar()
     
     def _create_header(self):
-        """Create native header"""
+        """Create enhanced header"""
         header_frame = tk.Frame(self.main_frame, relief='ridge', bd=2)
         header_frame.pack(fill=tk.X, pady=(0, 20))
         
-        # Title
-        title_label = tk.Label(header_frame, text="Beyond ReqIF", 
+        # Enhanced title
+        title_label = tk.Label(header_frame, text="Beyond ReqIF Enhanced", 
                               font=('Arial', 18, 'bold'))
         title_label.pack(side=tk.LEFT, padx=15, pady=15)
         
-        # Version
-        version_label = tk.Label(header_frame, text="Native Edition v1.3.0", 
+        # Enhanced version with individual stats
+        version_label = tk.Label(header_frame, text="Enhanced Edition v1.3.0 + Individual Stats", 
                                 font=('Arial', 11))
         version_label.pack(side=tk.RIGHT, padx=15, pady=15)
     
@@ -95,11 +95,11 @@ class ReqIFToolNative:
         
         # Create tabs
         self._create_compare_tab()
-        self._create_compare_folders_tab()
+        self._create_enhanced_compare_folders_tab()
         self._create_visualize_tab()
     
     def _create_compare_tab(self):
-        """Create comparison tab"""
+        """Create comparison tab (unchanged)"""
         compare_frame = tk.Frame(self.notebook)
         self.notebook.add(compare_frame, text="📊 Compare Files")
         
@@ -172,39 +172,42 @@ class ReqIFToolNative:
                                            font=('Arial', 11))
         self.compare_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
-    def _create_compare_folders_tab(self):
-        """Create folder comparison tab"""
+    def _create_enhanced_compare_folders_tab(self):
+        """Create enhanced folder comparison tab with individual file statistics"""
         compare_folders_frame = tk.Frame(self.notebook)
-        self.notebook.add(compare_folders_frame, text="📁 Compare Folders")
+        self.notebook.add(compare_folders_frame, text="📁 Enhanced Folders")
         
         # Main content frame
         content_frame = tk.Frame(compare_folders_frame, padx=25, pady=25)
         content_frame.pack(fill=tk.BOTH, expand=True)
         
         # Section header
-        header_label = tk.Label(content_frame, text="Folder Comparison", 
+        header_label = tk.Label(content_frame, text="Enhanced Folder Comparison", 
                                font=('Arial', 16, 'bold'))
         header_label.pack(anchor=tk.W, pady=(0, 10))
         
-        # Description
+        # Enhanced description
         desc_label = tk.Label(content_frame, 
-                             text="Compare two folders containing ReqIF files to identify file and requirement changes", 
+                             text="Compare two folders containing ReqIF files with detailed individual file statistics and analysis", 
                              font=('Arial', 11), wraplength=600, justify=tk.LEFT)
         desc_label.pack(anchor=tk.W, pady=(0, 25))
         
-        # Info box
-        info_frame = tk.Frame(content_frame, relief='solid', bd=1, bg='lightyellow')
+        # Enhanced info box with new features
+        info_frame = tk.Frame(content_frame, relief='solid', bd=1, bg='lightcyan')
         info_frame.pack(fill=tk.X, pady=(0, 25))
         
-        info_text = """ℹ️ Folder comparison features:
-• Scans subfolders recursively
-• Fuzzy matching for renamed files
+        info_text = """✨ Enhanced folder comparison features:
+• Individual file statistics and analysis
+• Detailed change tracking per file
+• Parsing success/failure monitoring per file
+• File size and requirement count analysis
+• Enhanced export capabilities with individual data
+• Analysis insights and recommendations
 • Maximum 200 files per comparison
-• Progress tracking with cancellation
-• Hierarchical results display"""
+• Progress tracking with cancellation"""
         
         tk.Label(info_frame, text=info_text, font=('Arial', 10), 
-                justify=tk.LEFT, bg='lightyellow', padx=15, pady=10).pack(anchor=tk.W)
+                justify=tk.LEFT, bg='lightcyan', padx=15, pady=10).pack(anchor=tk.W)
         
         # Folder selection frame
         folders_frame = tk.LabelFrame(content_frame, text="Select Folders", 
@@ -245,23 +248,23 @@ class ReqIFToolNative:
                                font=('Arial', 10), relief='raised', bd=2, padx=15)
         folder2_btn.pack(side=tk.RIGHT)
         
-        # Controls
+        # Enhanced controls
         controls_frame = tk.Frame(content_frame)
         controls_frame.pack(fill=tk.X, pady=(15, 0))
         
-        self.compare_folders_btn = tk.Button(controls_frame, text="🔍 Compare Folders", 
+        self.compare_folders_btn = tk.Button(controls_frame, text="🔍 Enhanced Compare", 
                                             command=self._compare_folders,
                                             font=('Arial', 12, 'bold'), relief='raised', bd=3,
                                             padx=25, pady=8, cursor='hand2')
         self.compare_folders_btn.pack(side=tk.LEFT)
         
         self.compare_folders_status_label = tk.Label(controls_frame, 
-                                                    text="Select two folders to begin comparison",
+                                                    text="Select two folders for enhanced comparison with individual file statistics",
                                                     font=('Arial', 11))
         self.compare_folders_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
     def _create_visualize_tab(self):
-        """Create visualization tab"""
+        """Create visualization tab (unchanged)"""
         visualize_frame = tk.Frame(self.notebook)
         self.notebook.add(visualize_frame, text="📈 Analyze File")
         
@@ -314,15 +317,15 @@ class ReqIFToolNative:
         self.visualize_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
     def _create_status_bar(self):
-        """Create native status bar"""
+        """Create enhanced status bar"""
         status_frame = tk.Frame(self.main_frame, relief='sunken', bd=2)
         status_frame.pack(fill=tk.X, pady=(20, 0))
         
-        self.status_label = tk.Label(status_frame, text="Ready", 
+        self.status_label = tk.Label(status_frame, text="Ready - Enhanced with individual file statistics", 
                                     font=('Arial', 10), anchor=tk.W)
         self.status_label.pack(side=tk.LEFT, padx=10, pady=8)
         
-        version_label = tk.Label(status_frame, text="v1.3.0", 
+        version_label = tk.Label(status_frame, text="Enhanced v1.3.0", 
                                 font=('Arial', 10))
         version_label.pack(side=tk.RIGHT, padx=10, pady=8)
     
@@ -340,8 +343,8 @@ class ReqIFToolNative:
         self._update_button_states()
     
     def _update_button_states(self):
-        """Update button states with visual feedback"""
-        # Compare button state
+        """Enhanced button states with individual statistics info"""
+        # Compare button state (unchanged)
         has_both_files = bool(self.file1_path.get() and self.file2_path.get())
         
         if has_both_files:
@@ -351,17 +354,17 @@ class ReqIFToolNative:
             self.compare_btn.configure(state=tk.DISABLED, bg='lightgray')
             self.compare_status_label.configure(text="Select two ReqIF files to begin comparison", fg='black')
         
-        # Compare folders button state
+        # Enhanced compare folders button state
         has_both_folders = bool(self.folder1_path.get() and self.folder2_path.get())
         
         if has_both_folders:
             self.compare_folders_btn.configure(state=tk.NORMAL, bg='lightblue')
-            self.compare_folders_status_label.configure(text="✓ Ready to compare folders", fg='darkblue')
+            self.compare_folders_status_label.configure(text="✓ Ready for enhanced comparison with individual file analysis", fg='darkblue')
         else:
             self.compare_folders_btn.configure(state=tk.DISABLED, bg='lightgray')
-            self.compare_folders_status_label.configure(text="Select two folders to begin comparison", fg='black')
+            self.compare_folders_status_label.configure(text="Select two folders for enhanced comparison with individual file statistics", fg='black')
         
-        # Visualize button state
+        # Visualize button state (unchanged)
         has_visualize_file = bool(self.visualize_file_path.get())
         
         if has_visualize_file:
@@ -372,7 +375,7 @@ class ReqIFToolNative:
             self.visualize_status_label.configure(text="Select a ReqIF file to explore and analyze", fg='black')
     
     def _browse_file1(self):
-        """Browse for first file"""
+        """Browse for first file (unchanged)"""
         try:
             filename = filedialog.askopenfilename(
                 title="Select Original ReqIF File",
@@ -390,7 +393,7 @@ class ReqIFToolNative:
             self._show_error("File Selection Error", f"Failed to select original file:\n{str(e)}")
     
     def _browse_file2(self):
-        """Browse for second file"""
+        """Browse for second file (unchanged)"""
         try:
             filename = filedialog.askopenfilename(
                 title="Select Modified ReqIF File",
@@ -408,7 +411,7 @@ class ReqIFToolNative:
             self._show_error("File Selection Error", f"Failed to select modified file:\n{str(e)}")
     
     def _browse_visualize_file(self):
-        """Browse for visualization file"""
+        """Browse for visualization file (unchanged)"""
         try:
             filename = filedialog.askopenfilename(
                 title="Select ReqIF File to Analyze",
@@ -426,7 +429,7 @@ class ReqIFToolNative:
             self._show_error("File Selection Error", f"Failed to select analysis file:\n{str(e)}")
     
     def _browse_folder1(self):
-        """Browse for first folder"""
+        """Browse for first folder (unchanged)"""
         try:
             foldername = filedialog.askdirectory(
                 title="Select Original Folder"
@@ -439,7 +442,7 @@ class ReqIFToolNative:
             self._show_error("Folder Selection Error", f"Failed to select original folder:\n{str(e)}")
     
     def _browse_folder2(self):
-        """Browse for second folder"""
+        """Browse for second folder (unchanged)"""
         try:
             foldername = filedialog.askdirectory(
                 title="Select Modified Folder"
@@ -452,7 +455,7 @@ class ReqIFToolNative:
             self._show_error("Folder Selection Error", f"Failed to select modified folder:\n{str(e)}")
     
     def _compare_files(self):
-        """Compare files"""
+        """Compare files (unchanged)"""
         if not (self.file1_path.get() and self.file2_path.get()):
             self._show_warning("Missing Files", "Please select both files to compare.")
             return
@@ -499,31 +502,31 @@ class ReqIFToolNative:
         threading.Thread(target=compare_in_thread, daemon=True).start()
     
     def _compare_folders(self):
-        """Compare folders"""
+        """Enhanced folder comparison with individual file statistics"""
         if not (self.folder1_path.get() and self.folder2_path.get()):
             self._show_warning("Missing Folders", "Please select both folders to compare.")
             return
         
         # Show progress dialog
-        self.progress_dialog = ProgressDialog(self.root, "Comparing Folders", 
-                                             "Initializing folder comparison...", True)
+        self.progress_dialog = ProgressDialog(self.root, "Enhanced Folder Comparison", 
+                                             "Initializing enhanced folder comparison with individual file statistics...", True)
         self.progress_dialog.show()
         
         # Setup cancellation
         cancel_flag = threading.Event()
         self.progress_dialog.set_cancel_callback(lambda: cancel_flag.set())
         
-        self._show_progress("Initializing folder comparison...")
+        self._show_progress("Initializing enhanced folder comparison...")
         self.compare_folders_btn.configure(state=tk.DISABLED, text="Comparing...", bg='yellow')
         self.root.update()
         
         def compare_folders_in_thread():
             try:
-                # Setup folder comparator
+                # Setup folder comparator (now enhanced with individual stats)
                 self.folder_comparator.set_cancel_flag(cancel_flag)
                 self.folder_comparator.set_progress_callback(self.progress_dialog.update_progress)
                 
-                # Perform comparison
+                # Perform comparison (automatically collects individual file statistics)
                 results = self.folder_comparator.compare_folders(
                     self.folder1_path.get(), 
                     self.folder2_path.get()
@@ -533,12 +536,17 @@ class ReqIFToolNative:
                     self.root.after_idle(lambda: self._show_comparison_cancelled())
                     return
                 
-                def show_folder_results():
+                def show_enhanced_folder_results():
                     try:
+                        # Create enhanced comparison window (automatically displays individual stats)
                         self.folder_comparison_window = FolderComparisonResultsGUI(self.root, results)
+                        
+                        # Get statistics for enhanced success message
                         folder_stats = results.get('folder_statistics', {})
                         req_stats = results.get('aggregated_statistics', {})
+                        individual_stats = results.get('individual_file_statistics', {})  # NEW
                         
+                        # Calculate enhanced metrics
                         total_file_changes = (folder_stats.get('files_added', 0) + 
                                             folder_stats.get('files_deleted', 0) + 
                                             folder_stats.get('files_with_changes', 0))
@@ -547,29 +555,40 @@ class ReqIFToolNative:
                                            req_stats.get('total_requirements_deleted', 0) + 
                                            req_stats.get('total_requirements_modified', 0))
                         
-                        self._show_success(f"Folder comparison complete - {total_file_changes} file changes, {total_req_changes} requirement changes")
-                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Compare Folders")
+                        # NEW: Get individual file insights
+                        total_files_analyzed = (len(individual_stats.get('matched_files', {})) +
+                                              len(individual_stats.get('added_files', {})) +
+                                              len(individual_stats.get('deleted_files', {})))
+                        
+                        # Enhanced success message with individual insights
+                        success_msg = (f"Enhanced folder comparison complete!\n"
+                                     f"📁 Files: {total_file_changes} changes across {total_files_analyzed} analyzed\n"
+                                     f"📄 Requirements: {total_req_changes} changes\n"
+                                     f"💡 View 'Individual Files' tab for detailed statistics")
+                        
+                        self._show_success(success_msg)
+                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
                         self._update_button_states()
                         
                         # Close progress dialog
                         if self.progress_dialog:
-                            self.progress_dialog.complete("Comparison completed successfully!")
+                            self.progress_dialog.complete("Enhanced comparison completed successfully!")
                         
                     except Exception as e:
-                        self._show_error("Results Error", f"Failed to display folder comparison results:\n{str(e)}")
-                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Compare Folders")
+                        self._show_error("Results Error", f"Failed to display enhanced folder comparison results:\n{str(e)}")
+                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
                         self._update_button_states()
                         
                         if self.progress_dialog:
                             self.progress_dialog.close()
                 
-                self.root.after_idle(show_folder_results)
+                self.root.after_idle(show_enhanced_folder_results)
                 
             except Exception as e:
                 error_message = str(e)
                 def show_error():
-                    self._show_error("Folder Comparison Failed", f"Folder comparison failed:\n{error_message}")
-                    self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Compare Folders")
+                    self._show_error("Enhanced Folder Comparison Failed", f"Enhanced folder comparison failed:\n{error_message}")
+                    self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
                     self._update_button_states()
                     
                     if self.progress_dialog:
@@ -580,7 +599,7 @@ class ReqIFToolNative:
         threading.Thread(target=compare_folders_in_thread, daemon=True).start()
     
     def _visualize_file(self):
-        """Visualize file"""
+        """Visualize file (unchanged)"""
         if not self.visualize_file_path.get():
             self._show_warning("Missing File", "Please select a file to analyze.")
             return
@@ -624,8 +643,8 @@ class ReqIFToolNative:
     
     def _show_comparison_cancelled(self):
         """Handle cancelled comparison"""
-        self._show_progress("Comparison cancelled by user")
-        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Compare Folders")
+        self._show_progress("Enhanced comparison cancelled by user")
+        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
         self._update_button_states()
         
         if self.progress_dialog:
@@ -652,7 +671,7 @@ class ReqIFToolNative:
     def run(self):
         """Run the application"""
         try:
-            self._show_success("Beyond ReqIF ready - File and folder comparison available")
+            self._show_success("Beyond ReqIF Enhanced ready - File and folder comparison with individual statistics available")
             self.notebook.select(0)
             self.root.mainloop()
         except Exception as e:
@@ -690,7 +709,7 @@ class ReqIFToolNative:
 def main():
     """Main function"""
     try:
-        print("Starting Beyond ReqIF v1.3.0 - Native Edition with Folder Comparison...")
+        print("Starting Beyond ReqIF v1.3.0 - Enhanced Edition with Individual File Statistics...")
         app = ReqIFToolNative()
         app.run()
     except Exception as e:
@@ -703,7 +722,7 @@ def main():
             root.withdraw()
             messagebox.showerror(
                 "Startup Error", 
-                f"Failed to start Beyond ReqIF:\n\n{str(e)}"
+                f"Failed to start Beyond ReqIF Enhanced:\n\n{str(e)}"
             )
             root.destroy()
         except Exception:
