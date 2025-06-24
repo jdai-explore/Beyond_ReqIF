@@ -19,12 +19,12 @@ try:
     from .visualizer_gui import VisualizerGUI
     from .main import ReqIFToolNative
     
-    # Enhanced components
+    # Enhanced components - FIXED IMPORTS
     from .utils import (
         get_config, get_threading_config, get_compatibility_config,
         ensure_compatibility, legacy_progress_adapter, quick_system_check
     )
-    from .threading import (
+    from .thread_pools import (
         get_thread_manager, execute_parallel_parse, execute_parallel_compare,
         get_threading_stats, is_threading_healthy
     )
@@ -153,7 +153,7 @@ def run_package_validation():
     # Test threading system
     if IMPORTS_SUCCESSFUL:
         try:
-            from .threading import validate_threading_system
+            from .thread_pools import validate_threading_system
             thread_validation = validate_threading_system()
             validation_results['threading_system'] = thread_validation['overall_success']
             status = "PASS" if thread_validation['overall_success'] else "FAIL"

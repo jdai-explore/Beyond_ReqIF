@@ -8,16 +8,16 @@ import os
 import difflib
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Callable
-import threading
+import threading as thread_module  # FIXED: Renamed to avoid circular import
 import time
 
 # Original imports
 from reqif_comparator import ReqIFComparator
 from reqif_parser import ReqIFParser
 
-# New threading infrastructure
-from threading.thread_manager import get_thread_manager, execute_parallel_parse, execute_parallel_compare
-from threading.task_queue import get_task_scheduler, get_result_collector, TaskPriority
+# New threading infrastructure - FIXED IMPORTS
+from thread_pools.thread_manager import get_thread_manager, execute_parallel_parse, execute_parallel_compare
+from thread_pools.task_queue import get_task_scheduler, get_result_collector, TaskPriority
 from utils.config import get_threading_config, get_compatibility_config
 from utils.compatibility_layer import ensure_compatibility, legacy_progress_adapter, register_fallback
 
@@ -37,7 +37,7 @@ class FolderComparator:
         
         # Progress tracking
         self.progress_callback = None
-        self.cancel_flag = threading.Event()
+        self.cancel_flag = thread_module.Event()
         
         # Configuration
         self.threading_config = get_threading_config()
@@ -64,7 +64,7 @@ class FolderComparator:
         else:
             self.progress_callback = callback
     
-    def set_cancel_flag(self, cancel_flag: threading.Event):
+    def set_cancel_flag(self, cancel_flag: thread_module.Event):
         """Set cancel flag for operation cancellation"""
         self.cancel_flag = cancel_flag
     

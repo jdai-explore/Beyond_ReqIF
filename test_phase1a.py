@@ -29,8 +29,8 @@ def test_imports():
     
     # Test threading imports
     try:
-        from threading.thread_manager import get_thread_manager
-        from threading.task_queue import get_task_scheduler, TaskPriority
+        from thread_pools.thread_manager import get_thread_manager
+        from thread_pools.task_queue import get_task_scheduler, TaskPriority
         test_results['threading_imports'] = True
         print("  ✅ threading package imports: PASS")
     except Exception as e:
@@ -111,8 +111,8 @@ def test_threading_system():
     print("\nTesting threading system...")
     
     try:
-        from threading.thread_manager import get_thread_manager, validate_threading
-        from threading.task_queue import get_task_scheduler, validate_task_system
+        from thread_pools.thread_manager import get_thread_manager, validate_threading
+        from thread_pools.task_queue import get_task_scheduler, validate_task_system
         
         # Test thread manager
         manager = get_thread_manager()
@@ -346,7 +346,7 @@ def test_integration():
         import threading as thread_module
         from folder_comparator import FolderComparator
         from utils.config import get_threading_config
-        from threading.thread_manager import get_thread_manager
+        from thread_pools.thread_manager import get_thread_manager
         
         # Test configuration integration
         config = get_threading_config()
@@ -408,7 +408,7 @@ def test_performance_simulation():
     print("\nTesting performance simulation...")
     
     try:
-        from threading.thread_manager import execute_parallel_parse, execute_parallel_compare
+        from thread_pools.thread_manager import execute_parallel_parse, execute_parallel_compare
         import time
         
         # Simulate parsing tasks

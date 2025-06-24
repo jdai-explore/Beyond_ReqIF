@@ -7,7 +7,7 @@ Completely native tkinter with individual file statistics support
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import os
-import threading
+import threading as thread_module  # FIXED: Renamed to avoid circular import
 from typing import Optional, Dict, Any
 
 # Import core modules
@@ -499,7 +499,7 @@ class ReqIFToolNative:
                 
                 self.root.after_idle(show_error)
         
-        threading.Thread(target=compare_in_thread, daemon=True).start()
+        thread_module.Thread(target=compare_in_thread, daemon=True).start()
     
     def _compare_folders(self):
         """Enhanced folder comparison with individual file statistics"""
@@ -513,7 +513,7 @@ class ReqIFToolNative:
         self.progress_dialog.show()
         
         # Setup cancellation
-        cancel_flag = threading.Event()
+        cancel_flag = thread_module.Event()
         self.progress_dialog.set_cancel_callback(lambda: cancel_flag.set())
         
         self._show_progress("Initializing enhanced folder comparison...")
@@ -588,7 +588,7 @@ class ReqIFToolNative:
                 error_message = str(e)
                 def show_error():
                     self._show_error("Enhanced Folder Comparison Failed", f"Enhanced folder comparison failed:\n{error_message}")
-                    self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
+                    self.compare_folders_btn.configure(state=tk.DISABLED, text="🔍 Enhanced Compare")
                     self._update_button_states()
                     
                     if self.progress_dialog:
@@ -596,7 +596,7 @@ class ReqIFToolNative:
                 
                 self.root.after_idle(show_error)
         
-        threading.Thread(target=compare_folders_in_thread, daemon=True).start()
+        thread_module.Thread(target=compare_folders_in_thread, daemon=True).start()
     
     def _visualize_file(self):
         """Visualize file (unchanged)"""
@@ -639,7 +639,7 @@ class ReqIFToolNative:
                 
                 self.root.after_idle(show_error)
         
-        threading.Thread(target=visualize_in_thread, daemon=True).start()
+        thread_module.Thread(target=visualize_in_thread, daemon=True).start()
     
     def _show_comparison_cancelled(self):
         """Handle cancelled comparison"""

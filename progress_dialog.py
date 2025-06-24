@@ -6,7 +6,7 @@ Lightweight progress dialog for long-running operations
 
 import tkinter as tk
 from tkinter import ttk
-import threading
+import threading as thread_module  # FIXED: Renamed to avoid circular import
 from typing import Optional, Callable
 
 
@@ -137,7 +137,7 @@ class ProgressDialog:
                 self.dialog.update_idletasks()
             
             # Schedule update on main thread
-            if threading.current_thread() == threading.main_thread():
+            if thread_module.current_thread() == thread_module.main_thread():
                 _update()
             else:
                 self.dialog.after_idle(_update)
@@ -162,7 +162,7 @@ class ProgressDialog:
                     self.progress_bar.stop()
                     self.progress_bar.configure(mode='determinate')
             
-            if threading.current_thread() == threading.main_thread():
+            if thread_module.current_thread() == thread_module.main_thread():
                 _set_mode()
             else:
                 self.dialog.after_idle(_set_mode)
@@ -189,7 +189,7 @@ class ProgressDialog:
                     # Auto-close after 1 second
                     self.dialog.after(1000, self.close)
                 
-                if threading.current_thread() == threading.main_thread():
+                if thread_module.current_thread() == thread_module.main_thread():
                     _complete()
                 else:
                     self.dialog.after_idle(_complete)
@@ -212,7 +212,7 @@ class ProgressDialog:
                     except:
                         pass
                 
-                if threading.current_thread() == threading.main_thread():
+                if thread_module.current_thread() == thread_module.main_thread():
                     _close()
                 else:
                     self.dialog.after_idle(_close)
@@ -308,7 +308,7 @@ if __name__ == "__main__":
         
         # Test buttons
         tk.Button(root, text="Test Determinate Progress", 
-                 command=lambda: threading.Thread(target=run_test, daemon=True).start(),
+                 command=lambda: thread_module.Thread(target=run_test, daemon=True).start(),
                  padx=10, pady=5).pack(pady=10)
         
         tk.Button(root, text="Test Indeterminate Progress", 
