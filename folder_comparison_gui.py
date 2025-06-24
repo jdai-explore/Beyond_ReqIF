@@ -361,6 +361,23 @@ class FolderComparisonResultsGUI:
         v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         matched_tree.configure(yscrollcommand=v_scroll.set)
         
+        # Configure color tags for visual feedback
+        matched_tree.tag_configure('high_change', background='#ffdddd')  # Light red
+        matched_tree.tag_configure('medium_change', background='#fff5dd')  # Light orange
+        matched_tree.tag_configure('low_change', background='#ddffdd')  # Light green
+        
+        # Add legend for color coding
+        legend_frame = tk.Frame(matched_frame)
+        legend_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
+        
+        tk.Label(legend_frame, text="Color coding:", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
+        tk.Label(legend_frame, text="Low change (<5%)", bg='#ddffdd', 
+                font=('Arial', 9), padx=5).pack(side=tk.LEFT, padx=(10, 5))
+        tk.Label(legend_frame, text="Medium change (5-20%)", bg='#fff5dd', 
+                font=('Arial', 9), padx=5).pack(side=tk.LEFT, padx=5)
+        tk.Label(legend_frame, text="High change (>20%)", bg='#ffdddd', 
+                font=('Arial', 9), padx=5).pack(side=tk.LEFT, padx=5)
+        
         # Populate matched files data
         for file_path, file_data in self.individual_stats.get('matched_files', {}).items():
             stats = file_data.get('comparison_stats', {})
@@ -392,16 +409,16 @@ class FolderComparisonResultsGUI:
             
             values = [match_type, similarity, changes_str, change_pct, file1_size, file2_size, reqs_str]
             
-            # Add color coding based on change percentage
-            item_id = matched_tree.insert('', 'end', text=file_path, values=values)
-            
-            # Tag for color coding
-            if stats.get('change_percentage', 0) > 20:
-                matched_tree.set(item_id, 'tag', 'high_change')
-            elif stats.get('change_percentage', 0) > 5:
-                matched_tree.set(item_id, 'tag', 'medium_change')
+            # Add item with appropriate tags for color coding
+            change_percentage = stats.get('change_percentage', 0)
+            if change_percentage > 20:
+                tags = ['high_change']
+            elif change_percentage > 5:
+                tags = ['medium_change']
             else:
-                matched_tree.set(item_id, 'tag', 'low_change')
+                tags = ['low_change']
+            
+            item_id = matched_tree.insert('', 'end', text=file_path, values=values, tags=tags)
     
     def _create_added_files_stats_tab(self, parent_notebook):
         """Create added files statistics tab"""
