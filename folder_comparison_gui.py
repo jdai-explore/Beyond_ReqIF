@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Enhanced Folder Comparison Results GUI - Native Version
-Added individual file statistics display without impacting existing functionality
+Enhanced Folder Comparison Results GUI - Updated Version
+Dynamic field detection without hardcoded field assumptions
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import csv
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 from comparison_gui import ComparisonResultsGUI
 
 
 class FolderComparisonResultsGUI:
     """
-    Enhanced Folder Comparison Results GUI with individual file statistics
+    Enhanced Folder Comparison Results GUI with Dynamic Field Detection
     """
     
     def __init__(self, parent: tk.Widget, results: Dict[str, Any]):
@@ -34,8 +34,11 @@ class FolderComparisonResultsGUI:
         self.expanded_nodes = set()
         self.file_comparison_windows = {}
         
-        # Individual file statistics (NEW)
+        # Individual file statistics (Enhanced)
         self.individual_stats = results.get('individual_file_statistics', {})
+        
+        # Dynamic field detection for matched files
+        self.available_fields = self._detect_available_fields()
         
         # Storage for file data (to avoid treeview column issues)
         self.item_file_data = {}
@@ -46,8 +49,33 @@ class FolderComparisonResultsGUI:
         # Handle window closing
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
     
+    def _detect_available_fields(self) -> Set[str]:
+        """Detect available fields from matched files"""
+        available_fields = set()
+        
+        # Check matched files for available fields
+        matched_files = self.individual_stats.get('matched_files', {})
+        for file_path, file_data in matched_files.items():
+            file1_info = file_data.get('file1_info', {})
+            file2_info = file_data.get('file2_info', {})
+            comparison_stats = file_data.get('comparison_stats', {})
+            
+            # Add file info fields
+            for info in [file1_info, file2_info]:
+                if isinstance(info, dict):
+                    available_fields.update(info.keys())
+            
+            # Add comparison stat fields
+            if isinstance(comparison_stats, dict):
+                available_fields.update(comparison_stats.keys())
+        
+        # Add standard fields that are always relevant
+        available_fields.update(['match_type', 'similarity', 'has_changes'])
+        
+        return available_fields
+    
     def setup_gui(self):
-        """Setup enhanced native GUI with individual file statistics"""
+        """Setup enhanced native GUI with dynamic field detection"""
         # Create main container
         self.main_frame = tk.Frame(self.window, padx=20, pady=20)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -94,10 +122,10 @@ class FolderComparisonResultsGUI:
         # Create enhanced summary sections
         self._create_folder_summary(summary_frame, folder_stats)
         self._create_requirements_summary(summary_frame, req_stats)
-        self._create_individual_insights_summary(summary_frame)  # NEW
+        self._create_individual_insights_summary(summary_frame)  # Enhanced
     
     def _create_folder_summary(self, parent, folder_stats):
-        """Create folder-level summary (unchanged)"""
+        """Create folder-level summary"""
         folder_frame = tk.LabelFrame(parent, text="File Changes", font=('Arial', 11, 'bold'))
         folder_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 15))
         
@@ -119,7 +147,7 @@ class FolderComparisonResultsGUI:
                     fg=color).pack(side=tk.RIGHT, padx=(20, 0))
     
     def _create_requirements_summary(self, parent, req_stats):
-        """Create requirements-level summary (unchanged)"""
+        """Create requirements-level summary"""
         req_frame = tk.LabelFrame(parent, text="Aggregated Requirement Changes", font=('Arial', 11, 'bold'))
         req_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(15, 15))
         
@@ -149,7 +177,7 @@ class FolderComparisonResultsGUI:
                 fg='purple').pack(side=tk.RIGHT, padx=(20, 0))
     
     def _create_individual_insights_summary(self, parent):
-        """NEW: Create individual file insights summary"""
+        """Create individual file insights summary with dynamic field analysis"""
         insights_frame = tk.LabelFrame(parent, text="Individual File Insights", font=('Arial', 11, 'bold'))
         insights_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(15, 0))
         
@@ -179,62 +207,89 @@ class FolderComparisonResultsGUI:
                  padx=10, pady=3, cursor='hand2', bg='lightcyan').pack(pady=(10, 5))
     
     def _calculate_individual_insights(self):
-        """Calculate insights from individual file statistics"""
+        """Calculate insights from individual file statistics with dynamic field analysis"""
         insights = {
             'total_files_analyzed': 0,
             'parsing_errors': 0,
             'largest_change_pct': 0,
             'avg_file_size_mb': 0,
-            'files_with_significant_changes': 0  # >10% change
+            'files_with_significant_changes': 0,  # >10% change
+            'most_common_fields': [],
+            'field_diversity': 0
         }
         
         file_sizes = []
+        all_fields = set()
         
         # Analyze matched files
         matched_files = self.individual_stats.get('matched_files', {})
         insights['total_files_analyzed'] += len(matched_files)
         
         for file_path, file_data in matched_files.items():
-            stats = file_data.get('comparison_stats', {})
-            change_pct = stats.get('change_percentage', 0)
-            
-            if change_pct > insights['largest_change_pct']:
-                insights['largest_change_pct'] = change_pct
-            
-            if change_pct > 10:
-                insights['files_with_significant_changes'] += 1
-            
-            # Collect file sizes
-            file1_size = file_data.get('file1_info', {}).get('size', 0)
-            file2_size = file_data.get('file2_info', {}).get('size', 0)
-            file_sizes.extend([file1_size, file2_size])
+            try:
+                stats = file_data.get('comparison_stats', {})
+                change_pct = stats.get('change_percentage', 0)
+                
+                if change_pct > insights['largest_change_pct']:
+                    insights['largest_change_pct'] = change_pct
+                
+                if change_pct > 10:
+                    insights['files_with_significant_changes'] += 1
+                
+                # Collect file sizes
+                file1_info = file_data.get('file1_info', {})
+                file2_info = file_data.get('file2_info', {})
+                
+                file1_size = file1_info.get('size', 0) if isinstance(file1_info, dict) else 0
+                file2_size = file2_info.get('size', 0) if isinstance(file2_info, dict) else 0
+                file_sizes.extend([file1_size, file2_size])
+                
+                # Collect field information for diversity analysis
+                if isinstance(stats, dict):
+                    all_fields.update(stats.keys())
+                    
+            except Exception as e:
+                print(f"Error analyzing matched file {file_path}: {e}")
         
         # Analyze added files
         added_files = self.individual_stats.get('added_files', {})
         insights['total_files_analyzed'] += len(added_files)
         
         for file_path, file_data in added_files.items():
-            if not file_data.get('parsing_success', True):
-                insights['parsing_errors'] += 1
-            
-            file_size = file_data.get('file_info', {}).get('size', 0)
-            file_sizes.append(file_size)
+            try:
+                if not file_data.get('parsing_success', True):
+                    insights['parsing_errors'] += 1
+                
+                file_info = file_data.get('file_info', {})
+                if isinstance(file_info, dict):
+                    file_size = file_info.get('size', 0)
+                    file_sizes.append(file_size)
+            except Exception as e:
+                print(f"Error analyzing added file {file_path}: {e}")
         
         # Analyze deleted files
         deleted_files = self.individual_stats.get('deleted_files', {})
         insights['total_files_analyzed'] += len(deleted_files)
         
         for file_path, file_data in deleted_files.items():
-            if not file_data.get('parsing_success', True):
-                insights['parsing_errors'] += 1
-            
-            file_size = file_data.get('file_info', {}).get('size', 0)
-            file_sizes.append(file_size)
+            try:
+                if not file_data.get('parsing_success', True):
+                    insights['parsing_errors'] += 1
+                
+                file_info = file_data.get('file_info', {})
+                if isinstance(file_info, dict):
+                    file_size = file_info.get('size', 0)
+                    file_sizes.append(file_size)
+            except Exception as e:
+                print(f"Error analyzing deleted file {file_path}: {e}")
         
         # Calculate average file size
         if file_sizes:
             avg_size_bytes = sum(file_sizes) / len(file_sizes)
             insights['avg_file_size_mb'] = avg_size_bytes / (1024 * 1024)
+        
+        # Calculate field diversity
+        insights['field_diversity'] = len(all_fields)
         
         return insights
     
@@ -250,11 +305,11 @@ class FolderComparisonResultsGUI:
         
         # Create tabs
         self._create_hierarchical_results_tab()      # Original functionality
-        self._create_individual_stats_tab()          # NEW: Individual file statistics
-        self._create_comparison_analysis_tab()       # NEW: Comparison analysis
+        self._create_individual_stats_tab()          # Enhanced: Individual file statistics
+        self._create_comparison_analysis_tab()       # Enhanced: Comparison analysis
     
     def _create_hierarchical_results_tab(self):
-        """Create hierarchical results display tab (original functionality)"""
+        """Create hierarchical results display tab with dynamic field support"""
         hierarchical_frame = tk.Frame(self.results_notebook)
         self.results_notebook.add(hierarchical_frame, text="📁 File Hierarchy")
         
@@ -268,9 +323,17 @@ class FolderComparisonResultsGUI:
         tree_frame = tk.Frame(hierarchical_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
-        # Create treeview with columns
-        columns = ['status', 'type', 'changes', 'match_type']
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings')
+        # Create treeview with dynamic columns
+        # Detect common fields from file results
+        file_results = self.results.get('file_results', {})
+        common_fields = self._detect_file_result_fields(file_results)
+        
+        # Use most relevant fields for tree columns
+        tree_columns = ['status', 'type', 'changes', 'match_type']
+        if 'file_size' in common_fields:
+            tree_columns.append('file_size')
+        
+        self.tree = ttk.Treeview(tree_frame, columns=tree_columns, show='tree headings')
         
         # Configure columns
         self.tree.heading('#0', text='File/Folder', anchor=tk.W)
@@ -280,12 +343,15 @@ class FolderComparisonResultsGUI:
             'status': ('Status', 120, 80),
             'type': ('Type', 100, 80),
             'changes': ('Changes', 200, 120),
-            'match_type': ('Match', 100, 80)
+            'match_type': ('Match', 100, 80),
+            'file_size': ('Size (MB)', 100, 80)
         }
         
-        for col, (display_name, width, minwidth) in column_config.items():
-            self.tree.heading(col, text=display_name, anchor=tk.W)
-            self.tree.column(col, width=width, minwidth=minwidth)
+        for col in tree_columns:
+            if col in column_config:
+                display_name, width, minwidth = column_config[col]
+                self.tree.heading(col, text=display_name, anchor=tk.W)
+                self.tree.column(col, width=width, minwidth=minwidth)
         
         # Pack treeview with scrollbars
         tree_container = tk.Frame(tree_frame)
@@ -310,8 +376,20 @@ class FolderComparisonResultsGUI:
         # Populate tree
         self._populate_hierarchical_tree()
     
+    def _detect_file_result_fields(self, file_results):
+        """Detect common fields in file results"""
+        common_fields = set()
+        
+        for category in ['matched_files', 'added_files', 'deleted_files']:
+            files = file_results.get(category, [])
+            for file_data in files:
+                if isinstance(file_data, dict):
+                    common_fields.update(file_data.keys())
+        
+        return common_fields
+    
     def _create_individual_stats_tab(self):
-        """NEW: Create individual file statistics tab"""
+        """Create individual file statistics tab with dynamic field support"""
         stats_frame = tk.Frame(self.results_notebook)
         self.results_notebook.add(stats_frame, text="📊 Individual Files")
         
@@ -325,34 +403,79 @@ class FolderComparisonResultsGUI:
         self._create_deleted_files_stats_tab(stats_notebook)
     
     def _create_matched_files_stats_tab(self, parent_notebook):
-        """Create matched files statistics tab"""
+        """Create matched files statistics tab with dynamic columns"""
         matched_frame = tk.Frame(parent_notebook)
         parent_notebook.add(matched_frame, text=f"🔄 Matched ({len(self.individual_stats.get('matched_files', {}))})")
         
-        # Create treeview for matched files
+        # Create treeview for matched files with dynamic columns
         tree_frame = tk.Frame(matched_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        columns = ['match_type', 'similarity', 'changes', 'change_pct', 'file1_size', 'file2_size', 'requirements']
+        # Define base columns that are always relevant
+        base_columns = ['match_type', 'similarity', 'changes', 'change_pct']
+        
+        # Add dynamic columns based on available data
+        matched_files = self.individual_stats.get('matched_files', {})
+        additional_columns = []
+        
+        # Check what additional fields are commonly available
+        field_counts = {}
+        for file_data in matched_files.values():
+            file1_info = file_data.get('file1_info', {})
+            file2_info = file_data.get('file2_info', {})
+            comparison_stats = file_data.get('comparison_stats', {})
+            
+            # Count occurrences of potentially useful fields
+            for info_dict in [file1_info, file2_info, comparison_stats]:
+                if isinstance(info_dict, dict):
+                    for field in info_dict.keys():
+                        if field not in ['full_path', 'relative_path']:  # Skip path fields
+                            field_counts[field] = field_counts.get(field, 0) + 1
+        
+        # Select most common additional fields
+        common_threshold = len(matched_files) * 0.5  # Field must be in 50% of files
+        for field, count in field_counts.items():
+            if count >= common_threshold and field not in base_columns:
+                if field in ['size', 'filename', 'modified_time']:
+                    additional_columns.append(field)
+        
+        # Final column list
+        columns = base_columns + additional_columns[:3]  # Limit additional columns
+        
         matched_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings')
         
         # Configure columns
         matched_tree.heading('#0', text='File Path', anchor=tk.W)
         matched_tree.column('#0', width=300, minwidth=200)
         
-        column_config = {
-            'match_type': ('Match Type', 80, 60),
-            'similarity': ('Similarity', 80, 60),
-            'changes': ('Changes', 120, 80),
-            'change_pct': ('Change %', 70, 50),
-            'file1_size': ('Size 1 (MB)', 90, 70),
-            'file2_size': ('Size 2 (MB)', 90, 70),
-            'requirements': ('Reqs (1→2)', 100, 80)
-        }
-        
-        for col, (display_name, width, minwidth) in column_config.items():
-            matched_tree.heading(col, text=display_name, anchor=tk.W)
-            matched_tree.column(col, width=width, minwidth=minwidth)
+        # Dynamic column configuration
+        for col in columns:
+            if col == 'match_type':
+                matched_tree.heading(col, text='Match Type', anchor=tk.W)
+                matched_tree.column(col, width=80, minwidth=60)
+            elif col == 'similarity':
+                matched_tree.heading(col, text='Similarity', anchor=tk.W)
+                matched_tree.column(col, width=80, minwidth=60)
+            elif col == 'changes':
+                matched_tree.heading(col, text='Changes', anchor=tk.W)
+                matched_tree.column(col, width=120, minwidth=80)
+            elif col == 'change_pct':
+                matched_tree.heading(col, text='Change %', anchor=tk.W)
+                matched_tree.column(col, width=70, minwidth=50)
+            elif col == 'size':
+                matched_tree.heading(col, text='Size (MB)', anchor=tk.W)
+                matched_tree.column(col, width=90, minwidth=70)
+            elif col == 'filename':
+                matched_tree.heading(col, text='Filename', anchor=tk.W)
+                matched_tree.column(col, width=150, minwidth=100)
+            elif col == 'modified_time':
+                matched_tree.heading(col, text='Modified', anchor=tk.W)
+                matched_tree.column(col, width=100, minwidth=80)
+            else:
+                # Generic handling for other fields
+                display_name = col.replace('_', ' ').title()
+                matched_tree.heading(col, text=display_name, anchor=tk.W)
+                matched_tree.column(col, width=100, minwidth=70)
         
         # Pack with scrollbars
         matched_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -379,49 +502,72 @@ class FolderComparisonResultsGUI:
                 font=('Arial', 9), padx=5).pack(side=tk.LEFT, padx=5)
         
         # Populate matched files data
-        for file_path, file_data in self.individual_stats.get('matched_files', {}).items():
-            stats = file_data.get('comparison_stats', {})
-            
-            # Calculate display values
-            match_type = file_data.get('match_type', 'unknown')
-            similarity = f"{file_data.get('similarity', 0):.2f}"
-            
-            # Changes summary
-            changes = []
-            if stats.get('added_count', 0) > 0:
-                changes.append(f"+{stats['added_count']}")
-            if stats.get('deleted_count', 0) > 0:
-                changes.append(f"-{stats['deleted_count']}")
-            if stats.get('modified_count', 0) > 0:
-                changes.append(f"~{stats['modified_count']}")
-            
-            changes_str = ", ".join(changes) if changes else "None"
-            change_pct = f"{stats.get('change_percentage', 0):.1f}%"
-            
-            # File sizes
-            file1_size = f"{file_data.get('file1_info', {}).get('size', 0) / (1024*1024):.1f}"
-            file2_size = f"{file_data.get('file2_info', {}).get('size', 0) / (1024*1024):.1f}"
-            
-            # Requirements count
-            reqs1 = stats.get('total_file1', 0)
-            reqs2 = stats.get('total_file2', 0)
-            reqs_str = f"{reqs1}→{reqs2}"
-            
-            values = [match_type, similarity, changes_str, change_pct, file1_size, file2_size, reqs_str]
-            
-            # Add item with appropriate tags for color coding
-            change_percentage = stats.get('change_percentage', 0)
-            if change_percentage > 20:
-                tags = ['high_change']
-            elif change_percentage > 5:
-                tags = ['medium_change']
-            else:
-                tags = ['low_change']
-            
-            item_id = matched_tree.insert('', 'end', text=file_path, values=values, tags=tags)
+        for file_path, file_data in matched_files.items():
+            try:
+                stats = file_data.get('comparison_stats', {})
+                
+                # Calculate display values dynamically
+                values = []
+                for col in columns:
+                    if col == 'match_type':
+                        values.append(file_data.get('match_type', 'unknown'))
+                    elif col == 'similarity':
+                        similarity = file_data.get('similarity', 0)
+                        values.append(f"{similarity:.2f}")
+                    elif col == 'changes':
+                        changes = []
+                        if stats.get('added_count', 0) > 0:
+                            changes.append(f"+{stats['added_count']}")
+                        if stats.get('deleted_count', 0) > 0:
+                            changes.append(f"-{stats['deleted_count']}")
+                        if stats.get('modified_count', 0) > 0:
+                            changes.append(f"~{stats['modified_count']}")
+                        values.append(", ".join(changes) if changes else "None")
+                    elif col == 'change_pct':
+                        change_pct = stats.get('change_percentage', 0)
+                        values.append(f"{change_pct:.1f}%")
+                    elif col == 'size':
+                        # Try to get size from file info
+                        file1_info = file_data.get('file1_info', {})
+                        size = file1_info.get('size', 0) if isinstance(file1_info, dict) else 0
+                        size_mb = size / (1024*1024) if size > 0 else 0
+                        values.append(f"{size_mb:.1f}")
+                    elif col == 'filename':
+                        file1_info = file_data.get('file1_info', {})
+                        filename = file1_info.get('filename', '') if isinstance(file1_info, dict) else ''
+                        values.append(filename)
+                    elif col == 'modified_time':
+                        file1_info = file_data.get('file1_info', {})
+                        mod_time = file1_info.get('modified_time', 0) if isinstance(file1_info, dict) else 0
+                        if mod_time:
+                            import time
+                            values.append(time.strftime('%Y-%m-%d', time.localtime(mod_time)))
+                        else:
+                            values.append('')
+                    else:
+                        # Try to get value from various sources
+                        value = (stats.get(col, '') or 
+                                file_data.get('file1_info', {}).get(col, '') or
+                                file_data.get('file2_info', {}).get(col, '') or
+                                file_data.get(col, ''))
+                        values.append(str(value))
+                
+                # Add item with appropriate tags for color coding
+                change_percentage = stats.get('change_percentage', 0)
+                if change_percentage > 20:
+                    tags = ['high_change']
+                elif change_percentage > 5:
+                    tags = ['medium_change']
+                else:
+                    tags = ['low_change']
+                
+                matched_tree.insert('', 'end', text=file_path, values=values, tags=tags)
+                
+            except Exception as e:
+                print(f"Error populating matched file {file_path}: {e}")
     
     def _create_added_files_stats_tab(self, parent_notebook):
-        """Create added files statistics tab"""
+        """Create added files statistics tab with dynamic fields"""
         added_frame = tk.Frame(parent_notebook)
         parent_notebook.add(added_frame, text=f"➕ Added ({len(self.individual_stats.get('added_files', {}))})")
         
@@ -429,23 +575,42 @@ class FolderComparisonResultsGUI:
         tree_frame = tk.Frame(added_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        columns = ['requirements', 'file_size', 'parsing_status', 'error']
+        # Dynamic columns based on available data
+        added_files = self.individual_stats.get('added_files', {})
+        base_columns = ['requirements', 'file_size', 'parsing_status']
+        
+        # Check for additional common fields
+        additional_fields = set()
+        for file_data in added_files.values():
+            file_info = file_data.get('file_info', {})
+            if isinstance(file_info, dict):
+                additional_fields.update(file_info.keys())
+        
+        # Add useful additional fields
+        useful_additional = ['filename', 'extension', 'parent_dir']
+        additional_columns = [f for f in useful_additional if f in additional_fields]
+        
+        columns = base_columns + additional_columns
         added_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings')
         
         # Configure columns
         added_tree.heading('#0', text='File Path', anchor=tk.W)
         added_tree.column('#0', width=400, minwidth=250)
         
-        column_config = {
-            'requirements': ('Requirements', 100, 80),
-            'file_size': ('Size (MB)', 80, 60),
-            'parsing_status': ('Status', 80, 60),
-            'error': ('Error Details', 300, 200)
-        }
-        
-        for col, (display_name, width, minwidth) in column_config.items():
-            added_tree.heading(col, text=display_name, anchor=tk.W)
-            added_tree.column(col, width=width, minwidth=minwidth)
+        for col in columns:
+            if col == 'requirements':
+                added_tree.heading(col, text='Requirements', anchor=tk.W)
+                added_tree.column(col, width=100, minwidth=80)
+            elif col == 'file_size':
+                added_tree.heading(col, text='Size (MB)', anchor=tk.W)
+                added_tree.column(col, width=80, minwidth=60)
+            elif col == 'parsing_status':
+                added_tree.heading(col, text='Status', anchor=tk.W)
+                added_tree.column(col, width=80, minwidth=60)
+            else:
+                display_name = col.replace('_', ' ').title()
+                added_tree.heading(col, text=display_name, anchor=tk.W)
+                added_tree.column(col, width=120, minwidth=80)
         
         # Pack with scrollbars
         added_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -455,20 +620,36 @@ class FolderComparisonResultsGUI:
         added_tree.configure(yscrollcommand=v_scroll.set)
         
         # Populate added files data
-        for file_path, file_data in self.individual_stats.get('added_files', {}).items():
-            req_count = file_data.get('requirement_count', 0)
-            file_size = file_data.get('file_size_mb', 0)
-            parsing_success = file_data.get('parsing_success', False)
-            error = file_data.get('error', '') if not parsing_success else ''
-            
-            status = "✓ Success" if parsing_success else "❌ Error"
-            
-            values = [str(req_count), f"{file_size:.1f}", status, error]
-            
-            added_tree.insert('', 'end', text=file_path, values=values)
+        for file_path, file_data in added_files.items():
+            try:
+                values = []
+                for col in columns:
+                    if col == 'requirements':
+                        req_count = file_data.get('requirement_count', 0)
+                        values.append(str(req_count))
+                    elif col == 'file_size':
+                        file_size = file_data.get('file_size_mb', 0)
+                        values.append(f"{file_size:.1f}")
+                    elif col == 'parsing_status':
+                        parsing_success = file_data.get('parsing_success', False)
+                        status = "✓ Success" if parsing_success else "❌ Error"
+                        values.append(status)
+                    else:
+                        # Try to get value from file_info
+                        file_info = file_data.get('file_info', {})
+                        if isinstance(file_info, dict):
+                            value = file_info.get(col, '')
+                        else:
+                            value = file_data.get(col, '')
+                        values.append(str(value))
+                
+                added_tree.insert('', 'end', text=file_path, values=values)
+                
+            except Exception as e:
+                print(f"Error populating added file {file_path}: {e}")
     
     def _create_deleted_files_stats_tab(self, parent_notebook):
-        """Create deleted files statistics tab"""
+        """Create deleted files statistics tab with dynamic fields"""
         deleted_frame = tk.Frame(parent_notebook)
         parent_notebook.add(deleted_frame, text=f"➖ Deleted ({len(self.individual_stats.get('deleted_files', {}))})")
         
@@ -476,23 +657,41 @@ class FolderComparisonResultsGUI:
         tree_frame = tk.Frame(deleted_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        columns = ['requirements', 'file_size', 'parsing_status', 'error']
+        # Similar structure to added files
+        deleted_files = self.individual_stats.get('deleted_files', {})
+        base_columns = ['requirements', 'file_size', 'parsing_status']
+        
+        # Check for additional common fields
+        additional_fields = set()
+        for file_data in deleted_files.values():
+            file_info = file_data.get('file_info', {})
+            if isinstance(file_info, dict):
+                additional_fields.update(file_info.keys())
+        
+        useful_additional = ['filename', 'extension', 'parent_dir']
+        additional_columns = [f for f in useful_additional if f in additional_fields]
+        
+        columns = base_columns + additional_columns
         deleted_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings')
         
-        # Configure columns
+        # Configure columns (same as added files)
         deleted_tree.heading('#0', text='File Path', anchor=tk.W)
         deleted_tree.column('#0', width=400, minwidth=250)
         
-        column_config = {
-            'requirements': ('Requirements', 100, 80),
-            'file_size': ('Size (MB)', 80, 60),
-            'parsing_status': ('Status', 80, 60),
-            'error': ('Error Details', 300, 200)
-        }
-        
-        for col, (display_name, width, minwidth) in column_config.items():
-            deleted_tree.heading(col, text=display_name, anchor=tk.W)
-            deleted_tree.column(col, width=width, minwidth=minwidth)
+        for col in columns:
+            if col == 'requirements':
+                deleted_tree.heading(col, text='Requirements', anchor=tk.W)
+                deleted_tree.column(col, width=100, minwidth=80)
+            elif col == 'file_size':
+                deleted_tree.heading(col, text='Size (MB)', anchor=tk.W)
+                deleted_tree.column(col, width=80, minwidth=60)
+            elif col == 'parsing_status':
+                deleted_tree.heading(col, text='Status', anchor=tk.W)
+                deleted_tree.column(col, width=80, minwidth=60)
+            else:
+                display_name = col.replace('_', ' ').title()
+                deleted_tree.heading(col, text=display_name, anchor=tk.W)
+                deleted_tree.column(col, width=120, minwidth=80)
         
         # Pack with scrollbars
         deleted_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -502,20 +701,36 @@ class FolderComparisonResultsGUI:
         deleted_tree.configure(yscrollcommand=v_scroll.set)
         
         # Populate deleted files data
-        for file_path, file_data in self.individual_stats.get('deleted_files', {}).items():
-            req_count = file_data.get('requirement_count', 0)
-            file_size = file_data.get('file_size_mb', 0)
-            parsing_success = file_data.get('parsing_success', False)
-            error = file_data.get('error', '') if not parsing_success else ''
-            
-            status = "✓ Success" if parsing_success else "❌ Error"
-            
-            values = [str(req_count), f"{file_size:.1f}", status, error]
-            
-            deleted_tree.insert('', 'end', text=file_path, values=values)
+        for file_path, file_data in deleted_files.items():
+            try:
+                values = []
+                for col in columns:
+                    if col == 'requirements':
+                        req_count = file_data.get('requirement_count', 0)
+                        values.append(str(req_count))
+                    elif col == 'file_size':
+                        file_size = file_data.get('file_size_mb', 0)
+                        values.append(f"{file_size:.1f}")
+                    elif col == 'parsing_status':
+                        parsing_success = file_data.get('parsing_success', False)
+                        status = "✓ Success" if parsing_success else "❌ Error"
+                        values.append(status)
+                    else:
+                        # Try to get value from file_info
+                        file_info = file_data.get('file_info', {})
+                        if isinstance(file_info, dict):
+                            value = file_info.get(col, '')
+                        else:
+                            value = file_data.get(col, '')
+                        values.append(str(value))
+                
+                deleted_tree.insert('', 'end', text=file_path, values=values)
+                
+            except Exception as e:
+                print(f"Error populating deleted file {file_path}: {e}")
     
     def _create_comparison_analysis_tab(self):
-        """NEW: Create comparison analysis tab with insights"""
+        """Create comparison analysis tab with dynamic insights"""
         analysis_frame = tk.Frame(self.results_notebook)
         self.results_notebook.add(analysis_frame, text="📈 Analysis")
         
@@ -539,7 +754,7 @@ class FolderComparisonResultsGUI:
         self._create_analysis_content(scrollable_frame)
     
     def _create_analysis_content(self, parent):
-        """Create analysis content with insights and recommendations"""
+        """Create analysis content with dynamic insights and recommendations"""
         # Title
         tk.Label(parent, text="Folder Comparison Analysis", 
                 font=('Arial', 16, 'bold')).pack(pady=(20, 30), padx=20)
@@ -549,7 +764,7 @@ class FolderComparisonResultsGUI:
                                       font=('Arial', 12, 'bold'), padx=15, pady=15)
         insights_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
         
-        insights = self._generate_analysis_insights()
+        insights = self._generate_dynamic_analysis_insights()
         
         for i, insight in enumerate(insights):
             insight_frame = tk.Frame(insights_frame)
@@ -565,7 +780,7 @@ class FolderComparisonResultsGUI:
                                             font=('Arial', 12, 'bold'), padx=15, pady=15)
         recommendations_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
         
-        recommendations = self._generate_recommendations()
+        recommendations = self._generate_dynamic_recommendations()
         
         for i, rec in enumerate(recommendations):
             rec_frame = tk.Frame(recommendations_frame)
@@ -576,13 +791,29 @@ class FolderComparisonResultsGUI:
                     fg=rec['color']).pack(side=tk.LEFT, padx=(0, 10))
             tk.Label(rec_frame, text=rec['text'], font=('Arial', 11), 
                     wraplength=600, justify=tk.LEFT).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # Field analysis section
+        field_analysis_frame = tk.LabelFrame(parent, text="Field Structure Analysis", 
+                                           font=('Arial', 12, 'bold'), padx=15, pady=15)
+        field_analysis_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        
+        field_analysis = self._analyze_field_structures()
+        
+        for analysis_item in field_analysis:
+            analysis_frame = tk.Frame(field_analysis_frame)
+            analysis_frame.pack(fill=tk.X, pady=3)
+            
+            tk.Label(analysis_frame, text=analysis_item['label'], font=('Arial', 11, 'bold')).pack(side=tk.LEFT)
+            tk.Label(analysis_frame, text=analysis_item['value'], font=('Arial', 11), 
+                    fg=analysis_item.get('color', 'black')).pack(side=tk.RIGHT)
     
-    def _generate_analysis_insights(self):
-        """Generate key insights from the comparison data"""
+    def _generate_dynamic_analysis_insights(self):
+        """Generate insights based on actual data without hardcoded field assumptions"""
         insights = []
         
         folder_stats = self.results.get('folder_statistics', {})
         req_stats = self.results.get('aggregated_statistics', {})
+        individual_insights = self._calculate_individual_insights()
         
         # Overall change magnitude
         change_pct = req_stats.get('overall_change_percentage', 0)
@@ -630,8 +861,6 @@ class FolderComparisonResultsGUI:
             })
         
         # Individual file insights
-        individual_insights = self._calculate_individual_insights()
-        
         if individual_insights.get('parsing_errors', 0) > 0:
             insights.append({
                 'icon': '❌',
@@ -644,10 +873,23 @@ class FolderComparisonResultsGUI:
                 'text': f"Significant individual changes: Largest single file change was {individual_insights['largest_change_pct']:.1f}%. Review high-impact files carefully."
             })
         
+        # Field diversity insight
+        field_diversity = individual_insights.get('field_diversity', 0)
+        if field_diversity > 20:
+            insights.append({
+                'icon': '🎯',
+                'text': f"Rich data structure: {field_diversity} different field types detected. Files contain diverse requirement information."
+            })
+        elif field_diversity < 5:
+            insights.append({
+                'icon': '📋',
+                'text': f"Simple data structure: Only {field_diversity} field types detected. Files have minimal requirement structure."
+            })
+        
         return insights
     
-    def _generate_recommendations(self):
-        """Generate recommendations based on analysis"""
+    def _generate_dynamic_recommendations(self):
+        """Generate recommendations based on actual analysis"""
         recommendations = []
         
         folder_stats = self.results.get('folder_statistics', {})
@@ -684,6 +926,23 @@ class FolderComparisonResultsGUI:
                 'text': 'Some files have significant changes. Focus review on files with >20% modification rate.'
             })
         
+        significant_changes = individual_insights.get('files_with_significant_changes', 0)
+        if significant_changes > 0:
+            recommendations.append({
+                'priority': 'MEDIUM:',
+                'color': 'orange',
+                'text': f'{significant_changes} files have significant changes (>10%). Prioritize review of these files.'
+            })
+        
+        # Field structure recommendations
+        field_diversity = individual_insights.get('field_diversity', 0)
+        if field_diversity > 15:
+            recommendations.append({
+                'priority': 'INFO:',
+                'color': 'blue',
+                'text': 'High field diversity detected. Consider standardizing requirement structure for consistency.'
+            })
+        
         # Low priority recommendations
         recommendations.append({
             'priority': 'INFO:',
@@ -698,6 +957,65 @@ class FolderComparisonResultsGUI:
         })
         
         return recommendations
+    
+    def _analyze_field_structures(self):
+        """Analyze field structures across files"""
+        analysis = []
+        
+        individual_insights = self._calculate_individual_insights()
+        matched_files = self.individual_stats.get('matched_files', {})
+        
+        # Field diversity analysis
+        field_diversity = individual_insights.get('field_diversity', 0)
+        analysis.append({
+            'label': 'Field Types Detected:',
+            'value': str(field_diversity),
+            'color': 'darkblue'
+        })
+        
+        # File size analysis
+        avg_size = individual_insights.get('avg_file_size_mb', 0)
+        analysis.append({
+            'label': 'Average File Size:',
+            'value': f'{avg_size:.1f} MB',
+            'color': 'darkgreen'
+        })
+        
+        # Change distribution analysis
+        low_change_count = 0
+        medium_change_count = 0
+        high_change_count = 0
+        
+        for file_data in matched_files.values():
+            stats = file_data.get('comparison_stats', {})
+            change_pct = stats.get('change_percentage', 0)
+            
+            if change_pct < 5:
+                low_change_count += 1
+            elif change_pct < 20:
+                medium_change_count += 1
+            else:
+                high_change_count += 1
+        
+        analysis.extend([
+            {
+                'label': 'Low Change Files (<5%):',
+                'value': str(low_change_count),
+                'color': 'darkgreen'
+            },
+            {
+                'label': 'Medium Change Files (5-20%):',
+                'value': str(medium_change_count),
+                'color': 'darkorange'
+            },
+            {
+                'label': 'High Change Files (>20%):',
+                'value': str(high_change_count),
+                'color': 'darkred'
+            }
+        ])
+        
+        return analysis
     
     def _show_detailed_individual_stats(self):
         """Show detailed individual file statistics dialog"""
@@ -735,7 +1053,7 @@ class FolderComparisonResultsGUI:
                  cursor='hand2').pack(pady=(20, 0))
     
     def _generate_detailed_individual_stats(self):
-        """Generate detailed individual file statistics text"""
+        """Generate detailed individual file statistics text with dynamic field analysis"""
         lines = [
             "DETAILED INDIVIDUAL FILE STATISTICS",
             "=" * 50,
@@ -774,9 +1092,25 @@ class FolderComparisonResultsGUI:
                 lines.append(f"   Requirements: +{added}, -{deleted}, ~{modified}, ={unchanged}")
                 
                 # File sizes
-                size1 = file_data.get('file1_info', {}).get('size', 0) / (1024*1024)
-                size2 = file_data.get('file2_info', {}).get('size', 0) / (1024*1024)
-                lines.append(f"   File Size: {size1:.1f}MB → {size2:.1f}MB")
+                file1_info = file_data.get('file1_info', {})
+                file2_info = file_data.get('file2_info', {})
+                
+                if isinstance(file1_info, dict) and isinstance(file2_info, dict):
+                    size1 = file1_info.get('size', 0) / (1024*1024)
+                    size2 = file2_info.get('size', 0) / (1024*1024)
+                    lines.append(f"   File Size: {size1:.1f}MB → {size2:.1f}MB")
+                
+                # Show additional detected fields
+                available_fields = set()
+                for info in [file1_info, file2_info, stats]:
+                    if isinstance(info, dict):
+                        available_fields.update(info.keys())
+                
+                interesting_fields = available_fields - {'size', 'filename', 'full_path', 'relative_path'}
+                if interesting_fields:
+                    field_list = ', '.join(sorted(list(interesting_fields))[:5])
+                    lines.append(f"   Available Fields: {field_list}")
+                
                 lines.append("")
             
             if len(matched_files) > 10:
@@ -812,6 +1146,15 @@ class FolderComparisonResultsGUI:
                 if not parsing_success:
                     error = file_data.get('error', 'Unknown error')
                     lines.append(f"   Error: {error}")
+                
+                # Show file info fields if available
+                file_info = file_data.get('file_info', {})
+                if isinstance(file_info, dict):
+                    interesting_fields = set(file_info.keys()) - {'size', 'filename', 'full_path', 'relative_path'}
+                    if interesting_fields:
+                        field_list = ', '.join(sorted(list(interesting_fields))[:3])
+                        lines.append(f"   File Fields: {field_list}")
+                
                 lines.append("")
             
             lines.extend([
@@ -857,11 +1200,22 @@ class FolderComparisonResultsGUI:
                 ""
             ])
         
+        # Field analysis summary
+        lines.extend([
+            "FIELD STRUCTURE ANALYSIS",
+            "-" * 40,
+            ""
+        ])
+        
+        field_analysis = self._analyze_field_structures()
+        for analysis_item in field_analysis:
+            lines.append(f"{analysis_item['label']} {analysis_item['value']}")
+        
         return '\n'.join(lines)
     
-    # Original methods (unchanged functionality)
+    # Original methods (updated for dynamic field support)
     def _populate_hierarchical_tree(self):
-        """Populate the hierarchical tree view (unchanged)"""
+        """Populate the hierarchical tree view with dynamic field support"""
         # Clear existing content
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -876,7 +1230,7 @@ class FolderComparisonResultsGUI:
         self._insert_folder_nodes(folder_structure)
     
     def _build_folder_structure(self, file_results):
-        """Build hierarchical folder structure from file results (unchanged)"""
+        """Build hierarchical folder structure from file results"""
         structure = {
             'folders': {},
             'files': []
@@ -901,6 +1255,13 @@ class FolderComparisonResultsGUI:
                 'match_type': file_result.get('match_type', 'exact')
             }
             
+            # Add file size if available
+            if isinstance(file1_info, dict) and file1_info.get('size'):
+                size_mb = file1_info['size'] / (1024 * 1024)
+                file_node['file_size'] = f"{size_mb:.1f}"
+            else:
+                file_node['file_size'] = 'N/A'
+            
             self._add_to_folder_structure(structure, file_node, parent_dir)
         
         # Process added files
@@ -914,6 +1275,13 @@ class FolderComparisonResultsGUI:
                 'changes': 'New file',
                 'match_type': 'N/A'
             }
+            
+            # Add file size if available
+            if isinstance(file_info, dict) and file_info.get('size'):
+                size_mb = file_info['size'] / (1024 * 1024)
+                file_node['file_size'] = f"{size_mb:.1f}"
+            else:
+                file_node['file_size'] = 'N/A'
             
             self._add_to_folder_structure(structure, file_node, file_info.get('parent_dir', ''))
         
@@ -929,12 +1297,19 @@ class FolderComparisonResultsGUI:
                 'match_type': 'N/A'
             }
             
+            # Add file size if available
+            if isinstance(file_info, dict) and file_info.get('size'):
+                size_mb = file_info['size'] / (1024 * 1024)
+                file_node['file_size'] = f"{size_mb:.1f}"
+            else:
+                file_node['file_size'] = 'N/A'
+            
             self._add_to_folder_structure(structure, file_node, file_info.get('parent_dir', ''))
         
         return structure
     
     def _add_to_folder_structure(self, structure, file_node, parent_dir):
-        """Add file node to folder structure (unchanged)"""
+        """Add file node to folder structure"""
         if not parent_dir or parent_dir == '.':
             # Root level file
             structure['files'].append(file_node)
@@ -958,7 +1333,7 @@ class FolderComparisonResultsGUI:
             current_level['files'].append(file_node)
     
     def _insert_folder_nodes(self, structure, parent_id=''):
-        """Recursively insert folder nodes into tree (unchanged)"""
+        """Recursively insert folder nodes into tree with dynamic values"""
         # Insert files at current level
         for file_node in structure.get('files', []):
             filename = os.path.basename(file_node['relative_path'])
@@ -974,20 +1349,29 @@ class FolderComparisonResultsGUI:
                 icon = '📄'
                 tag = 'matched_file'
             
-            values = [
-                file_node['status'],
-                file_node['type'].replace('_', ' ').title(),
-                file_node['changes'],
-                file_node['match_type']
-            ]
+            # Build values list dynamically based on tree columns
+            values = []
+            for col in self.tree['columns']:
+                if col == 'status':
+                    values.append(file_node['status'])
+                elif col == 'type':
+                    values.append(file_node['type'].replace('_', ' ').title())
+                elif col == 'changes':
+                    values.append(file_node['changes'])
+                elif col == 'match_type':
+                    values.append(file_node['match_type'])
+                elif col == 'file_size':
+                    values.append(file_node.get('file_size', 'N/A'))
+                else:
+                    # Handle any additional columns
+                    values.append(file_node.get(col, ''))
             
             item_id = self.tree.insert(parent_id, 'end', 
                                       text=f"{icon} {filename}",
                                       values=values,
                                       tags=[tag])
             
-            # Store file data for drill-down using item tags
-            # Note: Cannot use tree.set() for non-column data, so we'll store in a separate dict
+            # Store file data for drill-down
             if not hasattr(self, 'item_file_data'):
                 self.item_file_data = {}
             self.item_file_data[item_id] = file_node
@@ -997,16 +1381,30 @@ class FolderComparisonResultsGUI:
             # Count files in this folder (recursive)
             file_count = self._count_files_recursive(folder_data)
             
+            # Build folder values
+            folder_values = []
+            for col in self.tree['columns']:
+                if col == 'status':
+                    folder_values.append('Folder')
+                elif col == 'type':
+                    folder_values.append('Directory')
+                elif col == 'changes':
+                    folder_values.append(f"{file_count} files")
+                elif col == 'match_type':
+                    folder_values.append('N/A')
+                else:
+                    folder_values.append('')
+            
             folder_item_id = self.tree.insert(parent_id, 'end',
                                              text=f"📁 {folder_name}",
-                                             values=['Folder', 'Directory', f"{file_count} files", 'N/A'],
+                                             values=folder_values,
                                              tags=['folder'])
             
             # Recursively insert subfolder contents
             self._insert_folder_nodes(folder_data, folder_item_id)
     
     def _count_files_recursive(self, folder_data):
-        """Count files recursively in folder structure (unchanged)"""
+        """Count files recursively in folder structure"""
         count = len(folder_data.get('files', []))
         
         for subfolder_data in folder_data.get('folders', {}).values():
@@ -1015,33 +1413,31 @@ class FolderComparisonResultsGUI:
         return count
     
     def _get_file_status(self, file_result):
-        """Get status for matched file (unchanged)"""
+        """Get status for matched file based on available statistics"""
         stats = file_result.get('statistics', {})
         
-        total_changes = (stats.get('added_count', 0) + 
-                        stats.get('deleted_count', 0) + 
-                        stats.get('modified_count', 0))
+        # Check for any type of changes
+        change_indicators = ['added_count', 'deleted_count', 'modified_count', 'change_percentage']
+        has_changes = False
         
-        if total_changes > 0:
-            return 'Modified'
-        else:
-            return 'Unchanged'
+        for indicator in change_indicators:
+            if stats.get(indicator, 0) > 0:
+                has_changes = True
+                break
+        
+        return 'Modified' if has_changes else 'Unchanged'
     
     def _get_file_changes_summary(self, file_result):
-        """Get changes summary for matched file (unchanged)"""
+        """Get changes summary for matched file with dynamic field support"""
         stats = file_result.get('statistics', {})
         
-        added = stats.get('added_count', 0)
-        deleted = stats.get('deleted_count', 0)
-        modified = stats.get('modified_count', 0)
-        
         changes = []
-        if added > 0:
-            changes.append(f"+{added}")
-        if deleted > 0:
-            changes.append(f"-{deleted}")
-        if modified > 0:
-            changes.append(f"~{modified}")
+        if stats.get('added_count', 0) > 0:
+            changes.append(f"+{stats['added_count']}")
+        if stats.get('deleted_count', 0) > 0:
+            changes.append(f"-{stats['deleted_count']}")
+        if stats.get('modified_count', 0) > 0:
+            changes.append(f"~{stats['modified_count']}")
         
         if changes:
             return f"Reqs: {', '.join(changes)}"
@@ -1081,7 +1477,7 @@ class FolderComparisonResultsGUI:
                  padx=20, pady=6, cursor='hand2').pack(side=tk.RIGHT)
     
     def _export_individual_stats(self):
-        """NEW: Export individual file statistics to CSV"""
+        """Export individual file statistics to CSV with dynamic fields"""
         try:
             filename = filedialog.asksaveasfilename(
                 title="Export Individual File Statistics",
@@ -1093,81 +1489,56 @@ class FolderComparisonResultsGUI:
             if not filename:
                 return
             
-            import csv
+            # Collect all possible fields from all file categories
+            all_fields = set(['Category', 'File_Path'])
+            
+            # Add base fields
+            base_fields = ['Match_Type', 'Similarity', 'Requirements_Original', 'Requirements_Modified', 
+                          'Added_Reqs', 'Deleted_Reqs', 'Modified_Reqs', 'Unchanged_Reqs',
+                          'Change_Percentage', 'Parsing_Success', 'Error_Details']
+            all_fields.update(base_fields)
+            
+            # Add dynamic fields from file info and stats
+            for category in ['matched_files', 'added_files', 'deleted_files']:
+                files_data = self.individual_stats.get(category, {})
+                for file_data in files_data.values():
+                    # Add file info fields
+                    for info_key in ['file1_info', 'file2_info', 'file_info']:
+                        info = file_data.get(info_key, {})
+                        if isinstance(info, dict):
+                            for field in info.keys():
+                                if field not in ['full_path', 'relative_path']:
+                                    all_fields.add(f'File_{field}')
+                    
+                    # Add comparison stats fields
+                    stats = file_data.get('comparison_stats', {})
+                    if isinstance(stats, dict):
+                        for field in stats.keys():
+                            all_fields.add(f'Stats_{field}')
+            
+            # Convert to sorted list
+            sorted_fields = sorted(all_fields)
             
             with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile)
                 
                 # Write header
-                writer.writerow([
-                    'Category', 'File_Path', 'Match_Type', 'Similarity', 
-                    'Requirements_Original', 'Requirements_Modified', 
-                    'Added_Reqs', 'Deleted_Reqs', 'Modified_Reqs', 'Unchanged_Reqs',
-                    'Change_Percentage', 'File_Size_Original_MB', 'File_Size_Modified_MB',
-                    'Parsing_Success', 'Error_Details'
-                ])
+                writer.writerow(sorted_fields)
                 
-                # Matched files
+                # Write matched files
                 for file_path, file_data in self.individual_stats.get('matched_files', {}).items():
-                    stats = file_data.get('comparison_stats', {})
-                    
-                    writer.writerow([
-                        'Matched',
-                        file_path,
-                        file_data.get('match_type', ''),
-                        f"{file_data.get('similarity', 0):.3f}",
-                        stats.get('total_file1', 0),
-                        stats.get('total_file2', 0),
-                        stats.get('added_count', 0),
-                        stats.get('deleted_count', 0),
-                        stats.get('modified_count', 0),
-                        stats.get('unchanged_count', 0),
-                        f"{stats.get('change_percentage', 0):.2f}",
-                        f"{file_data.get('file1_info', {}).get('size', 0) / (1024*1024):.2f}",
-                        f"{file_data.get('file2_info', {}).get('size', 0) / (1024*1024):.2f}",
-                        'True',
-                        ''
-                    ])
+                    row = self._build_csv_row(sorted_fields, 'Matched', file_path, file_data)
+                    writer.writerow(row)
                 
-                # Added files
+                # Write added files
                 for file_path, file_data in self.individual_stats.get('added_files', {}).items():
-                    writer.writerow([
-                        'Added',
-                        file_path,
-                        'N/A',
-                        'N/A',
-                        0,
-                        file_data.get('requirement_count', 0),
-                        file_data.get('requirement_count', 0),
-                        0,
-                        0,
-                        0,
-                        'N/A',
-                        'N/A',
-                        f"{file_data.get('file_size_mb', 0):.2f}",
-                        str(file_data.get('parsing_success', False)),
-                        file_data.get('error', '')
-                    ])
+                    row = self._build_csv_row(sorted_fields, 'Added', file_path, file_data)
+                    writer.writerow(row)
                 
-                # Deleted files
+                # Write deleted files
                 for file_path, file_data in self.individual_stats.get('deleted_files', {}).items():
-                    writer.writerow([
-                        'Deleted',
-                        file_path,
-                        'N/A',
-                        'N/A',
-                        file_data.get('requirement_count', 0),
-                        0,
-                        0,
-                        file_data.get('requirement_count', 0),
-                        0,
-                        0,
-                        'N/A',
-                        f"{file_data.get('file_size_mb', 0):.2f}",
-                        'N/A',
-                        str(file_data.get('parsing_success', False)),
-                        file_data.get('error', '')
-                    ])
+                    row = self._build_csv_row(sorted_fields, 'Deleted', file_path, file_data)
+                    writer.writerow(row)
             
             messagebox.showinfo("Export Complete", 
                                f"Individual file statistics exported to:\n{filename}")
@@ -1176,9 +1547,74 @@ class FolderComparisonResultsGUI:
             messagebox.showerror("Export Error", 
                                f"Failed to export individual statistics:\n{str(e)}")
     
-    # Remaining original methods (unchanged)
+    def _build_csv_row(self, fields, category, file_path, file_data):
+        """Build CSV row with dynamic field support"""
+        row = []
+        
+        for field in fields:
+            if field == 'Category':
+                row.append(category)
+            elif field == 'File_Path':
+                row.append(file_path)
+            elif field == 'Match_Type':
+                row.append(file_data.get('match_type', 'N/A'))
+            elif field == 'Similarity':
+                similarity = file_data.get('similarity', 0)
+                row.append(f"{similarity:.3f}" if similarity else 'N/A')
+            elif field.startswith('Requirements_') or field.endswith('_Reqs'):
+                stats = file_data.get('comparison_stats', {})
+                if field == 'Requirements_Original':
+                    row.append(stats.get('total_file1', 0))
+                elif field == 'Requirements_Modified':
+                    row.append(stats.get('total_file2', 0))
+                elif field == 'Added_Reqs':
+                    row.append(stats.get('added_count', 0))
+                elif field == 'Deleted_Reqs':
+                    row.append(stats.get('deleted_count', 0))
+                elif field == 'Modified_Reqs':
+                    row.append(stats.get('modified_count', 0))
+                elif field == 'Unchanged_Reqs':
+                    row.append(stats.get('unchanged_count', 0))
+                else:
+                    row.append('')
+            elif field == 'Change_Percentage':
+                stats = file_data.get('comparison_stats', {})
+                change_pct = stats.get('change_percentage', 0)
+                row.append(f"{change_pct:.2f}" if change_pct else 'N/A')
+            elif field == 'Parsing_Success':
+                row.append(str(file_data.get('parsing_success', True)))
+            elif field == 'Error_Details':
+                row.append(file_data.get('error', ''))
+            elif field.startswith('File_'):
+                # Handle file info fields
+                field_name = field[5:]  # Remove 'File_' prefix
+                for info_key in ['file1_info', 'file2_info', 'file_info']:
+                    info = file_data.get(info_key, {})
+                    if isinstance(info, dict) and field_name in info:
+                        value = info[field_name]
+                        if field_name == 'size' and isinstance(value, (int, float)):
+                            row.append(f"{value / (1024*1024):.2f}")  # Convert to MB
+                        else:
+                            row.append(str(value))
+                        break
+                else:
+                    row.append('')
+            elif field.startswith('Stats_'):
+                # Handle stats fields
+                field_name = field[6:]  # Remove 'Stats_' prefix
+                stats = file_data.get('comparison_stats', {})
+                if isinstance(stats, dict):
+                    row.append(str(stats.get(field_name, '')))
+                else:
+                    row.append('')
+            else:
+                row.append('')
+        
+        return row
+    
+    # Remaining original methods (unchanged functionality)
     def _on_tree_double_click(self, event):
-        """Handle double-click on tree item (unchanged)"""
+        """Handle double-click on tree item"""
         item_id = self.tree.selection()[0] if self.tree.selection() else None
         if not item_id:
             return
@@ -1186,7 +1622,7 @@ class FolderComparisonResultsGUI:
         tags = self.tree.item(item_id, 'tags')
         
         if 'matched_file' in tags:
-            # Show detailed file comparison - get data from our storage dict
+            # Show detailed file comparison
             file_data = self.item_file_data.get(item_id)
             if file_data:
                 self._show_file_comparison(file_data)
@@ -1198,7 +1634,7 @@ class FolderComparisonResultsGUI:
                 self.tree.item(item_id, open=True)
     
     def _show_file_comparison(self, file_node):
-        """Show detailed comparison for a file (unchanged)"""
+        """Show detailed comparison for a file"""
         try:
             if file_node['type'] != 'matched_file':
                 messagebox.showinfo("No Comparison", 
@@ -1243,19 +1679,19 @@ class FolderComparisonResultsGUI:
             messagebox.showerror("Error", f"Failed to show file comparison:\n{str(e)}")
     
     def _on_tree_expand(self, event):
-        """Handle tree node expansion (unchanged)"""
+        """Handle tree node expansion"""
         item_id = self.tree.selection()[0] if self.tree.selection() else None
         if item_id:
             self.expanded_nodes.add(item_id)
     
     def _on_tree_collapse(self, event):
-        """Handle tree node collapse (unchanged)"""
+        """Handle tree node collapse"""
         item_id = self.tree.selection()[0] if self.tree.selection() else None
         if item_id and item_id in self.expanded_nodes:
             self.expanded_nodes.remove(item_id)
     
     def _expand_all(self):
-        """Expand all tree nodes (unchanged)"""
+        """Expand all tree nodes"""
         def expand_recursive(item_id):
             self.tree.item(item_id, open=True)
             for child_id in self.tree.get_children(item_id):
@@ -1265,7 +1701,7 @@ class FolderComparisonResultsGUI:
             expand_recursive(root_item)
     
     def _collapse_all(self):
-        """Collapse all tree nodes (unchanged)"""
+        """Collapse all tree nodes"""
         def collapse_recursive(item_id):
             self.tree.item(item_id, open=False)
             for child_id in self.tree.get_children(item_id):
@@ -1303,7 +1739,7 @@ class FolderComparisonResultsGUI:
                                f"Failed to export summary:\n{str(e)}")
     
     def _on_closing(self):
-        """Handle window closing (unchanged)"""
+        """Handle window closing"""
         try:
             # Close all file comparison windows
             for window in list(self.file_comparison_windows.values()):
@@ -1322,9 +1758,9 @@ class FolderComparisonResultsGUI:
 
 # Example usage
 if __name__ == "__main__":
-    print("Enhanced Folder Comparison Results GUI - Native Version")
+    print("Enhanced Folder Comparison Results GUI - Updated Version")
     print("New features:")
-    print("- Individual file statistics display")
-    print("- Enhanced export capabilities")
-    print("- Analysis insights and recommendations")
+    print("- Dynamic field detection without hardcoded assumptions")
+    print("- Enhanced export capabilities with all detected fields")
+    print("- Intelligent analysis insights based on actual data")
     print("- Backward compatibility maintained")

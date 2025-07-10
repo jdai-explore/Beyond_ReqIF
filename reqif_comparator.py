@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
 ReqIF Comparator Module - Updated Version
-Handles comparison logic between two sets of requirements.
-Enhanced with filename similarity for folder comparison functionality.
+Handles comparison logic between two sets of requirements with dynamic field detection.
+Enhanced with dynamic field comparison - no hardcoded field assumptions.
 """
 
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Set
 import difflib
 import os
 
 
 class ReqIFComparator:
-    """Compares two sets of ReqIF requirements and identifies differences"""
+    """Compares two sets of ReqIF requirements with dynamic field detection"""
     
     def __init__(self):
         self.similarity_threshold = 0.8  # For fuzzy matching (future use)
@@ -153,6 +153,79 @@ class ReqIFComparator:
                 }
             }
     
+    def _get_comparable_fields(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> Set[str]:
+        """Dynamically detect which fields can be compared between two requirements"""
+        fields1 = set(req1.keys()) if isinstance(req1, dict) else set()
+        fields2 = set(req2.keys()) if isinstance(req2, dict) else set()
+        
+        # Get all fields present in either requirement
+        all_fields = fields1 | fields2
+        
+        # Exclude internal/meta fields
+        excluded_fields = {'content', 'raw_attributes', '_comparison_data'}
+        comparable_fields = all_fields - excluded_fields
+        
+        return comparable_fields
+    
+    def _requirements_differ(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> bool:
+        """Check if two requirements are different using dynamic field detection"""
+        try:
+            # Ensure we have dictionaries
+            if not isinstance(req1, dict) or not isinstance(req2, dict):
+                return True  # Consider different if not both dicts
+            
+            # Get fields that can be compared
+            comparable_fields = self._get_comparable_fields(req1, req2)
+            
+            # Compare each comparable field
+            for field in comparable_fields:
+                if field == 'attributes':
+                    # Special handling for attributes
+                    if self._attributes_differ(req1.get('attributes', {}), req2.get('attributes', {})):
+                        return True
+                else:
+                    # Compare regular fields
+                    val1 = str(req1.get(field, '') or '').strip()
+                    val2 = str(req2.get(field, '') or '').strip()
+                    if val1 != val2:
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"Error in _requirements_differ: {e}")
+            return True
+    
+    def _attributes_differ(self, attrs1: Dict[str, Any], attrs2: Dict[str, Any]) -> bool:
+        """Compare attributes dictionaries"""
+        try:
+            # Ensure attributes are dictionaries
+            if not isinstance(attrs1, dict):
+                attrs1 = {}
+            if not isinstance(attrs2, dict):
+                attrs2 = {}
+            
+            # Check if attribute sets are different
+            if set(attrs1.keys()) != set(attrs2.keys()):
+                return True
+                
+            # Check if any attribute values differ
+            for key in attrs1.keys():
+                try:
+                    val1 = str(attrs1.get(key, '') or '').strip()
+                    val2 = str(attrs2.get(key, '') or '').strip()
+                    if val1 != val2:
+                        return True
+                except Exception as e:
+                    print(f"Error comparing attribute {key}: {e}")
+                    continue
+                    
+            return False
+            
+        except Exception as e:
+            print(f"Error comparing attributes: {e}")
+            return True
+    
     def _create_modified_entry(self, req_id: str, req1: Dict[str, Any], req2: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a GUI-friendly modified entry that shows the new version with change metadata
@@ -196,20 +269,19 @@ class ReqIFComparator:
                     return str(default)
             
             # Create the modified entry using the NEW version as base (for tree display)
-            modified_entry = {
-                # Primary data from NEW version (for tree display)
-                'id': req_id,
-                'identifier': safe_get(req2, 'identifier', req_id),
-                'title': safe_get(req2, 'title'),
-                'description': safe_get(req2, 'description'),
-                'type': safe_get(req2, 'type'),
-                'priority': safe_get(req2, 'priority'),
-                'status': safe_get(req2, 'status'),
-                'attributes': req2.get('attributes', {}) if isinstance(req2.get('attributes'), dict) else {},
-                'raw_attributes': req2.get('raw_attributes', {}) if isinstance(req2.get('raw_attributes'), dict) else {},
-                'content': safe_get(req2, 'content'),
-                
-                # Change-specific metadata
+            # Start with all fields from the new requirement
+            modified_entry = {}
+            
+            # Copy all actual fields from req2
+            for field_name, field_value in req2.items():
+                if field_name not in ['_comparison_data']:  # Exclude internal fields
+                    modified_entry[field_name] = field_value
+            
+            # Ensure we have an ID
+            modified_entry['id'] = req_id
+            
+            # Add change-specific metadata
+            modified_entry.update({
                 'changes_summary': changes_summary,
                 'changed_fields': change_fields,
                 'change_count': len(change_fields),
@@ -221,7 +293,7 @@ class ReqIFComparator:
                     'changes': changes if isinstance(changes, list) else [],
                     'detailed_changes': self._create_detailed_changes(req1, req2, changes)
                 }
-            }
+            })
             
             print(f"Successfully created modified entry for {req_id}")
             return modified_entry
@@ -234,15 +306,7 @@ class ReqIFComparator:
             # Return a basic fallback entry
             return {
                 'id': req_id,
-                'identifier': req_id,
-                'title': str(req2.get('title', '') if isinstance(req2, dict) else ''),
-                'description': str(req2.get('description', '') if isinstance(req2, dict) else ''),
-                'type': str(req2.get('type', '') if isinstance(req2, dict) else ''),
-                'priority': '',
-                'status': '',
-                'attributes': {},
-                'raw_attributes': {},
-                'content': '',
+                'attributes': req2.get('attributes', {}) if isinstance(req2, dict) else {},
                 'changes_summary': 'Error processing changes',
                 'changed_fields': [],
                 'change_count': 0,
@@ -264,63 +328,8 @@ class ReqIFComparator:
         except:
             return {}
     
-    def _requirements_differ(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> bool:
-        """Check if two requirements are different"""
-        try:
-            # Ensure we have dictionaries
-            if not isinstance(req1, dict) or not isinstance(req2, dict):
-                return True  # Consider different if not both dicts
-            
-            # Compare key fields
-            fields_to_compare = ['title', 'description', 'type', 'priority', 'status']
-            
-            for field in fields_to_compare:
-                try:
-                    val1 = str(req1.get(field, '') or '').strip()
-                    val2 = str(req2.get(field, '') or '').strip()
-                    if val1 != val2:
-                        return True
-                except Exception as e:
-                    print(f"Error comparing field {field}: {e}")
-                    continue
-                    
-            # Compare attributes
-            try:
-                attrs1 = req1.get('attributes', {})
-                attrs2 = req2.get('attributes', {})
-                
-                # Ensure attributes are dictionaries
-                if not isinstance(attrs1, dict):
-                    attrs1 = {}
-                if not isinstance(attrs2, dict):
-                    attrs2 = {}
-                
-                # Check if attribute sets are different
-                if set(attrs1.keys()) != set(attrs2.keys()):
-                    return True
-                    
-                # Check if any attribute values differ
-                for key in attrs1.keys():
-                    try:
-                        val1 = str(attrs1.get(key, '') or '').strip()
-                        val2 = str(attrs2.get(key, '') or '').strip()
-                        if val1 != val2:
-                            return True
-                    except Exception as e:
-                        print(f"Error comparing attribute {key}: {e}")
-                        continue
-                        
-            except Exception as e:
-                print(f"Error comparing attributes: {e}")
-                
-            return False
-            
-        except Exception as e:
-            print(f"Error in _requirements_differ: {e}")
-            return True
-    
     def _identify_changes(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> List[Dict[str, str]]:
-        """Identify specific changes between two requirements"""
+        """Identify specific changes between two requirements using dynamic field detection"""
         changes = []
         
         try:
@@ -328,10 +337,13 @@ class ReqIFComparator:
             if not isinstance(req1, dict) or not isinstance(req2, dict):
                 return []
             
-            # Check main field changes
-            main_fields = ['title', 'description', 'type', 'priority', 'status']
+            # Get all comparable fields
+            comparable_fields = self._get_comparable_fields(req1, req2)
             
-            for field in main_fields:
+            # Check changes in regular fields (excluding attributes)
+            regular_fields = comparable_fields - {'attributes'}
+            
+            for field in regular_fields:
                 try:
                     old_val = str(req1.get(field, '') or '').strip()
                     new_val = str(req2.get(field, '') or '').strip()
@@ -485,15 +497,34 @@ class ReqIFComparator:
             if not isinstance(req1, dict) or not isinstance(req2, dict):
                 return 0.0
             
-            # Simple similarity based on title and description
-            title1 = str(req1.get('title', '') or '').lower()
-            title2 = str(req2.get('title', '') or '').lower()
-            desc1 = str(req1.get('description', '') or '').lower()
-            desc2 = str(req2.get('description', '') or '').lower()
+            # Get all text content from both requirements
+            text1_parts = []
+            text2_parts = []
+            
+            # Get comparable fields
+            comparable_fields = self._get_comparable_fields(req1, req2)
+            
+            for field in comparable_fields:
+                if field == 'attributes':
+                    # Handle attributes specially
+                    attrs1 = req1.get('attributes', {})
+                    attrs2 = req2.get('attributes', {})
+                    if isinstance(attrs1, dict):
+                        text1_parts.extend(str(v) for v in attrs1.values() if v)
+                    if isinstance(attrs2, dict):
+                        text2_parts.extend(str(v) for v in attrs2.values() if v)
+                else:
+                    # Handle regular fields
+                    val1 = req1.get(field, '')
+                    val2 = req2.get(field, '')
+                    if val1:
+                        text1_parts.append(str(val1))
+                    if val2:
+                        text2_parts.append(str(val2))
             
             # Combine texts
-            text1 = (title1 + ' ' + desc1).strip()
-            text2 = (title2 + ' ' + desc2).strip()
+            text1 = ' '.join(text1_parts).lower().strip()
+            text2 = ' '.join(text2_parts).lower().strip()
             
             if not text1 and not text2:
                 return 1.0
@@ -573,7 +604,7 @@ class ReqIFComparator:
             return 0.0
     
     def export_comparison_summary(self, comparison_results: Dict[str, Any]) -> str:
-        """Generate a text summary of the comparison results"""
+        """Generate a text summary of the comparison results with dynamic field detection"""
         try:
             if not isinstance(comparison_results, dict):
                 return "Error: Invalid comparison results"
@@ -611,16 +642,19 @@ class ReqIFComparator:
                         
                         for req in requirements[:5]:  # Show first 5
                             if isinstance(req, dict):
-                                title = req.get('title', 'No title')
                                 req_id = req.get('id', 'No ID')
+                                
+                                # Get display text dynamically
+                                display_text = self._get_requirement_display_text(req)
+                                
                                 if category == 'modified':
                                     change_count = req.get('change_count', 0)
                                     changes_summary = req.get('changes_summary', 'Unknown changes')
-                                    summary_lines.append(f"  ~ {req_id}: {title}")
+                                    summary_lines.append(f"  ~ {req_id}: {display_text}")
                                     summary_lines.append(f"    Changes: {changes_summary} ({change_count} field(s))")
                                 else:
                                     prefix = "+" if category == 'added' else "-"
-                                    summary_lines.append(f"  {prefix} {req_id}: {title}")
+                                    summary_lines.append(f"  {prefix} {req_id}: {display_text}")
                         
                         if len(requirements) > 5:
                             remaining = len(requirements) - 5
@@ -634,12 +668,54 @@ class ReqIFComparator:
         except Exception as e:
             print(f"Error generating comparison summary: {e}")
             return f"Error generating summary: {str(e)}"
+    
+    def _get_requirement_display_text(self, req: Dict[str, Any]) -> str:
+        """Get appropriate display text for a requirement using dynamic field detection"""
+        try:
+            if not isinstance(req, dict):
+                return "Invalid requirement"
+            
+            # Try to find the best field for display
+            # Priority order: identifier, type, first attribute, id
+            display_candidates = []
+            
+            # Check for identifier
+            if req.get('identifier') and req.get('identifier') != req.get('id'):
+                display_candidates.append(req['identifier'])
+            
+            # Check for type
+            if req.get('type'):
+                display_candidates.append(req['type'])
+            
+            # Check for attributes that might be good for display
+            attributes = req.get('attributes', {})
+            if isinstance(attributes, dict) and attributes:
+                # Look for common display-worthy attribute names
+                priority_attrs = ['Object Text', 'Object Heading', 'Title', 'Name', 'Heading', 'Text']
+                
+                for attr_name in priority_attrs:
+                    if attr_name in attributes and attributes[attr_name]:
+                        display_candidates.append(str(attributes[attr_name])[:50] + "..." if len(str(attributes[attr_name])) > 50 else str(attributes[attr_name]))
+                        break
+                
+                # If no priority attributes found, use first attribute
+                if not any(attr in attributes for attr in priority_attrs):
+                    first_attr = next(iter(attributes.values()))
+                    if first_attr:
+                        display_candidates.append(str(first_attr)[:50] + "..." if len(str(first_attr)) > 50 else str(first_attr))
+            
+            # Return best candidate or fallback to ID
+            return display_candidates[0] if display_candidates else req.get('id', 'Unknown')
+            
+        except Exception as e:
+            print(f"Error getting display text: {e}")
+            return req.get('id', 'Unknown')
 
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("ReqIF Comparator - Enhanced Version with Folder Support")
-    print("Added filename and path similarity calculation methods")
+    print("ReqIF Comparator - Enhanced Version with Dynamic Field Detection")
+    print("Features: Dynamic field comparison, no hardcoded field assumptions")
     
     comparator = ReqIFComparator()
     
@@ -667,4 +743,4 @@ if __name__ == "__main__":
         similarity = comparator.calculate_path_similarity(path1, path2)
         print(f"'{path1}' vs '{path2}': {similarity:.2f}")
     
-    print("\nReqIF Comparator enhancement completed successfully!")
+    print("\nReqIF Comparator with dynamic field detection ready!")

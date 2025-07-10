@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ReqIF Parser Module - Production Version
-Enhanced ReqIF parser with targeted fixes for namespace handling and content extraction.
-Based on diagnostic analysis and optimized for your specific ReqIF file structure.
+ReqIF Parser Module - Updated Version
+Enhanced ReqIF parser with NO artificial field mapping - preserves original ReqIF structure
+Based on diagnostic analysis and optimized for authentic ReqIF file representation.
 """
 
 import xml.etree.ElementTree as ET
@@ -17,7 +17,7 @@ import html
 
 class ReqIFParser:
     """
-    Enhanced ReqIF Parser with targeted fixes for namespace handling and content extraction
+    Enhanced ReqIF Parser that preserves original ReqIF structure without artificial field mapping
     """
     
     def __init__(self):
@@ -50,7 +50,7 @@ class ReqIFParser:
             file_path: Path to the ReqIF file or ReqIF archive
             
         Returns:
-            List of requirement dictionaries with fully resolved content
+            List of requirement dictionaries with only actual ReqIF content
         """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"ReqIF file not found: {file_path}")
@@ -256,39 +256,31 @@ class ReqIFParser:
         return requirements
     
     def _process_single_spec_object(self, spec_obj, index: int) -> Optional[Dict[str, Any]]:
-        """Process a single SPEC-OBJECT with enhanced resolution"""
+        """Process a single SPEC-OBJECT with NO artificial field mapping"""
         # Extract basic info
         req_id = self._extract_identifier(spec_obj) or f"REQ_{index}"
+        req_identifier = self._extract_identifier(spec_obj)
         
-        # Initialize requirement
+        # Initialize requirement with ONLY actual ReqIF data
         requirement = {
             'id': req_id,
-            'identifier': req_id,
-            'title': '',
-            'description': '',
-            'type': '',
-            'priority': '',
-            'status': '',
             'attributes': {},
-            'raw_attributes': {},
-            'content': ''
+            'raw_attributes': {}
         }
         
-        # Resolve type reference
+        # Add identifier only if it exists and is different from id
+        if req_identifier and req_identifier != req_id:
+            requirement['identifier'] = req_identifier
+        
+        # Resolve type reference (only if exists)
         type_ref = self._extract_type_reference_enhanced(spec_obj)
         if type_ref and type_ref in self.spec_object_types:
             requirement['type'] = self.spec_object_types[type_ref]['long_name']
         elif type_ref:
             requirement['type'] = type_ref
         
-        # Enhanced attribute value extraction
+        # Extract attribute values (the core ReqIF data)
         self._extract_attribute_values_enhanced(spec_obj, requirement)
-        
-        # Smart field mapping
-        self._smart_field_mapping(requirement)
-        
-        # Ensure meaningful content
-        self._ensure_meaningful_content(requirement)
         
         # Create content hash for comparison
         requirement['content'] = self._create_content_hash(requirement)
@@ -341,7 +333,7 @@ class ReqIFParser:
         if not content:
             return
         
-        # Store raw content
+        # Store raw content (using definition reference)
         requirement['raw_attributes'][attr_def_ref] = content
         
         # Get human-readable attribute name
@@ -513,101 +505,25 @@ class ReqIFParser:
         
         return full_text.strip()
     
-    def _smart_field_mapping(self, requirement: Dict[str, Any]):
-        """Smart mapping of attributes to standard requirement fields"""
-        # Field mapping keywords
-        field_keywords = {
-            'title': ['title', 'name', 'heading', 'object', 'caption', 'summary'],
-            'description': ['description', 'detail', 'content', 'specification', 'rationale', 'text'],
-            'priority': ['priority', 'importance', 'criticality', 'level'],
-            'status': ['status', 'state', 'phase', 'condition']
-        }
-        
-        for field, keywords in field_keywords.items():
-            if requirement[field]:  # Don't override if already set
-                continue
-            
-            # Look for matching attributes
-            for attr_name, attr_value in requirement['attributes'].items():
-                if not attr_value:
-                    continue
-                
-                attr_lower = attr_name.lower()
-                if any(keyword in attr_lower for keyword in keywords):
-                    if field in ['title', 'description']:
-                        # Quality check for title/description
-                        if self._is_quality_content(attr_value, field):
-                            requirement[field] = str(attr_value)
-                            break
-                    else:
-                        requirement[field] = str(attr_value)
-                        break
-    
-    def _is_quality_content(self, content: str, field_type: str) -> bool:
-        """Check if content is quality for the field type"""
-        if not content or len(content) < 2:
-            return False
-        
-        # Remove leading reference IDs
-        clean_content = content
-        if content.startswith('_') and ' ' in content:
-            clean_content = content.split(' ', 1)[1]
-        
-        if field_type == 'title':
-            return (len(clean_content) < 200 and 
-                   not clean_content.replace('.', '').replace('-', '').isdigit() and
-                   any(c.isalpha() for c in clean_content))
-        elif field_type == 'description':
-            return (len(clean_content) >= 10 and 
-                   ' ' in clean_content and
-                   any(c.isalpha() for c in clean_content))
-        
-        return True
-    
-    def _ensure_meaningful_content(self, requirement: Dict[str, Any]):
-        """Ensure requirement has meaningful content"""
-        # Ensure title
-        if not requirement['title']:
-            # Try to find best title from attributes
-            candidates = []
-            for attr_name, attr_value in requirement['attributes'].items():
-                if attr_value and self._is_quality_content(str(attr_value), 'title'):
-                    candidates.append(str(attr_value))
-            
-            if candidates:
-                requirement['title'] = min(candidates, key=len)  # Shortest reasonable title
-            else:
-                requirement['title'] = requirement['id']
-        
-        # Ensure description
-        if not requirement['description']:
-            # Try to find best description from attributes
-            candidates = []
-            for attr_name, attr_value in requirement['attributes'].items():
-                if attr_value and self._is_quality_content(str(attr_value), 'description'):
-                    candidates.append(str(attr_value))
-            
-            if candidates:
-                requirement['description'] = max(candidates, key=len)  # Longest reasonable description
-    
     def _create_content_hash(self, req: Dict[str, Any]) -> str:
-        """Create a content string for comparison purposes"""
+        """Create a content string for comparison purposes using only actual fields"""
         parts = []
         
-        if req['title']:
-            parts.append(f"TITLE:{req['title']}")
-        if req['description']:
-            parts.append(f"DESC:{req['description']}")
-        if req['type']:
+        # Add ID (always present)
+        if req.get('id'):
+            parts.append(f"ID:{req['id']}")
+        
+        # Add identifier if different from id
+        if req.get('identifier') and req.get('identifier') != req.get('id'):
+            parts.append(f"IDENTIFIER:{req['identifier']}")
+        
+        # Add type if present
+        if req.get('type'):
             parts.append(f"TYPE:{req['type']}")
-        if req['priority']:
-            parts.append(f"PRIORITY:{req['priority']}")
-        if req['status']:
-            parts.append(f"STATUS:{req['status']}")
             
-        # Add key attributes (limit to avoid huge hashes)
+        # Add attributes (limit to avoid huge hashes)
         attr_count = 0
-        for attr_name, attr_value in req['attributes'].items():
+        for attr_name, attr_value in req.get('attributes', {}).items():
             if attr_value and attr_count < 10:  # Limit to first 10 meaningful attributes
                 parts.append(f"{attr_name}:{attr_value}")
                 attr_count += 1
@@ -736,10 +652,11 @@ class ReqIFParser:
 
 # Example usage
 if __name__ == "__main__":
-    print("Enhanced ReqIF Parser - Production Version")
-    print("Features: Namespace-aware parsing, enhanced content extraction, robust error handling")
+    print("Enhanced ReqIF Parser - No Artificial Field Mapping Version")
+    print("Features: Namespace-aware parsing, authentic content extraction, no field mapping")
     
     # Example usage:
     # parser = ReqIFParser()
     # requirements = parser.parse_file("example.reqif")
     # print(f"Parsed {len(requirements)} requirements")
+    # print("Actual fields found:", set().union(*(req.keys() for req in requirements)))

@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-ComparisonResultsGUI - Native Version
-Pure tkinter without any theme dependencies
+ComparisonResultsGUI - Updated Version
+Pure tkinter with dynamic field detection - no hardcoded field assumptions
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import csv
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Set
 import difflib
 import re
 
 
 class ComparisonResultsGUI:
     """
-    Comparison Results GUI - Native Version
+    Comparison Results GUI with Dynamic Field Detection
     """
     
     def __init__(self, parent: tk.Widget, results: Dict[str, Any]):
@@ -34,14 +34,79 @@ class ComparisonResultsGUI:
         # Track selected items for diff viewer
         self.selected_modified_items = []
         
+        # Dynamic field detection
+        self.available_fields = self._detect_available_fields()
+        self.display_fields = self._select_display_fields()
+        
         # Setup GUI
         self.setup_gui()
         
         # Handle window closing
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
     
+    def _detect_available_fields(self) -> Dict[str, Set[str]]:
+        """Detect which fields are actually available in each category"""
+        available_fields = {
+            'added': set(),
+            'deleted': set(),
+            'modified': set(),
+            'unchanged': set()
+        }
+        
+        for category in available_fields.keys():
+            requirements = self.results.get(category, [])
+            if not requirements:
+                continue
+                
+            for req in requirements:
+                if isinstance(req, dict):
+                    # Add main fields (excluding internal ones)
+                    for field_name in req.keys():
+                        if not field_name.startswith('_') and field_name not in ['content', 'raw_attributes']:
+                            available_fields[category].add(field_name)
+                    
+                    # Add attribute fields with prefix
+                    attributes = req.get('attributes', {})
+                    if isinstance(attributes, dict):
+                        for attr_name in attributes.keys():
+                            available_fields[category].add(f'attr_{attr_name}')
+        
+        return available_fields
+    
+    def _select_display_fields(self) -> Dict[str, List[str]]:
+        """Select optimal fields for display in each category"""
+        display_fields = {}
+        
+        for category, fields in self.available_fields.items():
+            if not fields:
+                display_fields[category] = ['id']
+                continue
+            
+            # Always include id first
+            selected = ['id']
+            
+            # Priority fields (if they exist)
+            priority_fields = ['identifier', 'type']
+            for field in priority_fields:
+                if field in fields and field not in selected:
+                    selected.append(field)
+            
+            # Add most common attribute fields (limit to reasonable number)
+            attr_fields = [f for f in fields if f.startswith('attr_')]
+            attr_fields = sorted(attr_fields)[:4]  # Limit to 4 attributes
+            selected.extend(attr_fields)
+            
+            # Add other fields (limit total columns)
+            other_fields = [f for f in fields if not f.startswith('attr_') and f not in selected]
+            remaining_slots = max(0, 8 - len(selected))  # Max 8 columns total
+            selected.extend(sorted(other_fields)[:remaining_slots])
+            
+            display_fields[category] = selected
+        
+        return display_fields
+    
     def setup_gui(self):
-        """Setup native GUI"""
+        """Setup native GUI with dynamic field support"""
         # Create main container
         self.main_frame = tk.Frame(self.window, padx=20, pady=20)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -154,29 +219,37 @@ class ComparisonResultsGUI:
         tree_frame = tk.Frame(parent)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
-        # Define columns for modified requirements
-        columns = ['title', 'description', 'type', 'changes_summary', 'change_count']
+        # Get display fields for modified category
+        display_fields = self.display_fields.get('modified', ['id'])
+        
+        # Add special columns for modified view
+        columns = display_fields[1:] + ['changes_summary', 'change_count']  # Exclude 'id' as it goes in tree column
         
         # Create treeview
         self.modified_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', selectmode='extended')
         self.modified_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # Configure columns
-        self.modified_tree.heading('#0', text='ID', anchor=tk.W)
+        # Configure tree column (first field, usually 'id')
+        tree_field = display_fields[0] if display_fields else 'id'
+        self.modified_tree.heading('#0', text=self._format_field_name(tree_field), anchor=tk.W)
         self.modified_tree.column('#0', width=120, minwidth=80)
         
-        column_config = {
-            'title': ('Title', 200, 150),
-            'description': ('Description', 300, 200),
-            'type': ('Type', 120, 100),
-            'changes_summary': ('Changes Summary', 200, 150),
-            'change_count': ('Changes', 80, 60)
-        }
-        
+        # Configure other columns
         for col in columns:
-            display_name, width, minwidth = column_config[col]
+            display_name = self._format_field_name(col)
             self.modified_tree.heading(col, text=display_name, anchor=tk.W)
-            self.modified_tree.column(col, width=width, minwidth=minwidth)
+            
+            # Set column width based on field type
+            if col in ['changes_summary']:
+                width = 200
+            elif col in ['change_count']:
+                width = 80
+            elif col.startswith('attr_'):
+                width = 180
+            else:
+                width = 150
+                
+            self.modified_tree.column(col, width=width, minwidth=60)
         
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.modified_tree.yview)
@@ -191,32 +264,40 @@ class ComparisonResultsGUI:
         self.modified_tree.bind('<Double-1>', lambda event: self._on_item_double_click(self.modified_tree, requirements, "modified"))
     
     def _create_requirements_tree(self, parent, requirements: List[Dict], category: str):
-        """Create standard treeview for non-modified requirements"""
+        """Create standard treeview for non-modified requirements with dynamic fields"""
         # Create frame
         tree_frame = tk.Frame(parent)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
-        # Define columns
-        columns = ['title', 'description', 'type']
+        # Get display fields for this category
+        display_fields = self.display_fields.get(category, ['id'])
+        
+        # Define columns (exclude first field which goes in tree column)
+        columns = display_fields[1:] if len(display_fields) > 1 else []
         
         # Create treeview
         tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', selectmode='extended')
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # Configure columns
-        tree.heading('#0', text='ID', anchor=tk.W)
+        # Configure tree column (first field)
+        tree_field = display_fields[0] if display_fields else 'id'
+        tree.heading('#0', text=self._format_field_name(tree_field), anchor=tk.W)
         tree.column('#0', width=120, minwidth=80)
         
-        column_config = {
-            'title': ('Title', 200, 150),
-            'description': ('Description', 300, 200),
-            'type': ('Type', 120, 100)
-        }
-        
+        # Configure other columns
         for col in columns:
-            display_name, width, minwidth = column_config[col]
+            display_name = self._format_field_name(col)
             tree.heading(col, text=display_name, anchor=tk.W)
-            tree.column(col, width=width, minwidth=minwidth)
+            
+            # Set column width based on field type
+            if col.startswith('attr_'):
+                width = 200
+            elif col in ['type']:
+                width = 120
+            else:
+                width = 150
+                
+            tree.column(col, width=width, minwidth=80)
         
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
@@ -229,27 +310,73 @@ class ComparisonResultsGUI:
         # Bind events
         tree.bind('<Double-1>', lambda event: self._on_item_double_click(tree, requirements, category))
     
+    def _format_field_name(self, field_name: str) -> str:
+        """Format field name for display"""
+        if field_name.startswith('attr_'):
+            # Remove 'attr_' prefix and format attribute name
+            attr_name = field_name[5:]
+            return attr_name.replace('_', ' ').title()
+        else:
+            # Format regular field names
+            formatted = field_name.replace('_', ' ').title()
+            # Special cases
+            if formatted == 'Id':
+                return 'ID'
+            elif formatted == 'Changes Summary':
+                return 'Changes Summary'
+            elif formatted == 'Change Count':
+                return 'Changes'
+            return formatted
+    
     def _populate_tree(self, tree, requirements: List[Dict], category: str):
-        """Populate treeview with data"""
+        """Populate treeview with data using dynamic fields"""
+        display_fields = self.display_fields.get(category, ['id'])
+        tree_field = display_fields[0] if display_fields else 'id'
+        column_fields = display_fields[1:] if len(display_fields) > 1 else []
+        
+        # Add special fields for modified category
+        if category == "modified":
+            column_fields = column_fields + ['changes_summary', 'change_count']
+        
         for i, req in enumerate(requirements):
             try:
-                req_id = str(req.get('id', f'{category}_{i}'))
-                title = str(req.get('title', ''))[:100]
-                description = str(req.get('description', ''))[:150]
-                req_type = str(req.get('type', ''))
+                if not isinstance(req, dict):
+                    continue
                 
-                if category == "modified":
-                    changes_summary = str(req.get('changes_summary', 'Unknown changes'))[:100]
-                    change_count = str(req.get('change_count', 0))
-                    values = [title, description, req_type, changes_summary, change_count]
-                else:
-                    values = [title, description, req_type]
+                # Get tree column value
+                tree_value = self._get_field_value(req, tree_field)
                 
-                tree.insert('', 'end', text=req_id, values=values)
+                # Get column values
+                values = []
+                for field in column_fields:
+                    value = self._get_field_value(req, field)
+                    # Truncate long values
+                    if len(str(value)) > 100:
+                        value = str(value)[:97] + "..."
+                    values.append(value)
+                
+                tree.insert('', 'end', text=tree_value, values=values)
                 
             except Exception as e:
                 print(f"Error inserting {category} requirement {i}: {e}")
                 continue
+    
+    def _get_field_value(self, req: Dict[str, Any], field_name: str) -> str:
+        """Get field value from requirement with proper handling"""
+        try:
+            if field_name.startswith('attr_'):
+                # Attribute field
+                attr_name = field_name[5:]
+                attributes = req.get('attributes', {})
+                if isinstance(attributes, dict):
+                    return str(attributes.get(attr_name, ''))
+                return ''
+            else:
+                # Regular field
+                return str(req.get(field_name, ''))
+        except Exception as e:
+            print(f"Error getting field value for {field_name}: {e}")
+            return ''
     
     def _on_modified_selection_change(self, event):
         """Handle selection changes in modified requirements tree"""
@@ -392,7 +519,7 @@ class ComparisonResultsGUI:
                  cursor='hand2').pack(side=tk.RIGHT)
     
     def _show_requirement_details(self, requirement: Dict, category: str):
-        """Show detailed requirement information"""
+        """Show detailed requirement information with dynamic fields"""
         details_window = tk.Toplevel(self.window)
         details_window.title(f"Requirement Details - {category.title()}")
         details_window.geometry("750x650")
@@ -401,9 +528,9 @@ class ComparisonResultsGUI:
         main_frame = tk.Frame(details_window, padx=25, pady=25)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Title
-        title = requirement.get('title', requirement.get('id', 'Unknown'))
-        tk.Label(main_frame, text=f"Requirement: {title}", 
+        # Title - use best available field
+        display_text = self._get_requirement_display_text(requirement)
+        tk.Label(main_frame, text=f"Requirement: {display_text}", 
                 font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
         
         # Details in scrollable text
@@ -439,40 +566,107 @@ class ComparisonResultsGUI:
                  font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
                  cursor='hand2').pack(side=tk.RIGHT)
     
+    def _get_requirement_display_text(self, req: Dict[str, Any]) -> str:
+        """Get best display text for requirement using dynamic fields"""
+        try:
+            if not isinstance(req, dict):
+                return "Invalid requirement"
+            
+            # Try different fields in priority order
+            candidates = []
+            
+            # Check for identifier if different from id
+            if req.get('identifier') and req.get('identifier') != req.get('id'):
+                candidates.append(req['identifier'])
+            
+            # Check for type
+            if req.get('type'):
+                candidates.append(req['type'])
+            
+            # Check attributes for display-worthy content
+            attributes = req.get('attributes', {})
+            if isinstance(attributes, dict):
+                # Look for common text-like attributes
+                text_attrs = []
+                for attr_name, attr_value in attributes.items():
+                    if attr_value and len(str(attr_value).strip()) > 0:
+                        text_attrs.append((attr_name, str(attr_value)))
+                
+                # Use first meaningful attribute
+                if text_attrs:
+                    attr_name, attr_value = text_attrs[0]
+                    display_value = attr_value[:50] + "..." if len(attr_value) > 50 else attr_value
+                    candidates.append(display_value)
+            
+            # Return best candidate or fallback to ID
+            return candidates[0] if candidates else req.get('id', 'Unknown')
+            
+        except Exception as e:
+            print(f"Error getting display text: {e}")
+            return req.get('id', 'Unknown')
+    
     def _populate_standard_details(self, text_widget, requirement: Dict, category: str):
-        """Populate details for non-modified requirements"""
+        """Populate details for non-modified requirements with dynamic fields"""
         text_widget.insert(tk.END, f"Category: {category.title()}\n\n")
-        text_widget.insert(tk.END, f"ID: {requirement.get('id', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Title: {requirement.get('title', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Description: {requirement.get('description', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Type: {requirement.get('type', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Priority: {requirement.get('priority', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Status: {requirement.get('status', 'N/A')}\n\n")
         
+        # Display all available fields dynamically
+        excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data', 'changes_summary', 'changed_fields', 'change_count'}
+        
+        for field_name, field_value in requirement.items():
+            if field_name not in excluded_fields and field_value:
+                display_name = self._format_field_name(field_name)
+                text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
+        
+        # Display attributes
         attributes = requirement.get('attributes', {})
-        if attributes:
+        if isinstance(attributes, dict) and attributes:
             text_widget.insert(tk.END, "Attributes:\n")
+            text_widget.insert(tk.END, "-" * 30 + "\n")
             for attr_name, attr_value in attributes.items():
-                text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+                if attr_value:
+                    text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+            text_widget.insert(tk.END, "\n")
+        
+        # Display raw attributes if different
+        raw_attributes = requirement.get('raw_attributes', {})
+        if isinstance(raw_attributes, dict) and raw_attributes and raw_attributes != attributes:
+            text_widget.insert(tk.END, "Raw Attribute References:\n")
+            text_widget.insert(tk.END, "-" * 30 + "\n")
+            for attr_ref, attr_value in raw_attributes.items():
+                if attr_value:
+                    text_widget.insert(tk.END, f"  {attr_ref}: {attr_value}\n")
     
     def _populate_modified_details(self, text_widget, requirement: Dict):
         """Populate details for modified requirements with change information"""
         text_widget.insert(tk.END, "Category: Modified\n\n")
-        text_widget.insert(tk.END, f"ID: {requirement.get('id', 'N/A')}\n\n")
+        
+        # Display current values (excluding change metadata)
+        excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data', 'changes_summary', 'changed_fields', 'change_count'}
         
         text_widget.insert(tk.END, "=== CURRENT VALUES (After Changes) ===\n\n")
-        text_widget.insert(tk.END, f"Title: {requirement.get('title', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Description: {requirement.get('description', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Type: {requirement.get('type', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Priority: {requirement.get('priority', 'N/A')}\n\n")
-        text_widget.insert(tk.END, f"Status: {requirement.get('status', 'N/A')}\n\n")
+        for field_name, field_value in requirement.items():
+            if field_name not in excluded_fields and field_value:
+                display_name = self._format_field_name(field_name)
+                text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
         
+        # Display current attributes
+        attributes = requirement.get('attributes', {})
+        if isinstance(attributes, dict) and attributes:
+            text_widget.insert(tk.END, "Current Attributes:\n")
+            text_widget.insert(tk.END, "-" * 30 + "\n")
+            for attr_name, attr_value in attributes.items():
+                if attr_value:
+                    text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+            text_widget.insert(tk.END, "\n")
+        
+        # Display change summary
         changes_summary = requirement.get('changes_summary', 'Unknown changes')
         change_count = requirement.get('change_count', 0)
         text_widget.insert(tk.END, f"=== CHANGE SUMMARY ===\n")
         text_widget.insert(tk.END, f"Fields Changed: {changes_summary}\n")
         text_widget.insert(tk.END, f"Total Changes: {change_count}\n\n")
         
+        # Display detailed changes
         comparison_data = requirement.get('_comparison_data', {})
         if comparison_data:
             changes = comparison_data.get('changes', [])
@@ -487,7 +681,8 @@ class ComparisonResultsGUI:
                     old_value = change.get('old_value', '')
                     new_value = change.get('new_value', '')
                     
-                    text_widget.insert(tk.END, f"Field: {field}\n")
+                    display_field = self._format_field_name(field)
+                    text_widget.insert(tk.END, f"Field: {display_field}\n")
                     text_widget.insert(tk.END, f"Change Type: {change_type.title()}\n")
                     
                     if change_type == 'added':
@@ -500,22 +695,27 @@ class ComparisonResultsGUI:
                     
                     text_widget.insert(tk.END, "\n" + "-"*50 + "\n\n")
             
-            if old_req:
+            # Display original values
+            if old_req and isinstance(old_req, dict):
                 text_widget.insert(tk.END, "=== ORIGINAL VALUES (Before Changes) ===\n\n")
-                text_widget.insert(tk.END, f"Title: {old_req.get('title', 'N/A')}\n\n")
-                text_widget.insert(tk.END, f"Description: {old_req.get('description', 'N/A')}\n\n")
-                text_widget.insert(tk.END, f"Type: {old_req.get('type', 'N/A')}\n\n")
-                text_widget.insert(tk.END, f"Priority: {old_req.get('priority', 'N/A')}\n\n")
-                text_widget.insert(tk.END, f"Status: {old_req.get('status', 'N/A')}\n\n")
-        
-        attributes = requirement.get('attributes', {})
-        if attributes:
-            text_widget.insert(tk.END, "=== CURRENT ATTRIBUTES ===\n")
-            for attr_name, attr_value in attributes.items():
-                text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+                
+                excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data'}
+                for field_name, field_value in old_req.items():
+                    if field_name not in excluded_fields and field_value:
+                        display_name = self._format_field_name(field_name)
+                        text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
+                
+                # Original attributes
+                old_attributes = old_req.get('attributes', {})
+                if isinstance(old_attributes, dict) and old_attributes:
+                    text_widget.insert(tk.END, "Original Attributes:\n")
+                    text_widget.insert(tk.END, "-" * 30 + "\n")
+                    for attr_name, attr_value in old_attributes.items():
+                        if attr_value:
+                            text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
     
     def _export_all_results(self):
-        """Export all results to CSV"""
+        """Export all results to CSV with dynamic fields"""
         try:
             filename = filedialog.asksaveasfilename(
                 title="Export All Results",
@@ -527,32 +727,51 @@ class ComparisonResultsGUI:
             if not filename:
                 return
             
+            # Collect all possible fields from all requirements
+            all_fields = set()
+            for category in ['added', 'deleted', 'modified', 'unchanged']:
+                requirements = self.results.get(category, [])
+                for req in requirements:
+                    if isinstance(req, dict):
+                        # Add main fields
+                        for field_name in req.keys():
+                            if not field_name.startswith('_') and field_name not in ['content', 'raw_attributes']:
+                                all_fields.add(field_name)
+                        
+                        # Add attribute fields
+                        attributes = req.get('attributes', {})
+                        if isinstance(attributes, dict):
+                            for attr_name in attributes.keys():
+                                all_fields.add(f'attr_{attr_name}')
+            
+            # Add change-specific fields for modified requirements
+            all_fields.update(['category', 'changes_summary', 'change_count'])
+            
+            # Sort fields for consistent column order
+            sorted_fields = sorted(all_fields)
+            
             with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile)
                 
-                writer.writerow(['Category', 'ID', 'Title', 'Description', 'Type', 'Priority', 'Status', 'Changes_Summary', 'Change_Count'])
+                # Write header
+                header = [self._format_field_name(field) for field in sorted_fields]
+                writer.writerow(header)
                 
+                # Write data for each category
                 for category in ['added', 'deleted', 'modified', 'unchanged']:
                     requirements = self.results.get(category, [])
                     for req in requirements:
-                        if category == 'modified':
-                            changes_summary = req.get('changes_summary', '')
-                            change_count = req.get('change_count', 0)
-                        else:
-                            changes_summary = ''
-                            change_count = 0
-                        
-                        writer.writerow([
-                            category.title(),
-                            req.get('id', ''),
-                            req.get('title', ''),
-                            req.get('description', ''),
-                            req.get('type', ''),
-                            req.get('priority', ''),
-                            req.get('status', ''),
-                            changes_summary,
-                            change_count
-                        ])
+                        if isinstance(req, dict):
+                            row = []
+                            for field in sorted_fields:
+                                if field == 'category':
+                                    row.append(category.title())
+                                elif field in ['changes_summary', 'change_count'] and category != 'modified':
+                                    row.append('')
+                                else:
+                                    value = self._get_field_value(req, field)
+                                    row.append(value)
+                            writer.writerow(row)
             
             messagebox.showinfo("Export Complete", f"Results exported to:\n{filename}")
             
@@ -569,7 +788,7 @@ class ComparisonResultsGUI:
 
 class DiffViewerWindow:
     """
-    Side-by-side diff viewer window - native version
+    Side-by-side diff viewer window with dynamic field support
     """
     
     def __init__(self, parent: tk.Widget, req_id: str, old_req: Dict, new_req: Dict, changes: List[Dict]):
@@ -599,23 +818,38 @@ class DiffViewerWindow:
         self._show_first_changed_field()
     
     def _build_field_data(self):
-        """Build comprehensive field data for diff viewing"""
-        standard_fields = ['title', 'description', 'type', 'priority', 'status']
+        """Build comprehensive field data for diff viewing with dynamic fields"""
+        # Get all fields from both requirements
+        old_fields = set(self.old_req.keys()) if isinstance(self.old_req, dict) else set()
+        new_fields = set(self.new_req.keys()) if isinstance(self.new_req, dict) else set()
+        all_fields = old_fields | new_fields
         
-        for field in standard_fields:
-            old_value = str(self.old_req.get(field, '') or '')
-            new_value = str(self.new_req.get(field, '') or '')
+        # Exclude internal fields
+        excluded_fields = {'content', 'raw_attributes', '_comparison_data', 'changes_summary', 'changed_fields', 'change_count'}
+        regular_fields = all_fields - excluded_fields - {'attributes'}
+        
+        # Process regular fields
+        for field in regular_fields:
+            old_value = str(self.old_req.get(field, '') or '') if isinstance(self.old_req, dict) else ''
+            new_value = str(self.new_req.get(field, '') or '') if isinstance(self.new_req, dict) else ''
             
             self.field_data[field] = {
-                'display_name': field.title(),
+                'display_name': self._format_field_name(field),
                 'old_value': old_value,
                 'new_value': new_value,
                 'has_changes': old_value != new_value,
-                'field_type': 'standard'
+                'field_type': 'regular'
             }
         
-        old_attrs = self.old_req.get('attributes', {})
-        new_attrs = self.new_req.get('attributes', {})
+        # Process attributes
+        old_attrs = self.old_req.get('attributes', {}) if isinstance(self.old_req, dict) else {}
+        new_attrs = self.new_req.get('attributes', {}) if isinstance(self.new_req, dict) else {}
+        
+        if not isinstance(old_attrs, dict):
+            old_attrs = {}
+        if not isinstance(new_attrs, dict):
+            new_attrs = {}
+        
         all_attr_keys = set(old_attrs.keys()) | set(new_attrs.keys())
         
         for attr_key in all_attr_keys:
@@ -629,6 +863,20 @@ class DiffViewerWindow:
                 'has_changes': old_value != new_value,
                 'field_type': 'attribute'
             }
+    
+    def _format_field_name(self, field_name: str) -> str:
+        """Format field name for display"""
+        if field_name.startswith('attr_'):
+            # Remove 'attr_' prefix and format attribute name
+            attr_name = field_name[5:]
+            return attr_name.replace('_', ' ').title()
+        else:
+            # Format regular field names
+            formatted = field_name.replace('_', ' ').title()
+            # Special cases
+            if formatted == 'Id':
+                return 'ID'
+            return formatted
     
     def _create_diff_viewer_ui(self):
         """Create the side-by-side diff viewer UI"""
