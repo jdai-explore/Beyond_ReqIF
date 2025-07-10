@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 ReqIF Tool Suite - Native GUI Version with Enhanced Folder Comparison
+UPDATED for Phase 3: Removed hardcoded field references in UI updates
 Completely native tkinter with individual file statistics support
 """
 
@@ -24,6 +25,7 @@ from progress_dialog import ProgressDialog
 class ReqIFToolNative:
     """
     ReqIF Tool Suite - Native GUI Version with Enhanced Folder Comparison
+    UPDATED for Phase 3: Dynamic field support without hardcoded field assumptions
     Pure tkinter with individual file statistics support
     """
     
@@ -33,7 +35,7 @@ class ReqIFToolNative:
         
         # Create main window
         self.root = tk.Tk()
-        self.root.title("Beyond ReqIF v1.3.0 - Enhanced Edition with Individual File Statistics")
+        self.root.title("Beyond ReqIF v1.3.0 - Enhanced Edition (Phase 3) with Dynamic Field Support")
         self.root.geometry("1150x750")
         
         # Initialize components
@@ -79,12 +81,12 @@ class ReqIFToolNative:
         header_frame.pack(fill=tk.X, pady=(0, 20))
         
         # Enhanced title
-        title_label = tk.Label(header_frame, text="Beyond ReqIF Enhanced", 
+        title_label = tk.Label(header_frame, text="Beyond ReqIF Enhanced (Phase 3)", 
                               font=('Arial', 18, 'bold'))
         title_label.pack(side=tk.LEFT, padx=15, pady=15)
         
-        # Enhanced version with individual stats
-        version_label = tk.Label(header_frame, text="Enhanced Edition v1.3.0 + Individual Stats", 
+        # Enhanced version with dynamic field support
+        version_label = tk.Label(header_frame, text="Dynamic Field Edition v1.3.0 + Phase 3", 
                                 font=('Arial', 11))
         version_label.pack(side=tk.RIGHT, padx=15, pady=15)
     
@@ -114,7 +116,7 @@ class ReqIFToolNative:
         
         # Description
         desc_label = tk.Label(content_frame, 
-                             text="Compare two ReqIF files to identify added, deleted, and modified requirements", 
+                             text="Compare two ReqIF files to identify changes using dynamic field detection", 
                              font=('Arial', 11), wraplength=600, justify=tk.LEFT)
         desc_label.pack(anchor=tk.W, pady=(0, 25))
         
@@ -168,7 +170,7 @@ class ReqIFToolNative:
         self.compare_btn.pack(side=tk.LEFT)
         
         self.compare_status_label = tk.Label(controls_frame, 
-                                           text="Select two ReqIF files to begin comparison",
+                                           text="Select two ReqIF files to begin dynamic field comparison",
                                            font=('Arial', 11))
         self.compare_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
@@ -182,27 +184,28 @@ class ReqIFToolNative:
         content_frame.pack(fill=tk.BOTH, expand=True)
         
         # Section header
-        header_label = tk.Label(content_frame, text="Enhanced Folder Comparison", 
+        header_label = tk.Label(content_frame, text="Enhanced Folder Comparison (Phase 3)", 
                                font=('Arial', 16, 'bold'))
         header_label.pack(anchor=tk.W, pady=(0, 10))
         
         # Enhanced description
         desc_label = tk.Label(content_frame, 
-                             text="Compare two folders containing ReqIF files with detailed individual file statistics and analysis", 
+                             text="Compare two folders containing ReqIF files with dynamic field detection and detailed individual file statistics", 
                              font=('Arial', 11), wraplength=600, justify=tk.LEFT)
         desc_label.pack(anchor=tk.W, pady=(0, 25))
         
-        # Enhanced info box with new features
+        # Enhanced info box with Phase 3 features
         info_frame = tk.Frame(content_frame, relief='solid', bd=1, bg='lightcyan')
         info_frame.pack(fill=tk.X, pady=(0, 25))
         
-        info_text = """✨ Enhanced folder comparison features:
-• Individual file statistics and analysis
-• Detailed change tracking per file
+        info_text = """✨ Phase 3 enhanced folder comparison features:
+• Dynamic field detection - no hardcoded field assumptions
+• Individual file statistics with adaptive field analysis
+• Detailed change tracking per file with any field structure
 • Parsing success/failure monitoring per file
 • File size and requirement count analysis
-• Enhanced export capabilities with individual data
-• Analysis insights and recommendations
+• Enhanced export capabilities with discovered field data
+• Analysis insights and recommendations based on actual content
 • Maximum 200 files per comparison
 • Progress tracking with cancellation"""
         
@@ -252,14 +255,14 @@ class ReqIFToolNative:
         controls_frame = tk.Frame(content_frame)
         controls_frame.pack(fill=tk.X, pady=(15, 0))
         
-        self.compare_folders_btn = tk.Button(controls_frame, text="🔍 Enhanced Compare", 
+        self.compare_folders_btn = tk.Button(controls_frame, text="🔍 Dynamic Compare", 
                                             command=self._compare_folders,
                                             font=('Arial', 12, 'bold'), relief='raised', bd=3,
                                             padx=25, pady=8, cursor='hand2')
         self.compare_folders_btn.pack(side=tk.LEFT)
         
         self.compare_folders_status_label = tk.Label(controls_frame, 
-                                                    text="Select two folders for enhanced comparison with individual file statistics",
+                                                    text="Select two folders for dynamic field comparison with individual file analysis",
                                                     font=('Arial', 11))
         self.compare_folders_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
@@ -273,13 +276,13 @@ class ReqIFToolNative:
         content_frame.pack(fill=tk.BOTH, expand=True)
         
         # Section header
-        header_label = tk.Label(content_frame, text="File Analysis", 
+        header_label = tk.Label(content_frame, text="Dynamic Field Analysis", 
                                font=('Arial', 16, 'bold'))
         header_label.pack(anchor=tk.W, pady=(0, 10))
         
         # Description
         desc_label = tk.Label(content_frame, 
-                             text="Analyze and explore the structure and content of a single ReqIF file", 
+                             text="Analyze and explore the structure and content of a single ReqIF file using dynamic field detection", 
                              font=('Arial', 11), wraplength=600, justify=tk.LEFT)
         desc_label.pack(anchor=tk.W, pady=(0, 25))
         
@@ -305,14 +308,14 @@ class ReqIFToolNative:
         controls_frame = tk.Frame(content_frame)
         controls_frame.pack(fill=tk.X, pady=(15, 0))
         
-        self.visualize_btn = tk.Button(controls_frame, text="📊 Analyze File", 
+        self.visualize_btn = tk.Button(controls_frame, text="📊 Analyze Fields", 
                                       command=self._visualize_file,
                                       font=('Arial', 12, 'bold'), relief='raised', bd=3,
                                       padx=25, pady=8, cursor='hand2')
         self.visualize_btn.pack(side=tk.LEFT)
         
         self.visualize_status_label = tk.Label(controls_frame, 
-                                             text="Select a ReqIF file to explore and analyze",
+                                             text="Select a ReqIF file to explore and analyze with dynamic field detection",
                                              font=('Arial', 11))
         self.visualize_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
@@ -321,11 +324,11 @@ class ReqIFToolNative:
         status_frame = tk.Frame(self.main_frame, relief='sunken', bd=2)
         status_frame.pack(fill=tk.X, pady=(20, 0))
         
-        self.status_label = tk.Label(status_frame, text="Ready - Enhanced with individual file statistics", 
+        self.status_label = tk.Label(status_frame, text="Ready - Phase 3: Dynamic field detection enabled", 
                                     font=('Arial', 10), anchor=tk.W)
         self.status_label.pack(side=tk.LEFT, padx=10, pady=8)
         
-        version_label = tk.Label(status_frame, text="Enhanced v1.3.0", 
+        version_label = tk.Label(status_frame, text="Phase 3 v1.3.0", 
                                 font=('Arial', 10))
         version_label.pack(side=tk.RIGHT, padx=10, pady=8)
     
@@ -343,36 +346,36 @@ class ReqIFToolNative:
         self._update_button_states()
     
     def _update_button_states(self):
-        """Enhanced button states with individual statistics info"""
+        """UPDATED Phase 3: Enhanced button states without hardcoded field references"""
         # Compare button state (unchanged)
         has_both_files = bool(self.file1_path.get() and self.file2_path.get())
         
         if has_both_files:
             self.compare_btn.configure(state=tk.NORMAL, bg='lightgreen')
-            self.compare_status_label.configure(text="✓ Ready to compare files", fg='darkgreen')
+            self.compare_status_label.configure(text="✓ Ready for dynamic field comparison", fg='darkgreen')
         else:
             self.compare_btn.configure(state=tk.DISABLED, bg='lightgray')
-            self.compare_status_label.configure(text="Select two ReqIF files to begin comparison", fg='black')
+            self.compare_status_label.configure(text="Select two ReqIF files to begin dynamic field comparison", fg='black')
         
         # Enhanced compare folders button state
         has_both_folders = bool(self.folder1_path.get() and self.folder2_path.get())
         
         if has_both_folders:
             self.compare_folders_btn.configure(state=tk.NORMAL, bg='lightblue')
-            self.compare_folders_status_label.configure(text="✓ Ready for enhanced comparison with individual file analysis", fg='darkblue')
+            self.compare_folders_status_label.configure(text="✓ Ready for dynamic comparison with adaptive field analysis", fg='darkblue')
         else:
             self.compare_folders_btn.configure(state=tk.DISABLED, bg='lightgray')
-            self.compare_folders_status_label.configure(text="Select two folders for enhanced comparison with individual file statistics", fg='black')
+            self.compare_folders_status_label.configure(text="Select two folders for dynamic field comparison with individual file analysis", fg='black')
         
         # Visualize button state (unchanged)
         has_visualize_file = bool(self.visualize_file_path.get())
         
         if has_visualize_file:
             self.visualize_btn.configure(state=tk.NORMAL, bg='lightblue')
-            self.visualize_status_label.configure(text="✓ Ready to analyze file", fg='darkblue')
+            self.visualize_status_label.configure(text="✓ Ready for dynamic field analysis", fg='darkblue')
         else:
             self.visualize_btn.configure(state=tk.DISABLED, bg='lightgray')
-            self.visualize_status_label.configure(text="Select a ReqIF file to explore and analyze", fg='black')
+            self.visualize_status_label.configure(text="Select a ReqIF file to explore and analyze with dynamic field detection", fg='black')
     
     def _browse_file1(self):
         """Browse for first file (unchanged)"""
@@ -455,32 +458,36 @@ class ReqIFToolNative:
             self._show_error("Folder Selection Error", f"Failed to select modified folder:\n{str(e)}")
     
     def _compare_files(self):
-        """Compare files (unchanged)"""
+        """UPDATED Phase 3: Compare files with dynamic field detection"""
         if not (self.file1_path.get() and self.file2_path.get()):
             self._show_warning("Missing Files", "Please select both files to compare.")
             return
         
-        self._show_progress("Initializing comparison...")
+        self._show_progress("Initializing dynamic field comparison...")
         self.compare_btn.configure(state=tk.DISABLED, text="Comparing...", bg='yellow')
         self.root.update()
         
         def compare_in_thread():
             try:
-                self.root.after_idle(lambda: self._show_progress("Parsing original file..."))
+                self.root.after_idle(lambda: self._show_progress("Parsing original file with dynamic field detection..."))
                 file1_reqs = self.parser.parse_file(self.file1_path.get())
                 
-                self.root.after_idle(lambda: self._show_progress("Parsing modified file..."))
+                self.root.after_idle(lambda: self._show_progress("Parsing modified file with dynamic field detection..."))
                 file2_reqs = self.parser.parse_file(self.file2_path.get())
                 
-                self.root.after_idle(lambda: self._show_progress("Analyzing differences..."))
+                self.root.after_idle(lambda: self._show_progress("Analyzing differences using adaptive field comparison..."))
                 results = self.comparator.compare_requirements(file1_reqs, file2_reqs)
                 
                 def show_results():
                     try:
                         self.comparison_window = ComparisonResultsGUI(self.root, results)
                         stats = results.get('statistics', {})
-                        changes = stats.get('added_count', 0) + stats.get('deleted_count', 0) + stats.get('modified_count', 0)
-                        self._show_success(f"Comparison complete - {changes} changes found")
+                        
+                        # UPDATED Phase 3: Dynamic change counting without hardcoded fields
+                        change_count = self._count_dynamic_changes(stats)
+                        field_count = self._count_available_fields(file1_reqs + file2_reqs)
+                        
+                        self._show_success(f"Dynamic comparison complete - {change_count} changes found across {field_count} detected fields")
                         self.compare_btn.configure(state=tk.NORMAL, text="🔍 Compare Files")
                         self._update_button_states()
                     except Exception as e:
@@ -502,21 +509,21 @@ class ReqIFToolNative:
         thread_module.Thread(target=compare_in_thread, daemon=True).start()
     
     def _compare_folders(self):
-        """Enhanced folder comparison with individual file statistics"""
+        """UPDATED Phase 3: Enhanced folder comparison with dynamic field analysis"""
         if not (self.folder1_path.get() and self.folder2_path.get()):
             self._show_warning("Missing Folders", "Please select both folders to compare.")
             return
         
         # Show progress dialog
-        self.progress_dialog = ProgressDialog(self.root, "Enhanced Folder Comparison", 
-                                             "Initializing enhanced folder comparison with individual file statistics...", True)
+        self.progress_dialog = ProgressDialog(self.root, "Dynamic Folder Comparison", 
+                                             "Initializing dynamic folder comparison with adaptive field detection...", True)
         self.progress_dialog.show()
         
         # Setup cancellation
         cancel_flag = thread_module.Event()
         self.progress_dialog.set_cancel_callback(lambda: cancel_flag.set())
         
-        self._show_progress("Initializing enhanced folder comparison...")
+        self._show_progress("Initializing dynamic folder comparison...")
         self.compare_folders_btn.configure(state=tk.DISABLED, text="Comparing...", bg='yellow')
         self.root.update()
         
@@ -544,39 +551,41 @@ class ReqIFToolNative:
                         # Get statistics for enhanced success message
                         folder_stats = results.get('folder_statistics', {})
                         req_stats = results.get('aggregated_statistics', {})
-                        individual_stats = results.get('individual_file_statistics', {})  # NEW
+                        individual_stats = results.get('individual_file_statistics', {})
                         
-                        # Calculate enhanced metrics
+                        # UPDATED Phase 3: Calculate enhanced metrics dynamically
                         total_file_changes = (folder_stats.get('files_added', 0) + 
                                             folder_stats.get('files_deleted', 0) + 
                                             folder_stats.get('files_with_changes', 0))
                         
-                        total_req_changes = (req_stats.get('total_requirements_added', 0) + 
-                                           req_stats.get('total_requirements_deleted', 0) + 
-                                           req_stats.get('total_requirements_modified', 0))
+                        total_req_changes = self._count_dynamic_changes(req_stats)
                         
                         # NEW: Get individual file insights
                         total_files_analyzed = (len(individual_stats.get('matched_files', {})) +
                                               len(individual_stats.get('added_files', {})) +
                                               len(individual_stats.get('deleted_files', {})))
                         
-                        # Enhanced success message with individual insights
-                        success_msg = (f"Enhanced folder comparison complete!\n"
+                        # Count total fields detected across all files
+                        total_fields_detected = self._count_total_fields_in_results(results)
+                        
+                        # Enhanced success message with dynamic field insights
+                        success_msg = (f"Dynamic folder comparison complete!\n"
                                      f"📁 Files: {total_file_changes} changes across {total_files_analyzed} analyzed\n"
-                                     f"📄 Requirements: {total_req_changes} changes\n"
-                                     f"💡 View 'Individual Files' tab for detailed statistics")
+                                     f"📄 Requirements: {total_req_changes} changes detected\n"
+                                     f"🔍 Fields: {total_fields_detected} unique fields discovered\n"
+                                     f"💡 View 'Individual Files' tab for detailed field analysis")
                         
                         self._show_success(success_msg)
-                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
+                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Dynamic Compare")
                         self._update_button_states()
                         
                         # Close progress dialog
                         if self.progress_dialog:
-                            self.progress_dialog.complete("Enhanced comparison completed successfully!")
+                            self.progress_dialog.complete("Dynamic comparison completed successfully!")
                         
                     except Exception as e:
                         self._show_error("Results Error", f"Failed to display enhanced folder comparison results:\n{str(e)}")
-                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
+                        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Dynamic Compare")
                         self._update_button_states()
                         
                         if self.progress_dialog:
@@ -588,7 +597,7 @@ class ReqIFToolNative:
                 error_message = str(e)
                 def show_error():
                     self._show_error("Enhanced Folder Comparison Failed", f"Enhanced folder comparison failed:\n{error_message}")
-                    self.compare_folders_btn.configure(state=tk.DISABLED, text="🔍 Enhanced Compare")
+                    self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Dynamic Compare")
                     self._update_button_states()
                     
                     if self.progress_dialog:
@@ -599,18 +608,18 @@ class ReqIFToolNative:
         thread_module.Thread(target=compare_folders_in_thread, daemon=True).start()
     
     def _visualize_file(self):
-        """Visualize file (unchanged)"""
+        """UPDATED Phase 3: Visualize file with dynamic field detection"""
         if not self.visualize_file_path.get():
             self._show_warning("Missing File", "Please select a file to analyze.")
             return
         
-        self._show_progress("Initializing analysis...")
+        self._show_progress("Initializing dynamic field analysis...")
         self.visualize_btn.configure(state=tk.DISABLED, text="Analyzing...", bg='yellow')
         self.root.update()
         
         def visualize_in_thread():
             try:
-                self.root.after_idle(lambda: self._show_progress("Parsing ReqIF file..."))
+                self.root.after_idle(lambda: self._show_progress("Parsing ReqIF file with dynamic field detection..."))
                 requirements = self.parser.parse_file(self.visualize_file_path.get())
                 
                 def show_visualizer():
@@ -620,12 +629,17 @@ class ReqIFToolNative:
                             requirements, 
                             self.visualize_file_path.get()
                         )
-                        self._show_success(f"Analysis complete - {len(requirements)} requirements loaded")
-                        self.visualize_btn.configure(state=tk.NORMAL, text="📊 Analyze File")
+                        
+                        # UPDATED Phase 3: Dynamic field counting
+                        req_count = len(requirements)
+                        field_count = self._count_available_fields(requirements)
+                        
+                        self._show_success(f"Dynamic analysis complete - {req_count} requirements with {field_count} detected fields")
+                        self.visualize_btn.configure(state=tk.NORMAL, text="📊 Analyze Fields")
                         self._update_button_states()
                     except Exception as e:
                         self._show_error("Analysis Error", f"Failed to display analysis:\n{str(e)}")
-                        self.visualize_btn.configure(state=tk.NORMAL, text="📊 Analyze File")
+                        self.visualize_btn.configure(state=tk.NORMAL, text="📊 Analyze Fields")
                         self._update_button_states()
                 
                 self.root.after_idle(show_visualizer)
@@ -634,17 +648,118 @@ class ReqIFToolNative:
                 error_message = str(e)
                 def show_error():
                     self._show_error("Analysis Failed", f"File analysis failed:\n{error_message}")
-                    self.visualize_btn.configure(state=tk.NORMAL, text="📊 Analyze File")
+                    self.visualize_btn.configure(state=tk.NORMAL, text="📊 Analyze Fields")
                     self._update_button_states()
                 
                 self.root.after_idle(show_error)
         
         thread_module.Thread(target=visualize_in_thread, daemon=True).start()
     
+    def _count_dynamic_changes(self, stats: Dict[str, Any]) -> int:
+        """
+        NEW Phase 3: Count changes dynamically without hardcoded field assumptions
+        """
+        try:
+            total_changes = 0
+            
+            # Look for standard change count fields
+            standard_change_fields = ['added_count', 'deleted_count', 'modified_count']
+            for field in standard_change_fields:
+                if field in stats:
+                    try:
+                        total_changes += int(stats[field])
+                    except (ValueError, TypeError):
+                        continue
+            
+            # If no standard fields found, look for alternative patterns
+            if total_changes == 0:
+                change_patterns = ['total_changes', 'changes_detected', 'modifications']
+                for pattern in change_patterns:
+                    if pattern in stats:
+                        try:
+                            total_changes += int(stats[pattern])
+                        except (ValueError, TypeError):
+                            continue
+            
+            # Last resort: count any field with 'count' in name (except unchanged)
+            if total_changes == 0:
+                for key, value in stats.items():
+                    if 'count' in key.lower() and 'unchanged' not in key.lower():
+                        try:
+                            total_changes += int(value)
+                        except (ValueError, TypeError):
+                            continue
+            
+            return total_changes
+            
+        except Exception as e:
+            print(f"Error counting dynamic changes: {e}")
+            return 0
+    
+    def _count_available_fields(self, requirements: List[Dict[str, Any]]) -> int:
+        """
+        NEW Phase 3: Count available fields dynamically
+        """
+        try:
+            all_fields = set()
+            
+            for req in requirements:
+                if isinstance(req, dict):
+                    # Add main fields (excluding internal ones)
+                    for field_name in req.keys():
+                        if not field_name.startswith('_') and field_name not in ['content', 'raw_attributes']:
+                            all_fields.add(field_name)
+                    
+                    # Add attribute fields
+                    attributes = req.get('attributes', {})
+                    if isinstance(attributes, dict):
+                        for attr_name in attributes.keys():
+                            all_fields.add(f'attr_{attr_name}')
+            
+            return len(all_fields)
+            
+        except Exception as e:
+            print(f"Error counting available fields: {e}")
+            return 0
+    
+    def _count_total_fields_in_results(self, results: Dict[str, Any]) -> int:
+        """
+        NEW Phase 3: Count total unique fields discovered in comparison results
+        """
+        try:
+            all_fields = set()
+            
+            # Check individual file statistics for field diversity
+            individual_stats = results.get('individual_file_statistics', {})
+            
+            for category in ['matched_files', 'added_files', 'deleted_files']:
+                files_data = individual_stats.get(category, {})
+                for file_data in files_data.values():
+                    # Extract fields from comparison stats
+                    stats = file_data.get('comparison_stats', {})
+                    if isinstance(stats, dict):
+                        all_fields.update(stats.keys())
+                    
+                    # Extract fields from file info
+                    for info_key in ['file1_info', 'file2_info', 'file_info']:
+                        info = file_data.get(info_key, {})
+                        if isinstance(info, dict):
+                            all_fields.update(info.keys())
+            
+            # Filter out internal/meta fields
+            meaningful_fields = {f for f in all_fields 
+                               if not f.startswith('_') and f not in ['full_path', 'relative_path']}
+            
+            return len(meaningful_fields)
+            
+        except Exception as e:
+            print(f"Error counting total fields: {e}")
+            return 0
+    
     def _show_comparison_cancelled(self):
         """Handle cancelled comparison"""
-        self._show_progress("Enhanced comparison cancelled by user")
-        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Enhanced Compare")
+        self._show_progress("Dynamic comparison cancelled by user")
+        self.compare_folders_btn.configure(state=tk.NORMAL, text="🔍 Dynamic Compare")
         self._update_button_states()
         
         if self.progress_dialog:
@@ -671,7 +786,7 @@ class ReqIFToolNative:
     def run(self):
         """Run the application"""
         try:
-            self._show_success("Beyond ReqIF Enhanced ready - File and folder comparison with individual statistics available")
+            self._show_success("Beyond ReqIF Enhanced (Phase 3) ready - Dynamic field detection and comparison available")
             self.notebook.select(0)
             self.root.mainloop()
         except Exception as e:
@@ -709,7 +824,7 @@ class ReqIFToolNative:
 def main():
     """Main function"""
     try:
-        print("Starting Beyond ReqIF v1.3.0 - Enhanced Edition with Individual File Statistics...")
+        print("Starting Beyond ReqIF v1.3.0 - Enhanced Edition (Phase 3) with Dynamic Field Support...")
         app = ReqIFToolNative()
         app.run()
     except Exception as e:
@@ -722,7 +837,7 @@ def main():
             root.withdraw()
             messagebox.showerror(
                 "Startup Error", 
-                f"Failed to start Beyond ReqIF Enhanced:\n\n{str(e)}"
+                f"Failed to start Beyond ReqIF Enhanced (Phase 3):\n\n{str(e)}"
             )
             root.destroy()
         except Exception:

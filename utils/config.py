@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Configuration Management for Enhanced ReqIF Tool
-Handles threading, caching, and performance settings with backward compatibility
+UPDATED for Phase 3: Added ParsingConfig to remove artificial field mapping
+Handles threading, caching, performance, parsing settings with backward compatibility
 """
 
 import os
@@ -11,9 +12,45 @@ from typing import Dict, Any, Optional
 import threading
 
 
+class ParsingConfig:
+    """
+    NEW: Parsing-specific configuration for removing artificial field mapping
+    """
+    
+    def __init__(self):
+        self.preserve_original_structure = True  # No artificial fields
+        self.show_raw_attribute_refs = False     # Show human-readable names by default
+        self.attribute_display_mode = 'human_readable'  # vs 'reference_ids'
+        self.dynamic_field_detection = True     # Auto-detect available fields
+        self.field_mapping_disabled = True      # Disable artificial mapping
+        self.strict_reqif_compliance = True     # Only show actual ReqIF content
+        self.fallback_field_handling = 'ignore'  # 'ignore', 'warn', or 'error'
+        
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ParsingConfig':
+        """Create from dictionary"""
+        config = cls()
+        for key, value in data.items():
+            if hasattr(config, key):
+                setattr(config, key, value)
+        return config
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            'preserve_original_structure': self.preserve_original_structure,
+            'show_raw_attribute_refs': self.show_raw_attribute_refs,
+            'attribute_display_mode': self.attribute_display_mode,
+            'dynamic_field_detection': self.dynamic_field_detection,
+            'field_mapping_disabled': self.field_mapping_disabled,
+            'strict_reqif_compliance': self.strict_reqif_compliance,
+            'fallback_field_handling': self.fallback_field_handling
+        }
+
+
 class Config:
     """
-    Main configuration manager with thread-safe access and automatic defaults
+    UPDATED: Main configuration manager with parsing configuration added
     """
     
     _instance = None
@@ -39,14 +76,15 @@ class Config:
         self._initialized = True
     
     def _load_defaults(self):
-        """Load safe default configuration"""
+        """Load safe default configuration - UPDATED with parsing config"""
         self._config_data = {
             'threading': ThreadingConfig().to_dict(),
             'caching': CacheConfig().to_dict(),
             'performance': PerformanceConfig().to_dict(),
             'compatibility': CompatibilityConfig().to_dict(),
-            'version': '1.3.0-enhanced',
-            'config_version': 1
+            'parsing': ParsingConfig().to_dict(),  # NEW: Add parsing config
+            'version': '1.3.0-enhanced-phase3',
+            'config_version': 2  # Increment version for parsing config addition
         }
     
     def _load_user_config(self):
@@ -94,6 +132,10 @@ class Config:
     def get_compatibility_config(self) -> 'CompatibilityConfig':
         """Get compatibility configuration"""
         return CompatibilityConfig.from_dict(self._config_data.get('compatibility', {}))
+    
+    def get_parsing_config(self) -> 'ParsingConfig':
+        """NEW: Get parsing configuration"""
+        return ParsingConfig.from_dict(self._config_data.get('parsing', {}))
     
     def update_section(self, section: str, updates: Dict[str, Any]):
         """Update a configuration section"""
@@ -283,23 +325,39 @@ def get_compatibility_config() -> CompatibilityConfig:
     return config.get_compatibility_config()
 
 
+def get_parsing_config() -> ParsingConfig:
+    """NEW: Get parsing configuration"""
+    return config.get_parsing_config()
+
+
 # Example usage and testing
 if __name__ == "__main__":
-    print("Testing Configuration Management...")
+    print("Testing Enhanced Configuration Management (Phase 3)...")
     
     # Test configuration loading
     cfg = get_config()
     threading_cfg = get_threading_config()
     caching_cfg = get_caching_config()
+    parsing_cfg = get_parsing_config()  # NEW: Test parsing config
     
     print(f"Threading enabled: {threading_cfg.enabled}")
     print(f"Parse threads: {threading_cfg.parse_threads}")
     print(f"Caching enabled: {caching_cfg.enabled}")
     print(f"Cache directory: {caching_cfg.cache_dir}")
     
+    # NEW: Test parsing configuration
+    print(f"Field mapping disabled: {parsing_cfg.field_mapping_disabled}")
+    print(f"Preserve original structure: {parsing_cfg.preserve_original_structure}")
+    print(f"Dynamic field detection: {parsing_cfg.dynamic_field_detection}")
+    print(f"Attribute display mode: {parsing_cfg.attribute_display_mode}")
+    
     # Test configuration updates
     cfg.update_section('threading', {'enabled': False})
-    updated_threading = get_threading_config()
-    print(f"Threading after update: {updated_threading.enabled}")
+    cfg.update_section('parsing', {'show_raw_attribute_refs': True})
     
-    print("Configuration management ready!")
+    updated_threading = get_threading_config()
+    updated_parsing = get_parsing_config()
+    print(f"Threading after update: {updated_threading.enabled}")
+    print(f"Show raw attribute refs after update: {updated_parsing.show_raw_attribute_refs}")
+    
+    print("Enhanced configuration management (Phase 3) ready!")

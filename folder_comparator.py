@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Enhanced Folder Comparator Module - Phase 1A Integration
+Enhanced Folder Comparator Module - Phase 3 Updates
+UPDATED: Removed hardcoded field references and added dynamic field support
 Added threading hooks and basic infrastructure while maintaining full backward compatibility
 """
 
@@ -19,12 +20,12 @@ from reqif_parser import ReqIFParser
 from thread_pools.thread_manager import get_thread_manager, execute_parallel_parse, execute_parallel_compare
 from thread_pools.task_queue import get_task_scheduler, get_result_collector, TaskPriority
 from utils.config import get_threading_config, get_compatibility_config
-from utils.compatibility_layer import ensure_compatibility, legacy_progress_adapter, register_fallback
 
 
 class FolderComparator:
     """
     Enhanced Folder Comparator with threading support and backward compatibility
+    UPDATED for Phase 3: Removed hardcoded field references
     """
     
     def __init__(self, max_files: int = 200, similarity_threshold: float = 0.6):
@@ -60,6 +61,7 @@ class FolderComparator:
     def set_progress_callback(self, callback: Callable[[int, int, str], None]):
         """Set progress callback function with legacy support"""
         if self.compatibility_config.legacy_progress_callbacks:
+            from utils.compatibility_layer import legacy_progress_adapter
             self.progress_callback = legacy_progress_adapter(callback)
         else:
             self.progress_callback = callback
@@ -68,7 +70,6 @@ class FolderComparator:
         """Set cancel flag for operation cancellation"""
         self.cancel_flag = cancel_flag
     
-    @ensure_compatibility
     def compare_folders(self, folder1_path: str, folder2_path: str, 
                        use_threading: bool = None, bypass_cache: bool = False) -> Dict[str, Any]:
         """
@@ -253,6 +254,7 @@ class FolderComparator:
             
         except Exception as e:
             print(f"Threaded analysis failed, falling back to sequential: {e}")
+            from utils.compatibility_layer import register_fallback
             register_fallback(f"Threaded file analysis failed: {e}")
             self.threading_stats['fallback_to_sequential'] = True
             return self._analyze_file_differences_sequential(file_matches, folder1_path, folder2_path)
@@ -577,10 +579,45 @@ class FolderComparator:
         return combined_similarity
     
     def _file_has_changes(self, stats: Dict) -> bool:
-        """Check if a file has any changes (UNCHANGED)"""
-        return (stats.get('added_count', 0) > 0 or 
-                stats.get('deleted_count', 0) > 0 or 
-                stats.get('modified_count', 0) > 0)
+        """
+        UPDATED Phase 3: Check if a file has any changes using dynamic statistics
+        Removed hardcoded field assumptions
+        """
+        try:
+            # Look for any count fields that indicate changes
+            change_indicators = [
+                'added_count', 'deleted_count', 'modified_count',  # Standard change counts
+                'changes_detected', 'total_changes',              # Alternative indicators
+                'change_percentage'                               # Percentage indicator
+            ]
+            
+            # Check for any positive change indicators
+            for indicator in change_indicators:
+                if indicator in stats:
+                    value = stats[indicator]
+                    try:
+                        # Convert to number and check if > 0
+                        if float(value) > 0:
+                            return True
+                    except (ValueError, TypeError):
+                        # If not a number, check if it's a truthy string
+                        if str(value).lower() in ['true', 'yes', 'changed']:
+                            return True
+            
+            # Fallback: Check if statistics suggest changes by looking for any non-zero counts
+            for key, value in stats.items():
+                if 'count' in key.lower() and key != 'unchanged_count':
+                    try:
+                        if float(value) > 0:
+                            return True
+                    except (ValueError, TypeError):
+                        continue
+            
+            return False
+            
+        except Exception as e:
+            print(f"Error checking file changes: {e}")
+            return False  # Safe default
     
     def _compare_single_file_pair(self, file1_path: str, file2_path: str) -> Dict[str, Any]:
         """Compare a single pair of ReqIF files (UNCHANGED)"""
@@ -695,22 +732,24 @@ class FolderComparator:
         self.cancel_flag.set()
     
     def export_folder_summary_enhanced(self, comparison_results: Dict[str, Any]) -> str:
-        """Generate enhanced text summary including threading statistics (ENHANCED)"""
+        """
+        UPDATED Phase 3: Generate enhanced text summary without hardcoded field references
+        """
         try:
             folder_stats = comparison_results.get('folder_statistics', {})
             req_stats = comparison_results.get('aggregated_statistics', {})
             individual_stats = comparison_results.get('individual_file_statistics', {})
-            threading_stats = comparison_results.get('threading_statistics', {})  # NEW
+            threading_stats = comparison_results.get('threading_statistics', {})
             
             summary_lines = [
-                "Enhanced Folder Comparison Summary (Phase 1A)",
+                "Enhanced Folder Comparison Summary (Phase 3)",
                 "=" * 60,
                 "",
                 "Folder Paths:",
                 f"- Original: {comparison_results.get('folder1_path', 'N/A')}",
                 f"- Modified: {comparison_results.get('folder2_path', 'N/A')}",
                 "",
-                "Processing Information:",  # NEW SECTION
+                "Processing Information:",
                 f"- Threading Used: {'Yes' if threading_stats.get('threading_used', False) else 'No'}",
                 f"- Fallback to Sequential: {'Yes' if threading_stats.get('fallback_to_sequential', False) else 'No'}",
                 f"- Parallel Processing Time: {threading_stats.get('parallel_parse_time', 0):.2f}s",
@@ -735,7 +774,7 @@ class FolderComparator:
                 "=" * 60,
             ]
             
-            # Add individual file statistics (existing logic)
+            # Add individual file statistics using dynamic approach
             if individual_stats.get('matched_files'):
                 summary_lines.extend([
                     "",
@@ -752,23 +791,86 @@ class FolderComparator:
                     summary_lines.append(f"{status_icon} {file_path} ({match_type} match)")
                     
                     if has_changes:
+                        # UPDATED Phase 3: Build changes dynamically without hardcoded fields
                         changes = []
-                        if stats.get('added_count', 0) > 0:
-                            changes.append(f"+{stats['added_count']}")
-                        if stats.get('deleted_count', 0) > 0:
-                            changes.append(f"-{stats['deleted_count']}")
-                        if stats.get('modified_count', 0) > 0:
-                            changes.append(f"~{stats['modified_count']}")
                         
-                        change_summary = ", ".join(changes) if changes else "No changes"
+                        # Look for standard change counts
+                        change_fields = ['added_count', 'deleted_count', 'modified_count']
+                        for field in change_fields:
+                            count = stats.get(field, 0)
+                            if count > 0:
+                                prefix = field.split('_')[0][0]  # 'a', 'd', 'm'
+                                changes.append(f"{prefix.upper()}{count}")
+                        
+                        # If no standard counts found, look for any numeric changes
+                        if not changes:
+                            for key, value in stats.items():
+                                if 'count' in key.lower() and key != 'unchanged_count':
+                                    try:
+                                        if float(value) > 0:
+                                            changes.append(f"{key}: {value}")
+                                    except (ValueError, TypeError):
+                                        continue
+                        
+                        change_summary = ", ".join(changes) if changes else "Changes detected"
                         change_pct = stats.get('change_percentage', 0)
                         summary_lines.append(f"    Changes: {change_summary} ({change_pct}%)")
                     else:
                         summary_lines.append(f"    No changes detected")
                     
-                    file1_size = round(file_data['file1_info']['size'] / (1024 * 1024), 2)
-                    file2_size = round(file_data['file2_info']['size'] / (1024 * 1024), 2)
-                    summary_lines.append(f"    File sizes: {file1_size}MB → {file2_size}MB")
+                    # File size information
+                    file1_info = file_data.get('file1_info', {})
+                    file2_info = file_data.get('file2_info', {})
+                    if file1_info.get('size') and file2_info.get('size'):
+                        file1_size = round(file1_info['size'] / (1024 * 1024), 2)
+                        file2_size = round(file2_info['size'] / (1024 * 1024), 2)
+                        summary_lines.append(f"    File sizes: {file1_size}MB → {file2_size}MB")
+                    summary_lines.append("")
+            
+            # Added files section
+            if individual_stats.get('added_files'):
+                summary_lines.extend([
+                    "",
+                    f"Added Files Details ({len(individual_stats['added_files'])}):",
+                    "-" * 40
+                ])
+                
+                for file_path, file_data in individual_stats['added_files'].items():
+                    req_count = file_data.get('requirement_count', 0)
+                    file_size = file_data.get('file_size_mb', 0)
+                    parsing_success = file_data.get('parsing_success', False)
+                    
+                    status_icon = "✅" if parsing_success else "❌"
+                    summary_lines.append(f"{status_icon} {file_path}")
+                    summary_lines.append(f"    Requirements: {req_count}")
+                    summary_lines.append(f"    File Size: {file_size}MB")
+                    
+                    if not parsing_success:
+                        error = file_data.get('error', 'Unknown error')
+                        summary_lines.append(f"    Error: {error}")
+                    summary_lines.append("")
+            
+            # Deleted files section
+            if individual_stats.get('deleted_files'):
+                summary_lines.extend([
+                    "",
+                    f"Deleted Files Details ({len(individual_stats['deleted_files'])}):",
+                    "-" * 40
+                ])
+                
+                for file_path, file_data in individual_stats['deleted_files'].items():
+                    req_count = file_data.get('requirement_count', 0)
+                    file_size = file_data.get('file_size_mb', 0)
+                    parsing_success = file_data.get('parsing_success', False)
+                    
+                    status_icon = "✅" if parsing_success else "❌"
+                    summary_lines.append(f"{status_icon} {file_path}")
+                    summary_lines.append(f"    Requirements: {req_count}")
+                    summary_lines.append(f"    File Size: {file_size}MB")
+                    
+                    if not parsing_success:
+                        error = file_data.get('error', 'Unknown error')
+                        summary_lines.append(f"    Error: {error}")
                     summary_lines.append("")
             
             return '\n'.join(summary_lines)
@@ -852,8 +954,8 @@ class FolderComparator:
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("Enhanced Folder Comparator - Phase 1A Implementation")
-    print("Features: Threading hooks, backward compatibility, individual file statistics")
+    print("Enhanced Folder Comparator - Phase 3 Implementation")
+    print("Features: Dynamic field detection, no hardcoded field assumptions")
     
     # Test the enhanced folder comparator
     def test_enhanced_folder_comparator():
@@ -867,6 +969,21 @@ if __name__ == "__main__":
         
         print(f"Threading enabled: {comparator.threading_config.enabled}")
         print(f"Parse threads: {comparator.threading_config.parse_threads}")
-        print("Enhanced Folder Comparator ready for Phase 1A testing!")
+        
+        # Test _file_has_changes with various statistics formats
+        test_stats = [
+            {'added_count': 5, 'deleted_count': 2, 'modified_count': 1},  # Standard format
+            {'changes_detected': 3},                                     # Alternative format
+            {'change_percentage': 15.5},                                 # Percentage format
+            {'total_changes': 0},                                        # No changes
+            {'custom_change_indicator': 7}                               # Custom format
+        ]
+        
+        print("\nTesting dynamic change detection:")
+        for i, stats in enumerate(test_stats):
+            has_changes = comparator._file_has_changes(stats)
+            print(f"Stats {i+1}: {stats} -> Changes: {has_changes}")
+        
+        print("Enhanced Folder Comparator (Phase 3) ready!")
     
     test_enhanced_folder_comparator()
