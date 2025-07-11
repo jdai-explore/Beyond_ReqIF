@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 ReqIF Tool Suite - Native GUI Version with Enhanced Folder Comparison
-UPDATED for Phase 3: Removed hardcoded field references in UI updates
+FIXED: Added missing typing imports and corrected threading initialization
 Completely native tkinter with individual file statistics support
 """
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import os
-import threading as thread_module  # FIXED: Renamed to avoid circular import
-from typing import Optional, Dict, Any
+import threading as thread_module
+from typing import Optional, Dict, Any, List  # FIXED: Added missing typing imports
 
 # Import core modules
 from reqif_parser import ReqIFParser
@@ -101,7 +101,7 @@ class ReqIFToolNative:
         self._create_visualize_tab()
     
     def _create_compare_tab(self):
-        """Create comparison tab (unchanged)"""
+        """Create comparison tab"""
         compare_frame = tk.Frame(self.notebook)
         self.notebook.add(compare_frame, text="📊 Compare Files")
         
@@ -267,7 +267,7 @@ class ReqIFToolNative:
         self.compare_folders_status_label.pack(side=tk.LEFT, padx=(25, 0))
     
     def _create_visualize_tab(self):
-        """Create visualization tab (unchanged)"""
+        """Create visualization tab"""
         visualize_frame = tk.Frame(self.notebook)
         self.notebook.add(visualize_frame, text="📈 Analyze File")
         
@@ -347,7 +347,7 @@ class ReqIFToolNative:
     
     def _update_button_states(self):
         """UPDATED Phase 3: Enhanced button states without hardcoded field references"""
-        # Compare button state (unchanged)
+        # Compare button state
         has_both_files = bool(self.file1_path.get() and self.file2_path.get())
         
         if has_both_files:
@@ -367,7 +367,7 @@ class ReqIFToolNative:
             self.compare_folders_btn.configure(state=tk.DISABLED, bg='lightgray')
             self.compare_folders_status_label.configure(text="Select two folders for dynamic field comparison with individual file analysis", fg='black')
         
-        # Visualize button state (unchanged)
+        # Visualize button state
         has_visualize_file = bool(self.visualize_file_path.get())
         
         if has_visualize_file:
@@ -378,7 +378,7 @@ class ReqIFToolNative:
             self.visualize_status_label.configure(text="Select a ReqIF file to explore and analyze with dynamic field detection", fg='black')
     
     def _browse_file1(self):
-        """Browse for first file (unchanged)"""
+        """Browse for first file"""
         try:
             filename = filedialog.askopenfilename(
                 title="Select Original ReqIF File",
@@ -396,7 +396,7 @@ class ReqIFToolNative:
             self._show_error("File Selection Error", f"Failed to select original file:\n{str(e)}")
     
     def _browse_file2(self):
-        """Browse for second file (unchanged)"""
+        """Browse for second file"""
         try:
             filename = filedialog.askopenfilename(
                 title="Select Modified ReqIF File",
@@ -414,7 +414,7 @@ class ReqIFToolNative:
             self._show_error("File Selection Error", f"Failed to select modified file:\n{str(e)}")
     
     def _browse_visualize_file(self):
-        """Browse for visualization file (unchanged)"""
+        """Browse for visualization file"""
         try:
             filename = filedialog.askopenfilename(
                 title="Select ReqIF File to Analyze",
@@ -432,7 +432,7 @@ class ReqIFToolNative:
             self._show_error("File Selection Error", f"Failed to select analysis file:\n{str(e)}")
     
     def _browse_folder1(self):
-        """Browse for first folder (unchanged)"""
+        """Browse for first folder"""
         try:
             foldername = filedialog.askdirectory(
                 title="Select Original Folder"
@@ -445,7 +445,7 @@ class ReqIFToolNative:
             self._show_error("Folder Selection Error", f"Failed to select original folder:\n{str(e)}")
     
     def _browse_folder2(self):
-        """Browse for second folder (unchanged)"""
+        """Browse for second folder"""
         try:
             foldername = filedialog.askdirectory(
                 title="Select Modified Folder"
