@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-ComparisonResultsGUI - Updated Version
-Pure tkinter with dynamic field detection - no hardcoded field assumptions
+ComparisonResultsGUI - Updated Version for Content/Structural Separation
+Pure tkinter with dynamic field detection and clear distinction between
+content modifications and structural differences
 """
 
 import tkinter as tk
@@ -15,7 +16,7 @@ import re
 
 class ComparisonResultsGUI:
     """
-    Comparison Results GUI with Dynamic Field Detection
+    Comparison Results GUI with Content/Structural Change Separation
     """
     
     def __init__(self, parent: tk.Widget, results: Dict[str, Any]):
@@ -32,7 +33,8 @@ class ComparisonResultsGUI:
         self.window.focus_set()
         
         # Track selected items for diff viewer
-        self.selected_modified_items = []
+        self.selected_content_items = []
+        self.selected_structural_items = []
         
         # Dynamic field detection
         self.available_fields = self._detect_available_fields()
@@ -49,7 +51,8 @@ class ComparisonResultsGUI:
         available_fields = {
             'added': set(),
             'deleted': set(),
-            'modified': set(),
+            'content_modified': set(),
+            'structural_only': set(),
             'unchanged': set()
         }
         
@@ -106,7 +109,7 @@ class ComparisonResultsGUI:
         return display_fields
     
     def setup_gui(self):
-        """Setup native GUI with dynamic field support"""
+        """Setup native GUI with content/structural separation"""
         # Create main container
         self.main_frame = tk.Frame(self.window, padx=20, pady=20)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -129,12 +132,12 @@ class ComparisonResultsGUI:
         
         # Subtitle
         subtitle_label = tk.Label(header_frame,
-                                 text="Select modified requirements and click 'Show Differences' for detailed comparison",
+                                 text="Content changes show actual value modifications. Structural changes show field additions/removals.",
                                  font=('Arial', 11))
         subtitle_label.pack(anchor=tk.W, pady=(8, 0))
     
     def _create_summary_section(self):
-        """Create summary statistics"""
+        """Create summary statistics with content/structural breakdown"""
         summary_frame = tk.LabelFrame(self.main_frame, text="Summary Statistics", 
                                      font=('Arial', 12, 'bold'), padx=15, pady=15)
         summary_frame.pack(fill=tk.X, pady=(0, 20))
@@ -150,27 +153,59 @@ class ComparisonResultsGUI:
         summary_data = [
             ("Added", stats.get('added_count', 0), 'darkgreen'),
             ("Deleted", stats.get('deleted_count', 0), 'darkred'),
-            ("Modified", stats.get('modified_count', 0), 'darkorange'),
+            ("Content Modified", stats.get('content_modified_count', 0), 'darkorange'),
+            ("Structure Only", stats.get('structural_only_count', 0), 'purple'),
             ("Unchanged", stats.get('unchanged_count', 0), 'darkblue')
         ]
         
         for col, (label, count, color) in enumerate(summary_data):
             frame = tk.Frame(stats_container)
-            frame.grid(row=0, column=col, padx=25, pady=10, sticky='n')
+            frame.grid(row=0, column=col, padx=20, pady=10, sticky='n')
             
             tk.Label(frame, text=label, font=('Arial', 12, 'bold')).pack()
             tk.Label(frame, text=str(count), font=('Arial', 16, 'bold'), 
                     fg=color).pack()
+        
+        # Add percentage info
+        percentage_frame = tk.Frame(summary_frame)
+        percentage_frame.pack(fill=tk.X, pady=(15, 0))
+        
+        content_pct = stats.get('content_change_percentage', 0)
+        total_pct = stats.get('total_change_percentage', 0)
+        
+        tk.Label(percentage_frame, text=f"Content Change Rate: {content_pct}%", 
+                font=('Arial', 11, 'bold'), fg='darkorange').pack(side=tk.LEFT, padx=(0, 30))
+        tk.Label(percentage_frame, text=f"Total Change Rate: {total_pct}%", 
+                font=('Arial', 11, 'bold'), fg='darkred').pack(side=tk.LEFT)
+        
+        # Structural changes info
+        if stats.get('added_fields') or stats.get('removed_fields'):
+            struct_frame = tk.Frame(summary_frame)
+            struct_frame.pack(fill=tk.X, pady=(15, 0))
+            
+            tk.Label(struct_frame, text="Common Structural Changes:", 
+                    font=('Arial', 11, 'bold')).pack(anchor=tk.W)
+            
+            if stats.get('added_fields'):
+                added_fields = stats['added_fields'][:5]  # Show first 5
+                tk.Label(struct_frame, text=f"  Added fields: {', '.join(added_fields)}", 
+                        font=('Arial', 10), fg='darkgreen').pack(anchor=tk.W)
+            
+            if stats.get('removed_fields'):
+                removed_fields = stats['removed_fields'][:5]  # Show first 5
+                tk.Label(struct_frame, text=f"  Removed fields: {', '.join(removed_fields)}", 
+                        font=('Arial', 10), fg='darkred').pack(anchor=tk.W)
     
     def _create_results_section(self):
-        """Create results with tabs"""
+        """Create results with tabs for different change types"""
         self.notebook = ttk.Notebook(self.main_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
         
         # Create tabs
         self._create_added_tab()
         self._create_deleted_tab()
-        self._create_modified_tab()
+        self._create_content_modified_tab()
+        self._create_structural_only_tab()
         self._create_unchanged_tab()
     
     def _create_added_tab(self):
@@ -185,12 +220,19 @@ class ComparisonResultsGUI:
         self.notebook.add(deleted_frame, text=f"➖ Deleted ({len(self.results.get('deleted', []))})")
         self._create_requirements_tree(deleted_frame, self.results.get('deleted', []), "deleted")
     
-    def _create_modified_tab(self):
-        """Create modified requirements tab with diff functionality"""
+    def _create_content_modified_tab(self):
+        """Create content-modified requirements tab with diff functionality"""
         modified_frame = tk.Frame(self.notebook)
-        self.notebook.add(modified_frame, text=f"📝 Modified ({len(self.results.get('modified', []))})")
+        self.notebook.add(modified_frame, text=f"📝 Content Modified ({len(self.results.get('content_modified', []))})")
         
-        self._create_enhanced_modified_tree(modified_frame, self.results.get('modified', []))
+        self._create_enhanced_modified_tree(modified_frame, self.results.get('content_modified', []), 'content')
+    
+    def _create_structural_only_tab(self):
+        """Create structural-only changes tab"""
+        structural_frame = tk.Frame(self.notebook)
+        self.notebook.add(structural_frame, text=f"📋 Structure Only ({len(self.results.get('structural_only', []))})")
+        
+        self._create_structural_tree(structural_frame, self.results.get('structural_only', []))
     
     def _create_unchanged_tab(self):
         """Create unchanged requirements tab"""
@@ -198,20 +240,21 @@ class ComparisonResultsGUI:
         self.notebook.add(unchanged_frame, text=f"✓ Unchanged ({len(self.results.get('unchanged', []))})")
         self._create_requirements_tree(unchanged_frame, self.results.get('unchanged', []), "unchanged")
     
-    def _create_enhanced_modified_tree(self, parent, requirements: List[Dict]):
+    def _create_enhanced_modified_tree(self, parent, requirements: List[Dict], change_type: str):
         """Create enhanced modified requirements tree with diff functionality"""
         # Controls frame for Show Differences button
         controls_frame = tk.Frame(parent)
         controls_frame.pack(fill=tk.X, padx=15, pady=15)
         
         self.show_diff_btn = tk.Button(controls_frame, text="👁️ Show Differences",
-                                      command=self._show_differences, state=tk.DISABLED,
+                                      command=lambda: self._show_differences(change_type), 
+                                      state=tk.DISABLED,
                                       font=('Arial', 11, 'bold'), relief='raised', bd=2,
                                       padx=15, pady=5, cursor='hand2')
         self.show_diff_btn.pack(side=tk.LEFT, padx=(0, 15))
         
         self.selection_info_label = tk.Label(controls_frame,
-                                           text="Select a modified requirement to view differences",
+                                           text="Select a requirement to view content differences",
                                            font=('Arial', 10))
         self.selection_info_label.pack(side=tk.LEFT)
         
@@ -219,29 +262,28 @@ class ComparisonResultsGUI:
         tree_frame = tk.Frame(parent)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         
-        # Get display fields for modified category
-        display_fields = self.display_fields.get('modified', ['id'])
+        # Get display fields for content modified category
+        display_fields = self.display_fields.get('content_modified', ['id'])
         
         # Add special columns for modified view
-        columns = display_fields[1:] + ['changes_summary', 'change_count']  # Exclude 'id' as it goes in tree column
+        columns = display_fields[1:] + ['changes_summary', 'change_count']
         
         # Create treeview
-        self.modified_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', selectmode='extended')
-        self.modified_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.content_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', selectmode='extended')
+        self.content_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # Configure tree column (first field, usually 'id')
+        # Configure tree column
         tree_field = display_fields[0] if display_fields else 'id'
-        self.modified_tree.heading('#0', text=self._format_field_name(tree_field), anchor=tk.W)
-        self.modified_tree.column('#0', width=120, minwidth=80)
+        self.content_tree.heading('#0', text=self._format_field_name(tree_field), anchor=tk.W)
+        self.content_tree.column('#0', width=120, minwidth=80)
         
         # Configure other columns
         for col in columns:
             display_name = self._format_field_name(col)
-            self.modified_tree.heading(col, text=display_name, anchor=tk.W)
+            self.content_tree.heading(col, text=display_name, anchor=tk.W)
             
-            # Set column width based on field type
             if col in ['changes_summary']:
-                width = 200
+                width = 300
             elif col in ['change_count']:
                 width = 80
             elif col.startswith('attr_'):
@@ -249,19 +291,76 @@ class ComparisonResultsGUI:
             else:
                 width = 150
                 
-            self.modified_tree.column(col, width=width, minwidth=60)
+            self.content_tree.column(col, width=width, minwidth=60)
         
         # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.modified_tree.yview)
+        v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.content_tree.yview)
         v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.modified_tree.configure(yscrollcommand=v_scrollbar.set)
+        self.content_tree.configure(yscrollcommand=v_scrollbar.set)
         
         # Populate tree
-        self._populate_tree(self.modified_tree, requirements, "modified")
+        self._populate_tree(self.content_tree, requirements, "content_modified")
         
-        # Bind events for selection handling
-        self.modified_tree.bind('<<TreeviewSelect>>', self._on_modified_selection_change)
-        self.modified_tree.bind('<Double-1>', lambda event: self._on_item_double_click(self.modified_tree, requirements, "modified"))
+        # Bind events
+        self.content_tree.bind('<<TreeviewSelect>>', lambda e: self._on_modified_selection_change('content'))
+        self.content_tree.bind('<Double-1>', lambda event: self._on_item_double_click(self.content_tree, requirements, "content_modified"))
+    
+    def _create_structural_tree(self, parent, requirements: List[Dict]):
+        """Create tree for structural-only changes"""
+        # Info frame
+        info_frame = tk.Frame(parent)
+        info_frame.pack(fill=tk.X, padx=15, pady=15)
+        
+        tk.Label(info_frame, text="These requirements have the same content but different fields/attributes",
+                font=('Arial', 11), fg='purple').pack(anchor=tk.W)
+        
+        # Tree frame
+        tree_frame = tk.Frame(parent)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        
+        # Define columns for structural view
+        columns = ['added_fields', 'removed_fields']
+        
+        # Create treeview
+        self.structural_tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', selectmode='extended')
+        self.structural_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Configure columns
+        self.structural_tree.heading('#0', text='ID', anchor=tk.W)
+        self.structural_tree.column('#0', width=150, minwidth=100)
+        
+        self.structural_tree.heading('added_fields', text='Added Fields', anchor=tk.W)
+        self.structural_tree.column('added_fields', width=300, minwidth=150)
+        
+        self.structural_tree.heading('removed_fields', text='Removed Fields', anchor=tk.W)
+        self.structural_tree.column('removed_fields', width=300, minwidth=150)
+        
+        # Add scrollbars
+        v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.structural_tree.yview)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.structural_tree.configure(yscrollcommand=v_scrollbar.set)
+        
+        # Populate tree
+        for req in requirements:
+            if isinstance(req, dict):
+                req_id = req.get('id', 'Unknown')
+                added_fields = req.get('added_fields', [])
+                removed_fields = req.get('removed_fields', [])
+                
+                # Format field lists
+                added_text = ', '.join(added_fields[:5])
+                if len(added_fields) > 5:
+                    added_text += f' (+{len(added_fields)-5} more)'
+                
+                removed_text = ', '.join(removed_fields[:5])
+                if len(removed_fields) > 5:
+                    removed_text += f' (+{len(removed_fields)-5} more)'
+                
+                values = [added_text or 'None', removed_text or 'None']
+                self.structural_tree.insert('', 'end', text=req_id, values=values)
+        
+        # Bind double-click
+        self.structural_tree.bind('<Double-1>', lambda event: self._on_structural_double_click(event, requirements))
     
     def _create_requirements_tree(self, parent, requirements: List[Dict], category: str):
         """Create standard treeview for non-modified requirements with dynamic fields"""
@@ -323,9 +422,9 @@ class ComparisonResultsGUI:
             if formatted == 'Id':
                 return 'ID'
             elif formatted == 'Changes Summary':
-                return 'Changes Summary'
-            elif formatted == 'Change Count':
                 return 'Changes'
+            elif formatted == 'Change Count':
+                return 'Count'
             return formatted
     
     def _populate_tree(self, tree, requirements: List[Dict], category: str):
@@ -334,8 +433,8 @@ class ComparisonResultsGUI:
         tree_field = display_fields[0] if display_fields else 'id'
         column_fields = display_fields[1:] if len(display_fields) > 1 else []
         
-        # Add special fields for modified category
-        if category == "modified":
+        # Add special fields for content modified category
+        if category == "content_modified":
             column_fields = column_fields + ['changes_summary', 'change_count']
         
         for i, req in enumerate(requirements):
@@ -378,41 +477,46 @@ class ComparisonResultsGUI:
             print(f"Error getting field value for {field_name}: {e}")
             return ''
     
-    def _on_modified_selection_change(self, event):
+    def _on_modified_selection_change(self, change_type: str):
         """Handle selection changes in modified requirements tree"""
         try:
-            selection = self.modified_tree.selection()
-            self.selected_modified_items = list(selection)
-            
-            if len(selection) == 1:
-                self.show_diff_btn.configure(state=tk.NORMAL, bg='lightgreen')
-                self.selection_info_label.configure(text="1 requirement selected - click 'Show Differences' to view changes")
-            elif len(selection) > 1:
-                self.show_diff_btn.configure(state=tk.DISABLED, bg='lightgray')
-                self.selection_info_label.configure(text=f"{len(selection)} requirements selected - select only one to view differences")
-            else:
-                self.show_diff_btn.configure(state=tk.DISABLED, bg='lightgray')
-                self.selection_info_label.configure(text="Select a modified requirement to view differences")
+            if change_type == 'content':
+                tree = self.content_tree
+                selection = tree.selection()
+                self.selected_content_items = list(selection)
+                
+                if len(selection) == 1:
+                    self.show_diff_btn.configure(state=tk.NORMAL, bg='lightgreen')
+                    self.selection_info_label.configure(text="1 requirement selected - click 'Show Differences' to view changes")
+                elif len(selection) > 1:
+                    self.show_diff_btn.configure(state=tk.DISABLED, bg='lightgray')
+                    self.selection_info_label.configure(text=f"{len(selection)} requirements selected - select only one to view differences")
+                else:
+                    self.show_diff_btn.configure(state=tk.DISABLED, bg='lightgray')
+                    self.selection_info_label.configure(text="Select a requirement to view content differences")
                 
         except Exception as e:
             print(f"Error handling selection change: {e}")
     
-    def _show_differences(self):
+    def _show_differences(self, change_type: str):
         """Show side-by-side differences for selected requirement"""
-        if not self.selected_modified_items or len(self.selected_modified_items) != 1:
-            messagebox.showwarning("Selection Required", "Please select exactly one modified requirement to view differences.")
+        if change_type == 'content' and not self.selected_content_items:
+            messagebox.showwarning("Selection Required", "Please select exactly one requirement to view differences.")
             return
         
         try:
-            item = self.selected_modified_items[0]
-            item_index = self.modified_tree.index(item)
+            if change_type == 'content':
+                item = self.selected_content_items[0]
+                tree = self.content_tree
+                requirements = self.results.get('content_modified', [])
             
-            modified_requirements = self.results.get('modified', [])
-            if item_index >= len(modified_requirements):
+            item_index = tree.index(item)
+            
+            if item_index >= len(requirements):
                 messagebox.showerror("Error", "Could not find requirement data.")
                 return
             
-            requirement = modified_requirements[item_index]
+            requirement = requirements[item_index]
             self._launch_diff_viewer(requirement)
             
         except Exception as e:
@@ -440,6 +544,93 @@ class ComparisonResultsGUI:
         except Exception as e:
             print(f"Error launching diff viewer: {e}")
             messagebox.showerror("Error", f"Failed to launch diff viewer:\n{str(e)}")
+    
+    def _on_structural_double_click(self, event, requirements: List[Dict]):
+        """Handle double-click on structural changes"""
+        selection = self.structural_tree.selection()
+        if not selection:
+            return
+        
+        try:
+            item = selection[0]
+            item_index = self.structural_tree.index(item)
+            
+            if item_index < len(requirements):
+                req = requirements[item_index]
+                self._show_structural_details(req)
+        except Exception as e:
+            print(f"Error handling structural double-click: {e}")
+    
+    def _show_structural_details(self, requirement: Dict):
+        """Show detailed structural changes"""
+        details_window = tk.Toplevel(self.window)
+        details_window.title(f"Structural Changes - {requirement.get('id', 'Unknown')}")
+        details_window.geometry("700x600")
+        details_window.transient(self.window)
+        
+        main_frame = tk.Frame(details_window, padx=25, pady=25)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        tk.Label(main_frame, text=f"Structural Changes for: {requirement.get('id', 'Unknown')}", 
+                font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
+        
+        # Info
+        tk.Label(main_frame, text="This requirement has identical content but different fields/attributes",
+                font=('Arial', 11), fg='purple').pack(anchor=tk.W, pady=(0, 15))
+        
+        # Details in scrollable text
+        text_frame = tk.Frame(main_frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        details_text = tk.Text(text_frame, wrap=tk.WORD, font=('Arial', 11))
+        details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        details_text.configure(yscrollcommand=scrollbar.set)
+        
+        # Populate details
+        comparison_data = requirement.get('_comparison_data', {})
+        added_fields = comparison_data.get('added_fields', set())
+        removed_fields = comparison_data.get('removed_fields', set())
+        
+        details_text.insert(tk.END, "=== ADDED FIELDS ===\n\n")
+        if added_fields:
+            for field in sorted(added_fields):
+                field_display = field.replace('attribute.', 'Attribute: ')
+                new_req = comparison_data.get('new', {})
+                value = self._get_field_value_from_comparison(new_req, field)
+                details_text.insert(tk.END, f"{field_display}:\n  {value}\n\n")
+        else:
+            details_text.insert(tk.END, "No fields added\n\n")
+        
+        details_text.insert(tk.END, "\n=== REMOVED FIELDS ===\n\n")
+        if removed_fields:
+            for field in sorted(removed_fields):
+                field_display = field.replace('attribute.', 'Attribute: ')
+                old_req = comparison_data.get('old', {})
+                value = self._get_field_value_from_comparison(old_req, field)
+                details_text.insert(tk.END, f"{field_display}:\n  {value}\n\n")
+        else:
+            details_text.insert(tk.END, "No fields removed\n\n")
+        
+        details_text.configure(state=tk.DISABLED)
+        
+        # Close button
+        tk.Button(main_frame, text="Close", command=details_window.destroy,
+                 font=('Arial', 11), relief='raised', bd=2, padx=20, pady=6,
+                 cursor='hand2').pack(pady=(20, 0))
+    
+    def _get_field_value_from_comparison(self, req: Dict[str, Any], field: str) -> str:
+        """Get field value handling attribute fields"""
+        if field.startswith('attribute.'):
+            attr_name = field[10:]
+            attributes = req.get('attributes', {})
+            if isinstance(attributes, dict):
+                return str(attributes.get(attr_name, ''))
+        else:
+            return str(req.get(field, ''))
     
     def _create_controls_section(self):
         """Create control buttons"""
@@ -472,7 +663,7 @@ class ComparisonResultsGUI:
             
             if item_index < len(requirements):
                 req = requirements[item_index]
-                if category == "modified":
+                if category == "content_modified":
                     self._show_modified_requirement_options(req)
                 else:
                     self._show_requirement_details(req, category)
@@ -480,738 +671,647 @@ class ComparisonResultsGUI:
             print(f"Error handling double-click: {e}")
     
     def _show_modified_requirement_options(self, requirement: Dict):
-        """Show options for modified requirements (details or diff)"""
-        choice_window = tk.Toplevel(self.window)
-        choice_window.title("View Options")
-        choice_window.geometry("450x250")
-        choice_window.transient(self.window)
-        choice_window.grab_set()
-        
-        main_frame = tk.Frame(choice_window, padx=25, pady=25)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        req_id = requirement.get('id', 'Unknown')
-        tk.Label(main_frame, text=f"View options for requirement: {req_id}", 
-                font=('Arial', 14, 'bold')).pack(pady=(0, 20))
-        
-        tk.Label(main_frame, text="How would you like to view this modified requirement?",
-                font=('Arial', 11)).pack(pady=(0, 25))
-        
-        button_frame = tk.Frame(main_frame)
-        button_frame.pack(fill=tk.X)
-        
-        def show_details():
-            choice_window.destroy()
-            self._show_requirement_details(requirement, "modified")
-        
-        def show_diff():
-            choice_window.destroy()
-            self._launch_diff_viewer(requirement)
-        
-        tk.Button(button_frame, text="📋 Show Details", command=show_details, 
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
-        tk.Button(button_frame, text="🔍 Show Differences", command=show_diff,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.LEFT)
-        tk.Button(button_frame, text="Cancel", command=choice_window.destroy,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.RIGHT)
-    
-    def _show_requirement_details(self, requirement: Dict, category: str):
-        """Show detailed requirement information with dynamic fields"""
-        details_window = tk.Toplevel(self.window)
-        details_window.title(f"Requirement Details - {category.title()}")
-        details_window.geometry("750x650")
-        details_window.transient(self.window)
-        
-        main_frame = tk.Frame(details_window, padx=25, pady=25)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Title - use best available field
-        display_text = self._get_requirement_display_text(requirement)
-        tk.Label(main_frame, text=f"Requirement: {display_text}", 
-                font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
-        
-        # Details in scrollable text
-        text_frame = tk.Frame(main_frame)
-        text_frame.pack(fill=tk.BOTH, expand=True)
-        
-        details_text = tk.Text(text_frame, wrap=tk.WORD, font=('Arial', 11))
-        details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        details_text.configure(yscrollcommand=scrollbar.set)
-        
-        # Populate details
-        if category == "modified":
-            self._populate_modified_details(details_text, requirement)
-        else:
-            self._populate_standard_details(details_text, requirement, category)
-        
-        details_text.configure(state=tk.DISABLED)
-        
-        # Buttons frame
-        buttons_frame = tk.Frame(main_frame)
-        buttons_frame.pack(fill=tk.X, pady=(20, 0))
-        
-        if category == "modified":
-            tk.Button(buttons_frame, text="🔍 Show Differences", 
-                     command=lambda: [details_window.destroy(), self._launch_diff_viewer(requirement)],
-                     font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                     cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
-        
-        tk.Button(buttons_frame, text="Close", command=details_window.destroy,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.RIGHT)
-    
-    def _get_requirement_display_text(self, req: Dict[str, Any]) -> str:
-        """Get best display text for requirement using dynamic fields"""
-        try:
-            if not isinstance(req, dict):
-                return "Invalid requirement"
-            
-            # Try different fields in priority order
-            candidates = []
-            
-            # Check for identifier if different from id
-            if req.get('identifier') and req.get('identifier') != req.get('id'):
-                candidates.append(req['identifier'])
-            
-            # Check for type
-            if req.get('type'):
-                candidates.append(req['type'])
-            
-            # Check attributes for display-worthy content
-            attributes = req.get('attributes', {})
-            if isinstance(attributes, dict):
-                # Look for common text-like attributes
-                text_attrs = []
-                for attr_name, attr_value in attributes.items():
-                    if attr_value and len(str(attr_value).strip()) > 0:
-                        text_attrs.append((attr_name, str(attr_value)))
-                
-                # Use first meaningful attribute
-                if text_attrs:
-                    attr_name, attr_value = text_attrs[0]
-                    display_value = attr_value[:50] + "..." if len(attr_value) > 50 else attr_value
-                    candidates.append(display_value)
-            
-            # Return best candidate or fallback to ID
-            return candidates[0] if candidates else req.get('id', 'Unknown')
-            
-        except Exception as e:
-            print(f"Error getting display text: {e}")
-            return req.get('id', 'Unknown')
-    
-    def _populate_standard_details(self, text_widget, requirement: Dict, category: str):
-        """Populate details for non-modified requirements with dynamic fields"""
-        text_widget.insert(tk.END, f"Category: {category.title()}\n\n")
-        
-        # Display all available fields dynamically
-        excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data', 'changes_summary', 'changed_fields', 'change_count'}
-        
-        for field_name, field_value in requirement.items():
-            if field_name not in excluded_fields and field_value:
-                display_name = self._format_field_name(field_name)
-                text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
-        
-        # Display attributes
-        attributes = requirement.get('attributes', {})
-        if isinstance(attributes, dict) and attributes:
-            text_widget.insert(tk.END, "Attributes:\n")
-            text_widget.insert(tk.END, "-" * 30 + "\n")
-            for attr_name, attr_value in attributes.items():
-                if attr_value:
-                    text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
-            text_widget.insert(tk.END, "\n")
-        
-        # Display raw attributes if different
-        raw_attributes = requirement.get('raw_attributes', {})
-        if isinstance(raw_attributes, dict) and raw_attributes and raw_attributes != attributes:
-            text_widget.insert(tk.END, "Raw Attribute References:\n")
-            text_widget.insert(tk.END, "-" * 30 + "\n")
-            for attr_ref, attr_value in raw_attributes.items():
-                if attr_value:
-                    text_widget.insert(tk.END, f"  {attr_ref}: {attr_value}\n")
-    
-    def _populate_modified_details(self, text_widget, requirement: Dict):
-        """Populate details for modified requirements with change information"""
-        text_widget.insert(tk.END, "Category: Modified\n\n")
-        
-        # Display current values (excluding change metadata)
-        excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data', 'changes_summary', 'changed_fields', 'change_count'}
-        
-        text_widget.insert(tk.END, "=== CURRENT VALUES (After Changes) ===\n\n")
-        for field_name, field_value in requirement.items():
-            if field_name not in excluded_fields and field_value:
-                display_name = self._format_field_name(field_name)
-                text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
-        
-        # Display current attributes
-        attributes = requirement.get('attributes', {})
-        if isinstance(attributes, dict) and attributes:
-            text_widget.insert(tk.END, "Current Attributes:\n")
-            text_widget.insert(tk.END, "-" * 30 + "\n")
-            for attr_name, attr_value in attributes.items():
-                if attr_value:
-                    text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
-            text_widget.insert(tk.END, "\n")
-        
-        # Display change summary
-        changes_summary = requirement.get('changes_summary', 'Unknown changes')
-        change_count = requirement.get('change_count', 0)
-        text_widget.insert(tk.END, f"=== CHANGE SUMMARY ===\n")
-        text_widget.insert(tk.END, f"Fields Changed: {changes_summary}\n")
-        text_widget.insert(tk.END, f"Total Changes: {change_count}\n\n")
-        
-        # Display detailed changes
-        comparison_data = requirement.get('_comparison_data', {})
-        if comparison_data:
-            changes = comparison_data.get('changes', [])
-            old_req = comparison_data.get('old', {})
-            
-            if changes:
-                text_widget.insert(tk.END, "=== DETAILED CHANGES ===\n\n")
-                
-                for change in changes:
-                    field = change.get('field', 'Unknown')
-                    change_type = change.get('change_type', 'modified')
-                    old_value = change.get('old_value', '')
-                    new_value = change.get('new_value', '')
-                    
-                    display_field = self._format_field_name(field)
-                    text_widget.insert(tk.END, f"Field: {display_field}\n")
-                    text_widget.insert(tk.END, f"Change Type: {change_type.title()}\n")
-                    
-                    if change_type == 'added':
-                        text_widget.insert(tk.END, f"Added Value: {new_value}\n")
-                    elif change_type == 'deleted':
-                        text_widget.insert(tk.END, f"Deleted Value: {old_value}\n")
-                    else:
-                        text_widget.insert(tk.END, f"Old Value: {old_value}\n")
-                        text_widget.insert(tk.END, f"New Value: {new_value}\n")
-                    
-                    text_widget.insert(tk.END, "\n" + "-"*50 + "\n\n")
-            
-            # Display original values
-            if old_req and isinstance(old_req, dict):
-                text_widget.insert(tk.END, "=== ORIGINAL VALUES (Before Changes) ===\n\n")
-                
-                excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data'}
-                for field_name, field_value in old_req.items():
-                    if field_name not in excluded_fields and field_value:
-                        display_name = self._format_field_name(field_name)
-                        text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
-                
-                # Original attributes
-                old_attributes = old_req.get('attributes', {})
-                if isinstance(old_attributes, dict) and old_attributes:
-                    text_widget.insert(tk.END, "Original Attributes:\n")
-                    text_widget.insert(tk.END, "-" * 30 + "\n")
-                    for attr_name, attr_value in old_attributes.items():
-                        if attr_value:
-                            text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
-    
-    def _export_all_results(self):
-        """Export all results to CSV with dynamic fields"""
-        try:
-            filename = filedialog.asksaveasfilename(
-                title="Export All Results",
-                defaultextension=".csv",
-                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialfile="comparison_results_all.csv"
-            )
-            
-            if not filename:
-                return
-            
-            # Collect all possible fields from all requirements
-            all_fields = set()
-            for category in ['added', 'deleted', 'modified', 'unchanged']:
-                requirements = self.results.get(category, [])
-                for req in requirements:
-                    if isinstance(req, dict):
-                        # Add main fields
-                        for field_name in req.keys():
-                            if not field_name.startswith('_') and field_name not in ['content', 'raw_attributes']:
-                                all_fields.add(field_name)
-                        
-                        # Add attribute fields
-                        attributes = req.get('attributes', {})
-                        if isinstance(attributes, dict):
-                            for attr_name in attributes.keys():
-                                all_fields.add(f'attr_{attr_name}')
-            
-            # Add change-specific fields for modified requirements
-            all_fields.update(['category', 'changes_summary', 'change_count'])
-            
-            # Sort fields for consistent column order
-            sorted_fields = sorted(all_fields)
-            
-            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.writer(csvfile)
-                
-                # Write header
-                header = [self._format_field_name(field) for field in sorted_fields]
-                writer.writerow(header)
-                
-                # Write data for each category
-                for category in ['added', 'deleted', 'modified', 'unchanged']:
-                    requirements = self.results.get(category, [])
-                    for req in requirements:
-                        if isinstance(req, dict):
-                            row = []
-                            for field in sorted_fields:
-                                if field == 'category':
-                                    row.append(category.title())
-                                elif field in ['changes_summary', 'change_count'] and category != 'modified':
-                                    row.append('')
-                                else:
-                                    value = self._get_field_value(req, field)
-                                    row.append(value)
-                            writer.writerow(row)
-            
-            messagebox.showinfo("Export Complete", f"Results exported to:\n{filename}")
-            
-        except Exception as e:
-            messagebox.showerror("Export Error", f"Failed to export results:\n{str(e)}")
-    
-    def _on_closing(self):
-        """Handle window closing"""
-        try:
-            self.window.destroy()
-        except:
-            pass
+       """Show options for content-modified requirements (details or diff)"""
+       choice_window = tk.Toplevel(self.window)
+       choice_window.title("View Options")
+       choice_window.geometry("450x250")
+       choice_window.transient(self.window)
+       choice_window.grab_set()
+       
+       main_frame = tk.Frame(choice_window, padx=25, pady=25)
+       main_frame.pack(fill=tk.BOTH, expand=True)
+       
+       req_id = requirement.get('id', 'Unknown')
+       tk.Label(main_frame, text=f"View options for requirement: {req_id}", 
+               font=('Arial', 14, 'bold')).pack(pady=(0, 20))
+       
+       tk.Label(main_frame, text="How would you like to view this content-modified requirement?",
+               font=('Arial', 11)).pack(pady=(0, 25))
+       
+       button_frame = tk.Frame(main_frame)
+       button_frame.pack(fill=tk.X)
+       
+       def show_details():
+           choice_window.destroy()
+           self._show_requirement_details(requirement, "content_modified")
+       
+       def show_diff():
+           choice_window.destroy()
+           self._launch_diff_viewer(requirement)
+       
+       tk.Button(button_frame, text="📋 Show Details", command=show_details, 
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
+       tk.Button(button_frame, text="🔍 Show Differences", command=show_diff,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.LEFT)
+       tk.Button(button_frame, text="Cancel", command=choice_window.destroy,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.RIGHT)
+   
+   def _show_requirement_details(self, requirement: Dict, category: str):
+       """Show detailed requirement information with dynamic fields"""
+       details_window = tk.Toplevel(self.window)
+       details_window.title(f"Requirement Details - {category.replace('_', ' ').title()}")
+       details_window.geometry("750x650")
+       details_window.transient(self.window)
+       
+       main_frame = tk.Frame(details_window, padx=25, pady=25)
+       main_frame.pack(fill=tk.BOTH, expand=True)
+       
+       # Title - use best available display text
+       display_text = self._get_requirement_display_text(requirement)
+       tk.Label(main_frame, text=f"Requirement: {display_text}", 
+               font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
+       
+       # Details in scrollable text
+       text_frame = tk.Frame(main_frame)
+       text_frame.pack(fill=tk.BOTH, expand=True)
+       
+       details_text = tk.Text(text_frame, wrap=tk.WORD, font=('Arial', 11))
+       details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+       
+       scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=details_text.yview)
+       scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+       details_text.configure(yscrollcommand=scrollbar.set)
+       
+       # Populate details with dynamic fields
+       if category == "content_modified":
+           self._populate_content_modified_details(details_text, requirement)
+       else:
+           self._populate_standard_details(details_text, requirement, category)
+       
+       details_text.configure(state=tk.DISABLED)
+       
+       # Buttons frame
+       buttons_frame = tk.Frame(main_frame)
+       buttons_frame.pack(fill=tk.X, pady=(20, 0))
+       
+       if category == "content_modified":
+           tk.Button(buttons_frame, text="🔍 Show Differences", 
+                    command=lambda: [details_window.destroy(), self._launch_diff_viewer(requirement)],
+                    font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                    cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
+       
+       tk.Button(buttons_frame, text="Close", command=details_window.destroy,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.RIGHT)
+   
+   def _get_requirement_display_text(self, req: Dict[str, Any]) -> str:
+       """Get best display text for requirement using dynamic fields"""
+       try:
+           if not isinstance(req, dict):
+               return "Invalid requirement"
+           
+           # Try different fields in priority order
+           candidates = []
+           
+           # Check for identifier if different from id
+           if req.get('identifier') and req.get('identifier') != req.get('id'):
+               candidates.append(req['identifier'])
+           
+           # Check for type
+           if req.get('type'):
+               candidates.append(req['type'])
+           
+           # Check attributes for display-worthy content
+           attributes = req.get('attributes', {})
+           if isinstance(attributes, dict):
+               # Look for text-like attributes
+               for attr_name, attr_value in attributes.items():
+                   if attr_value and len(str(attr_value).strip()) > 0:
+                       display_value = str(attr_value)
+                       if len(display_value) > 50:
+                           display_value = display_value[:50] + "..."
+                       candidates.append(display_value)
+                       break  # Use first meaningful attribute
+           
+           # Return best candidate or fallback to ID
+           return candidates[0] if candidates else req.get('id', 'Unknown')
+           
+       except Exception as e:
+           print(f"Error getting display text: {e}")
+           return req.get('id', 'Unknown')
+   
+   def _populate_standard_details(self, text_widget, requirement: Dict, category: str):
+       """Populate details for non-modified requirements with dynamic fields"""
+       text_widget.insert(tk.END, f"Category: {category.replace('_', ' ').title()}\n\n")
+       
+       # Display all available fields dynamically
+       excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data', 
+                         'changes_summary', 'changed_fields', 'change_count',
+                         'added_fields', 'removed_fields', 'structural_changes_only'}
+       
+       for field_name, field_value in requirement.items():
+           if field_name not in excluded_fields and field_value:
+               display_name = self._format_field_name(field_name)
+               text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
+       
+       # Display attributes
+       attributes = requirement.get('attributes', {})
+       if isinstance(attributes, dict) and attributes:
+           text_widget.insert(tk.END, "Attributes:\n")
+           text_widget.insert(tk.END, "-" * 30 + "\n")
+           for attr_name, attr_value in attributes.items():
+               if attr_value:
+                   text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+           text_widget.insert(tk.END, "\n")
+       
+       # Display raw attributes if different
+       raw_attributes = requirement.get('raw_attributes', {})
+       if isinstance(raw_attributes, dict) and raw_attributes and raw_attributes != attributes:
+           text_widget.insert(tk.END, "Raw Attribute References:\n")
+           text_widget.insert(tk.END, "-" * 30 + "\n")
+           for attr_ref, attr_value in raw_attributes.items():
+               if attr_value:
+                   text_widget.insert(tk.END, f"  {attr_ref}: {attr_value}\n")
+   
+   def _populate_content_modified_details(self, text_widget, requirement: Dict):
+       """Populate details for content-modified requirements with change information"""
+       text_widget.insert(tk.END, "Category: Content Modified\n\n")
+       
+       # Display current values (excluding change metadata)
+       excluded_fields = {'attributes', 'raw_attributes', 'content', '_comparison_data', 
+                         'changes_summary', 'changed_fields', 'change_count'}
+       
+       text_widget.insert(tk.END, "=== CURRENT VALUES (After Changes) ===\n\n")
+       for field_name, field_value in requirement.items():
+           if field_name not in excluded_fields and field_value:
+               display_name = self._format_field_name(field_name)
+               text_widget.insert(tk.END, f"{display_name}: {field_value}\n\n")
+       
+       # Display current attributes
+       attributes = requirement.get('attributes', {})
+       if isinstance(attributes, dict) and attributes:
+           text_widget.insert(tk.END, "Current Attributes:\n")
+           text_widget.insert(tk.END, "-" * 30 + "\n")
+           for attr_name, attr_value in attributes.items():
+               if attr_value:
+                   text_widget.insert(tk.END, f"  {attr_name}: {attr_value}\n")
+           text_widget.insert(tk.END, "\n")
+       
+       # Display change summary
+       changes_summary = requirement.get('changes_summary', 'Unknown changes')
+       change_count = requirement.get('change_count', 0)
+       text_widget.insert(tk.END, f"=== CHANGE SUMMARY ===\n")
+       text_widget.insert(tk.END, f"Fields Changed: {changes_summary}\n")
+       text_widget.insert(tk.END, f"Total Changes: {change_count}\n\n")
+       
+       # Display detailed changes
+       comparison_data = requirement.get('_comparison_data', {})
+       if comparison_data:
+           changes = comparison_data.get('changes', [])
+           old_req = comparison_data.get('old', {})
+           
+           if changes:
+               text_widget.insert(tk.END, "=== DETAILED CONTENT CHANGES ===\n\n")
+               
+               for change in changes:
+                   field = change.get('field', 'Unknown')
+                   old_value = change.get('old_value', '')
+                   new_value = change.get('new_value', '')
+                   
+                   display_field = field.replace('attribute.', 'Attribute: ')
+                   text_widget.insert(tk.END, f"Field: {display_field}\n")
+                   text_widget.insert(tk.END, f"Old Value: {old_value}\n")
+                   text_widget.insert(tk.END, f"New Value: {new_value}\n")
+                   
+                   text_widget.insert(tk.END, "\n" + "-"*50 + "\n\n")
+   
+   def _export_all_results(self):
+       """Export all results to CSV with dynamic fields and new categorization"""
+       try:
+           filename = filedialog.asksaveasfilename(
+               title="Export All Results",
+               defaultextension=".csv",
+               filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+               initialfile="comparison_results_all.csv"
+           )
+           
+           if not filename:
+               return
+           
+           # Collect all possible fields from all requirements
+           all_fields = set()
+           for category in ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged']:
+               requirements = self.results.get(category, [])
+               for req in requirements:
+                   if isinstance(req, dict):
+                       # Add main fields
+                       for field_name in req.keys():
+                           if not field_name.startswith('_') and field_name not in ['content', 'raw_attributes']:
+                               all_fields.add(field_name)
+                       
+                       # Add attribute fields
+                       attributes = req.get('attributes', {})
+                       if isinstance(attributes, dict):
+                           for attr_name in attributes.keys():
+                               all_fields.add(f'attr_{attr_name}')
+           
+           # Add change-specific fields
+           all_fields.update(['category', 'changes_summary', 'change_count', 'added_fields', 'removed_fields'])
+           
+           # Sort fields for consistent column order
+           sorted_fields = sorted(all_fields)
+           
+           with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+               writer = csv.writer(csvfile)
+               
+               # Write header
+               header = [self._format_field_name(field) for field in sorted_fields]
+               writer.writerow(header)
+               
+               # Write data for each category
+               for category in ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged']:
+                   requirements = self.results.get(category, [])
+                   for req in requirements:
+                       if isinstance(req, dict):
+                           row = []
+                           for field in sorted_fields:
+                               if field == 'category':
+                                   row.append(category.replace('_', ' ').title())
+                               elif field == 'added_fields':
+                                   added = req.get('added_fields', [])
+                                   row.append(', '.join(added) if added else '')
+                               elif field == 'removed_fields':
+                                   removed = req.get('removed_fields', [])
+                                   row.append(', '.join(removed) if removed else '')
+                               else:
+                                   value = self._get_field_value(req, field)
+                                   row.append(value)
+                           writer.writerow(row)
+           
+           messagebox.showinfo("Export Complete", f"Results exported to:\n{filename}")
+           
+       except Exception as e:
+           messagebox.showerror("Export Error", f"Failed to export results:\n{str(e)}")
+   
+   def _on_closing(self):
+       """Handle window closing"""
+       try:
+           self.window.destroy()
+       except:
+           pass
 
 
 class DiffViewerWindow:
-    """
-    Side-by-side diff viewer window with dynamic field support
-    """
-    
-    def __init__(self, parent: tk.Widget, req_id: str, old_req: Dict, new_req: Dict, changes: List[Dict]):
-        self.parent = parent
-        self.req_id = req_id
-        self.old_req = old_req
-        self.new_req = new_req
-        self.changes = changes
-        
-        # Create diff viewer window
-        self.window = tk.Toplevel(parent)
-        self.window.title(f"Show Differences - {req_id}")
-        self.window.geometry("1200x800")
-        self.window.transient(parent)
-        
-        # Track current field being viewed
-        self.current_field = None
-        self.field_data = {}
-        
-        # Build field data
-        self._build_field_data()
-        
-        # Create UI
-        self._create_diff_viewer_ui()
-        
-        # Show first field with changes
-        self._show_first_changed_field()
-    
-    def _build_field_data(self):
-        """Build comprehensive field data for diff viewing with dynamic fields"""
-        # Get all fields from both requirements
-        old_fields = set(self.old_req.keys()) if isinstance(self.old_req, dict) else set()
-        new_fields = set(self.new_req.keys()) if isinstance(self.new_req, dict) else set()
-        all_fields = old_fields | new_fields
-        
-        # Exclude internal fields
-        excluded_fields = {'content', 'raw_attributes', '_comparison_data', 'changes_summary', 'changed_fields', 'change_count'}
-        regular_fields = all_fields - excluded_fields - {'attributes'}
-        
-        # Process regular fields
-        for field in regular_fields:
-            old_value = str(self.old_req.get(field, '') or '') if isinstance(self.old_req, dict) else ''
-            new_value = str(self.new_req.get(field, '') or '') if isinstance(self.new_req, dict) else ''
-            
-            self.field_data[field] = {
-                'display_name': self._format_field_name(field),
-                'old_value': old_value,
-                'new_value': new_value,
-                'has_changes': old_value != new_value,
-                'field_type': 'regular'
-            }
-        
-        # Process attributes
-        old_attrs = self.old_req.get('attributes', {}) if isinstance(self.old_req, dict) else {}
-        new_attrs = self.new_req.get('attributes', {}) if isinstance(self.new_req, dict) else {}
-        
-        if not isinstance(old_attrs, dict):
-            old_attrs = {}
-        if not isinstance(new_attrs, dict):
-            new_attrs = {}
-        
-        all_attr_keys = set(old_attrs.keys()) | set(new_attrs.keys())
-        
-        for attr_key in all_attr_keys:
-            old_value = str(old_attrs.get(attr_key, '') or '')
-            new_value = str(new_attrs.get(attr_key, '') or '')
-            
-            self.field_data[f'attribute.{attr_key}'] = {
-                'display_name': f'Attribute: {attr_key}',
-                'old_value': old_value,
-                'new_value': new_value,
-                'has_changes': old_value != new_value,
-                'field_type': 'attribute'
-            }
-    
-    def _format_field_name(self, field_name: str) -> str:
-        """Format field name for display"""
-        if field_name.startswith('attr_'):
-            # Remove 'attr_' prefix and format attribute name
-            attr_name = field_name[5:]
-            return attr_name.replace('_', ' ').title()
-        else:
-            # Format regular field names
-            formatted = field_name.replace('_', ' ').title()
-            # Special cases
-            if formatted == 'Id':
-                return 'ID'
-            return formatted
-    
-    def _create_diff_viewer_ui(self):
-        """Create the side-by-side diff viewer UI"""
-        main_frame = tk.Frame(self.window, padx=15, pady=15)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Header
-        self._create_diff_header(main_frame)
-        
-        # Field selector
-        self._create_field_selector(main_frame)
-        
-        # Side-by-side diff panes
-        self._create_diff_panes(main_frame)
-        
-        # Controls
-        self._create_diff_controls(main_frame)
-    
-    def _create_diff_header(self, parent):
-        """Create diff header"""
-        header_frame = tk.Frame(parent)
-        header_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        tk.Label(header_frame, text=f"Requirement Differences: {self.req_id}", 
-                font=('Arial', 16, 'bold')).pack(anchor=tk.W)
-    
-    def _create_field_selector(self, parent):
-        """Create field selector dropdown"""
-        selector_frame = tk.Frame(parent)
-        selector_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        tk.Label(selector_frame, text="Field:", font=('Arial', 12, 'bold')).pack(side=tk.LEFT, padx=(0, 15))
-        
-        # Create field options
-        self.field_options = []
-        self.field_var = tk.StringVar()
-        
-        for field_key, field_info in self.field_data.items():
-            display_text = field_info['display_name']
-            if field_info['has_changes']:
-                display_text += " (Modified)"
-            self.field_options.append((field_key, display_text))
-        
-        # Sort so changed fields appear first
-        self.field_options.sort(key=lambda x: (not self.field_data[x[0]]['has_changes'], x[1]))
-        
-        self.field_combo = ttk.Combobox(selector_frame, textvariable=self.field_var,
-                                       values=[option[1] for option in self.field_options],
-                                       state='readonly', width=50, font=('Arial', 10))
-        self.field_combo.pack(side=tk.LEFT, padx=(0, 15))
-        self.field_combo.bind('<<ComboboxSelected>>', self._on_field_change)
-        
-        # Navigation buttons
-        self.prev_btn = tk.Button(selector_frame, text="← Previous", command=self._show_previous_field,
-                                 font=('Arial', 10), relief='raised', bd=2, padx=10, pady=3)
-        self.prev_btn.pack(side=tk.LEFT, padx=(0, 8))
-        
-        self.next_btn = tk.Button(selector_frame, text="Next →", command=self._show_next_field,
-                                 font=('Arial', 10), relief='raised', bd=2, padx=10, pady=3)
-        self.next_btn.pack(side=tk.LEFT, padx=(0, 15))
-        
-        # Change indicator
-        self.change_indicator = tk.Label(selector_frame, text="", font=('Arial', 10))
-        self.change_indicator.pack(side=tk.LEFT)
-    
-    def _create_diff_panes(self, parent):
-        """Create side-by-side diff panes"""
-        panes_frame = tk.Frame(parent)
-        panes_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Left pane (Original)
-        left_frame = tk.LabelFrame(panes_frame, text="Original", font=('Arial', 12, 'bold'))
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
-        
-        self.left_text = tk.Text(left_frame, wrap=tk.WORD, font=('Consolas', 11),
+   """
+   Side-by-side diff viewer window for content changes only
+   """
+   
+   def __init__(self, parent: tk.Widget, req_id: str, old_req: Dict, new_req: Dict, changes: List[Dict]):
+       self.parent = parent
+       self.req_id = req_id
+       self.old_req = old_req
+       self.new_req = new_req
+       self.changes = changes
+       
+       # Create diff viewer window
+       self.window = tk.Toplevel(parent)
+       self.window.title(f"Content Differences - {req_id}")
+       self.window.geometry("1200x800")
+       self.window.transient(parent)
+       
+       # Track current field being viewed
+       self.current_field = None
+       self.field_data = {}
+       
+       # Build field data (only changed fields)
+       self._build_field_data()
+       
+       # Create UI
+       self._create_diff_viewer_ui()
+       
+       # Show first field with changes
+       self._show_first_changed_field()
+   
+   def _build_field_data(self):
+       """Build field data for diff viewing - only content changes"""
+       # Process only the changes provided
+       for change in self.changes:
+           field = change.get('field', '')
+           if field:
+               self.field_data[field] = {
+                   'display_name': field.replace('attribute.', 'Attribute: '),
+                   'old_value': str(change.get('old_value', '')),
+                   'new_value': str(change.get('new_value', '')),
+                   'has_changes': True,
+                   'field_type': 'attribute' if field.startswith('attribute.') else 'regular'
+               }
+   
+   def _create_diff_viewer_ui(self):
+       """Create the side-by-side diff viewer UI"""
+       main_frame = tk.Frame(self.window, padx=15, pady=15)
+       main_frame.pack(fill=tk.BOTH, expand=True)
+       
+       # Header
+       self._create_diff_header(main_frame)
+       
+       # Field selector
+       self._create_field_selector(main_frame)
+       
+       # Side-by-side diff panes
+       self._create_diff_panes(main_frame)
+       
+       # Controls
+       self._create_diff_controls(main_frame)
+   
+   def _create_diff_header(self, parent):
+       """Create diff header"""
+       header_frame = tk.Frame(parent)
+       header_frame.pack(fill=tk.X, pady=(0, 20))
+       
+       tk.Label(header_frame, text=f"Content Differences: {self.req_id}", 
+               font=('Arial', 16, 'bold')).pack(anchor=tk.W)
+       
+       tk.Label(header_frame, text="Showing only fields with content changes", 
+               font=('Arial', 11), fg='darkorange').pack(anchor=tk.W)
+   
+   def _create_field_selector(self, parent):
+       """Create field selector dropdown"""
+       selector_frame = tk.Frame(parent)
+       selector_frame.pack(fill=tk.X, pady=(0, 20))
+       
+       tk.Label(selector_frame, text="Field:", font=('Arial', 12, 'bold')).pack(side=tk.LEFT, padx=(0, 15))
+       
+       # Create field options (only changed fields)
+       self.field_options = []
+       self.field_var = tk.StringVar()
+       
+       for field_key, field_info in self.field_data.items():
+           display_text = field_info['display_name'] + " (Modified)"
+           self.field_options.append((field_key, display_text))
+       
+       # Sort fields
+       self.field_options.sort(key=lambda x: x[1])
+       
+       self.field_combo = ttk.Combobox(selector_frame, textvariable=self.field_var,
+                                      values=[option[1] for option in self.field_options],
+                                      state='readonly', width=50, font=('Arial', 10))
+       self.field_combo.pack(side=tk.LEFT, padx=(0, 15))
+       self.field_combo.bind('<<ComboboxSelected>>', self._on_field_change)
+       
+       # Navigation buttons
+       self.prev_btn = tk.Button(selector_frame, text="← Previous", command=self._show_previous_field,
+                                font=('Arial', 10), relief='raised', bd=2, padx=10, pady=3)
+       self.prev_btn.pack(side=tk.LEFT, padx=(0, 8))
+       
+       self.next_btn = tk.Button(selector_frame, text="Next →", command=self._show_next_field,
+                                font=('Arial', 10), relief='raised', bd=2, padx=10, pady=3)
+       self.next_btn.pack(side=tk.LEFT, padx=(0, 15))
+       
+       # Change indicator
+       self.change_indicator = tk.Label(selector_frame, text="Content Modified", 
+                                      font=('Arial', 10), fg='darkorange')
+       self.change_indicator.pack(side=tk.LEFT)
+   
+   def _create_diff_panes(self, parent):
+       """Create side-by-side diff panes"""
+       panes_frame = tk.Frame(parent)
+       panes_frame.pack(fill=tk.BOTH, expand=True)
+       
+       # Left pane (Original)
+       left_frame = tk.LabelFrame(panes_frame, text="Original", font=('Arial', 12, 'bold'))
+       left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
+       
+       self.left_text = tk.Text(left_frame, wrap=tk.WORD, font=('Consolas', 11),
+                               state=tk.DISABLED)
+       self.left_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+       
+       left_scroll = ttk.Scrollbar(left_frame, orient=tk.VERTICAL, command=self.left_text.yview)
+       left_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+       self.left_text.configure(yscrollcommand=left_scroll.set)
+       
+       # Right pane (Modified)
+       right_frame = tk.LabelFrame(panes_frame, text="Modified", font=('Arial', 12, 'bold'))
+       right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(8, 0))
+       
+       self.right_text = tk.Text(right_frame, wrap=tk.WORD, font=('Consolas', 11),
                                 state=tk.DISABLED)
-        self.left_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        left_scroll = ttk.Scrollbar(left_frame, orient=tk.VERTICAL, command=self.left_text.yview)
-        left_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.left_text.configure(yscrollcommand=left_scroll.set)
-        
-        # Right pane (Modified)
-        right_frame = tk.LabelFrame(panes_frame, text="Modified", font=('Arial', 12, 'bold'))
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(8, 0))
-        
-        self.right_text = tk.Text(right_frame, wrap=tk.WORD, font=('Consolas', 11),
-                                 state=tk.DISABLED)
-        self.right_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        right_scroll = ttk.Scrollbar(right_frame, orient=tk.VERTICAL, command=self.right_text.yview)
-        right_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.right_text.configure(yscrollcommand=right_scroll.set)
-        
-        # Configure text highlighting tags
-        self._configure_text_tags()
-    
-    def _configure_text_tags(self):
-        """Configure text highlighting tags for diff visualization"""
-        # Deletion highlighting (red background)
-        self.left_text.tag_configure("deleted", background="#ffdddd", foreground="#cc0000")
-        
-        # Addition highlighting (green background)
-        self.right_text.tag_configure("added", background="#ddffdd", foreground="#006600")
-        
-        # Modification highlighting (yellow background)
-        self.left_text.tag_configure("modified_old", background="#ffffdd", foreground="#666600")
-        self.right_text.tag_configure("modified_new", background="#ffffdd", foreground="#666600")
-    
-    def _create_diff_controls(self, parent):
-        """Create diff viewer controls"""
-        controls_frame = tk.Frame(parent)
-        controls_frame.pack(fill=tk.X, pady=(20, 0))
-        
-        # Export diff button
-        tk.Button(controls_frame, text="📄 Export Diff Report", command=self._export_diff_report,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
-        
-        # Copy buttons
-        tk.Button(controls_frame, text="📋 Copy Original", command=self._copy_original,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
-        
-        tk.Button(controls_frame, text="📋 Copy Modified", command=self._copy_modified,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.LEFT, padx=(0, 25))
-        
-        # Close button
-        tk.Button(controls_frame, text="✖️ Close", command=self.window.destroy,
-                 font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
-                 cursor='hand2').pack(side=tk.RIGHT)
-    
-    def _show_first_changed_field(self):
-        """Show the first field that has changes"""
-        for field_key, field_info in self.field_data.items():
-            if field_info['has_changes']:
-                self._show_field(field_key)
-                break
-        else:
-            # If no changes, show first field
-            if self.field_options:
-                self._show_field(self.field_options[0][0])
-    
-    def _show_field(self, field_key: str):
-        """Show the specified field in the diff viewer"""
-        if field_key not in self.field_data:
-            return
-        
-        self.current_field = field_key
-        field_info = self.field_data[field_key]
-        
-        # Update field selector
-        for i, (key, display_text) in enumerate(self.field_options):
-            if key == field_key:
-                self.field_combo.current(i)
-                break
-        
-        # Update change indicator
-        if field_info['has_changes']:
-            self.change_indicator.configure(text="✓ Modified", fg="darkorange")
-        else:
-            self.change_indicator.configure(text="= Unchanged", fg="darkgreen")
-        
-        # Show field content
-        self._display_field_content(field_info)
-        
-        # Update navigation buttons
-        self._update_navigation_buttons()
-    
-    def _display_field_content(self, field_info: Dict):
-        """Display field content with diff highlighting"""
-        old_value = field_info['old_value']
-        new_value = field_info['new_value']
-        
-        # Clear text widgets
-        self.left_text.configure(state=tk.NORMAL)
-        self.right_text.configure(state=tk.NORMAL)
-        self.left_text.delete(1.0, tk.END)
-        self.right_text.delete(1.0, tk.END)
-        
-        if field_info['has_changes']:
-            # Show diff highlighting
-            self._display_diff_content(old_value, new_value)
-        else:
-            # Show identical content
-            self.left_text.insert(tk.END, old_value if old_value else "(empty)")
-            self.right_text.insert(tk.END, new_value if new_value else "(empty)")
-        
-        # Disable editing
-        self.left_text.configure(state=tk.DISABLED)
-        self.right_text.configure(state=tk.DISABLED)
-    
-    def _display_diff_content(self, old_value: str, new_value: str):
-        """Display content with diff highlighting"""
-        if not old_value and not new_value:
-            self.left_text.insert(tk.END, "(empty)")
-            self.right_text.insert(tk.END, "(empty)")
-            return
-        
-        if not old_value:
-            # Addition only
-            self.left_text.insert(tk.END, "(empty)")
-            self.right_text.insert(tk.END, new_value, "added")
-            return
-        
-        if not new_value:
-            # Deletion only
-            self.left_text.insert(tk.END, old_value, "deleted")
-            self.right_text.insert(tk.END, "(empty)")
-            return
-        
-        # Generate word-level diff
-        old_words = re.split(r'(\s+)', old_value)
-        new_words = re.split(r'(\s+)', new_value)
-        
-        differ = difflib.SequenceMatcher(None, old_words, new_words)
-        
-        for tag, i1, i2, j1, j2 in differ.get_opcodes():
-            old_text = ''.join(old_words[i1:i2])
-            new_text = ''.join(new_words[j1:j2])
-            
-            if tag == 'equal':
-                # Unchanged text
-                self.left_text.insert(tk.END, old_text)
-                self.right_text.insert(tk.END, new_text)
-            elif tag == 'delete':
-                # Deleted text (only in left)
-                self.left_text.insert(tk.END, old_text, "deleted")
-            elif tag == 'insert':
-                # Inserted text (only in right)
-                self.right_text.insert(tk.END, new_text, "added")
-            elif tag == 'replace':
-                # Modified text
-                self.left_text.insert(tk.END, old_text, "modified_old")
-                self.right_text.insert(tk.END, new_text, "modified_new")
-    
-    def _on_field_change(self, event=None):
-        """Handle field selection change"""
-        try:
-            selected_index = self.field_combo.current()
-            if 0 <= selected_index < len(self.field_options):
-                field_key = self.field_options[selected_index][0]
-                self._show_field(field_key)
-        except Exception as e:
-            print(f"Error changing field: {e}")
-    
-    def _show_previous_field(self):
-        """Show previous field"""
-        try:
-            current_index = self.field_combo.current()
-            if current_index > 0:
-                self.field_combo.current(current_index - 1)
-                self._on_field_change()
-        except Exception as e:
-            print(f"Error showing previous field: {e}")
-    
-    def _show_next_field(self):
-        """Show next field"""
-        try:
-            current_index = self.field_combo.current()
-            if current_index < len(self.field_options) - 1:
-                self.field_combo.current(current_index + 1)
-                self._on_field_change()
-        except Exception as e:
-            print(f"Error showing next field: {e}")
-    
-    def _update_navigation_buttons(self):
-        """Update navigation button states"""
-        current_index = self.field_combo.current()
-        
-        # Previous button
-        if current_index <= 0:
-            self.prev_btn.configure(state=tk.DISABLED)
-        else:
-            self.prev_btn.configure(state=tk.NORMAL)
-        
-        # Next button
-        if current_index >= len(self.field_options) - 1:
-            self.next_btn.configure(state=tk.DISABLED)
-        else:
-            self.next_btn.configure(state=tk.NORMAL)
-    
-    def _copy_original(self):
-        """Copy original content to clipboard"""
-        try:
-            content = self.left_text.get(1.0, tk.END).strip()
-            self.window.clipboard_clear()
-            self.window.clipboard_append(content)
-            messagebox.showinfo("Copied", "Original content copied to clipboard")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to copy content:\n{str(e)}")
-    
-    def _copy_modified(self):
-        """Copy modified content to clipboard"""
-        try:
-            content = self.right_text.get(1.0, tk.END).strip()
-            self.window.clipboard_clear()
-            self.window.clipboard_append(content)
-            messagebox.showinfo("Copied", "Modified content copied to clipboard")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to copy content:\n{str(e)}")
-    
-    def _export_diff_report(self):
-        """Export detailed diff report"""
-        try:
-            filename = filedialog.asksaveasfilename(
-                title="Export Diff Report",
-                defaultextension=".txt",
-                filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-                initialfile=f"diff_report_{self.req_id}.txt"
-            )
-            
-            if not filename:
-                return
-            
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(f"Difference Report for Requirement: {self.req_id}\n")
-                f.write("=" * 60 + "\n\n")
-                
-                for field_key, field_info in self.field_data.items():
-                    f.write(f"Field: {field_info['display_name']}\n")
-                    f.write("-" * 30 + "\n")
-                    
-                    if field_info['has_changes']:
-                        f.write("Status: MODIFIED\n\n")
-                        f.write(f"Original:\n{field_info['old_value']}\n\n")
-                        f.write(f"Modified:\n{field_info['new_value']}\n\n")
-                    else:
-                        f.write("Status: UNCHANGED\n\n")
-                        f.write(f"Content:\n{field_info['old_value']}\n\n")
-                    
-                    f.write("\n" + "="*60 + "\n\n")
-            
-            messagebox.showinfo("Export Complete", f"Diff report exported to:\n{filename}")
-            
-        except Exception as e:
-            messagebox.showerror("Export Error", f"Failed to export diff report:\n{str(e)}")
+       self.right_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+       
+       right_scroll = ttk.Scrollbar(right_frame, orient=tk.VERTICAL, command=self.right_text.yview)
+       right_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+       self.right_text.configure(yscrollcommand=right_scroll.set)
+       
+       # Configure text highlighting tags
+       self._configure_text_tags()
+   
+   def _configure_text_tags(self):
+       """Configure text highlighting tags for diff visualization"""
+       # Deletion highlighting (red background)
+       self.left_text.tag_configure("deleted", background="#ffdddd", foreground="#cc0000")
+       
+       # Addition highlighting (green background)
+       self.right_text.tag_configure("added", background="#ddffdd", foreground="#006600")
+       
+       # Modification highlighting (yellow background)
+       self.left_text.tag_configure("modified_old", background="#ffffdd", foreground="#666600")
+       self.right_text.tag_configure("modified_new", background="#ffffdd", foreground="#666600")
+   
+   def _create_diff_controls(self, parent):
+       """Create diff viewer controls"""
+       controls_frame = tk.Frame(parent)
+       controls_frame.pack(fill=tk.X, pady=(20, 0))
+       
+       # Export diff button
+       tk.Button(controls_frame, text="📄 Export Diff Report", command=self._export_diff_report,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
+       
+       # Copy buttons
+       tk.Button(controls_frame, text="📋 Copy Original", command=self._copy_original,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.LEFT, padx=(0, 15))
+       
+       tk.Button(controls_frame, text="📋 Copy Modified", command=self._copy_modified,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.LEFT, padx=(0, 25))
+       
+       # Close button
+       tk.Button(controls_frame, text="✖️ Close", command=self.window.destroy,
+                font=('Arial', 11), relief='raised', bd=2, padx=15, pady=6,
+                cursor='hand2').pack(side=tk.RIGHT)
+   
+   def _show_first_changed_field(self):
+       """Show the first field that has changes"""
+       if self.field_options:
+           self._show_field(self.field_options[0][0])
+   
+   def _show_field(self, field_key: str):
+       """Show the specified field in the diff viewer"""
+       if field_key not in self.field_data:
+           return
+       
+       self.current_field = field_key
+       field_info = self.field_data[field_key]
+       
+       # Update field selector
+       for i, (key, display_text) in enumerate(self.field_options):
+           if key == field_key:
+               self.field_combo.current(i)
+               break
+       
+       # Show field content
+       self._display_field_content(field_info)
+       
+       # Update navigation buttons
+       self._update_navigation_buttons()
+   
+   def _display_field_content(self, field_info: Dict):
+       """Display field content with diff highlighting"""
+       old_value = field_info['old_value']
+       new_value = field_info['new_value']
+       
+       # Clear text widgets
+       self.left_text.configure(state=tk.NORMAL)
+       self.right_text.configure(state=tk.NORMAL)
+       self.left_text.delete(1.0, tk.END)
+       self.right_text.delete(1.0, tk.END)
+       
+       # Show diff highlighting
+       self._display_diff_content(old_value, new_value)
+       
+       # Disable editing
+       self.left_text.configure(state=tk.DISABLED)
+       self.right_text.configure(state=tk.DISABLED)
+   
+   def _display_diff_content(self, old_value: str, new_value: str):
+       """Display content with diff highlighting"""
+       if not old_value and not new_value:
+           self.left_text.insert(tk.END, "(empty)")
+           self.right_text.insert(tk.END, "(empty)")
+           return
+       
+       if not old_value:
+           # Addition only
+           self.left_text.insert(tk.END, "(empty)")
+           self.right_text.insert(tk.END, new_value, "added")
+           return
+       
+       if not new_value:
+           # Deletion only
+           self.left_text.insert(tk.END, old_value, "deleted")
+           self.right_text.insert(tk.END, "(empty)")
+           return
+       
+       # Generate word-level diff
+       old_words = re.split(r'(\s+)', old_value)
+       new_words = re.split(r'(\s+)', new_value)
+       
+       differ = difflib.SequenceMatcher(None, old_words, new_words)
+       
+       for tag, i1, i2, j1, j2 in differ.get_opcodes():
+           old_text = ''.join(old_words[i1:i2])
+           new_text = ''.join(new_words[j1:j2])
+           
+           if tag == 'equal':
+               # Unchanged text
+               self.left_text.insert(tk.END, old_text)
+               self.right_text.insert(tk.END, new_text)
+           elif tag == 'delete':
+               # Deleted text (only in left)
+               self.left_text.insert(tk.END, old_text, "deleted")
+           elif tag == 'insert':
+               # Inserted text (only in right)
+               self.right_text.insert(tk.END, new_text, "added")
+           elif tag == 'replace':
+               # Modified text
+               self.left_text.insert(tk.END, old_text, "modified_old")
+               self.right_text.insert(tk.END, new_text, "modified_new")
+   
+   def _on_field_change(self, event=None):
+       """Handle field selection change"""
+       try:
+           selected_index = self.field_combo.current()
+           if 0 <= selected_index < len(self.field_options):
+               field_key = self.field_options[selected_index][0]
+               self._show_field(field_key)
+       except Exception as e:
+           print(f"Error changing field: {e}")
+   
+   def _show_previous_field(self):
+       """Show previous field"""
+       try:
+           current_index = self.field_combo.current()
+           if current_index > 0:
+               self.field_combo.current(current_index - 1)
+               self._on_field_change()
+       except Exception as e:
+           print(f"Error showing previous field: {e}")
+   
+   def _show_next_field(self):
+       """Show next field"""
+       try:
+           current_index = self.field_combo.current()
+           if current_index < len(self.field_options) - 1:
+               self.field_combo.current(current_index + 1)
+               self._on_field_change()
+       except Exception as e:
+           print(f"Error showing next field: {e}")
+   
+   def _update_navigation_buttons(self):
+       """Update navigation button states"""
+       current_index = self.field_combo.current()
+       
+       # Previous button
+       if current_index <= 0:
+           self.prev_btn.configure(state=tk.DISABLED)
+       else:
+           self.prev_btn.configure(state=tk.NORMAL)
+       
+       # Next button
+       if current_index >= len(self.field_options) - 1:
+           self.next_btn.configure(state=tk.DISABLED)
+       else:
+           self.next_btn.configure(state=tk.NORMAL)
+   
+   def _copy_original(self):
+       """Copy original content to clipboard"""
+       try:
+           content = self.left_text.get(1.0, tk.END).strip()
+           self.window.clipboard_clear()
+           self.window.clipboard_append(content)
+           messagebox.showinfo("Copied", "Original content copied to clipboard")
+       except Exception as e:
+           messagebox.showerror("Error", f"Failed to copy content:\n{str(e)}")
+   
+   def _copy_modified(self):
+       """Copy modified content to clipboard"""
+       try:
+           content = self.right_text.get(1.0, tk.END).strip()
+           self.window.clipboard_clear()
+           self.window.clipboard_append(content)
+           messagebox.showinfo("Copied", "Modified content copied to clipboard")
+       except Exception as e:
+           messagebox.showerror("Error", f"Failed to copy content:\n{str(e)}")
+   
+   def _export_diff_report(self):
+       """Export detailed diff report"""
+       try:
+           filename = filedialog.asksaveasfilename(
+               title="Export Diff Report",
+               defaultextension=".txt",
+               filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+               initialfile=f"diff_report_{self.req_id}.txt"
+           )
+           
+           if not filename:
+               return
+           
+           with open(filename, 'w', encoding='utf-8') as f:
+               f.write(f"Content Difference Report for Requirement: {self.req_id}\n")
+               f.write("=" * 60 + "\n\n")
+               
+               for field_key, field_info in self.field_data.items():
+                   f.write(f"Field: {field_info['display_name']}\n")
+                   f.write("-" * 30 + "\n")
+                   f.write("Status: CONTENT MODIFIED\n\n")
+                   f.write(f"Original:\n{field_info['old_value']}\n\n")
+                   f.write(f"Modified:\n{field_info['new_value']}\n\n")
+                   f.write("\n" + "="*60 + "\n\n")
+           
+           messagebox.showinfo("Export Complete", f"Diff report exported to:\n{filename}")
+           
+       except Exception as e:
+           messagebox.showerror("Export Error", f"Failed to
