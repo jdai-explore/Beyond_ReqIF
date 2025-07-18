@@ -1,6 +1,6 @@
-# main.py - Fixed imports and usage
+#!/usr/bin/env python3
 """
-Main Application Entry Point - Fixed import issues
+Main Application Entry Point - Fixed Version
 Now handles: Added, Deleted, Content Modified, Structural Changes, Unchanged
 """
 
@@ -12,11 +12,10 @@ from typing import Dict, List, Optional, Any
 import threading
 from datetime import datetime
 
-# Import comparison modules - FIXED IMPORTS
 try:
-    from reqif_comparator import ReqIFComparator  # Import the class, not a function
+    from reqif_comparator import ReqIFComparator
     from folder_comparator import FolderComparator
-    from comparison_gui import ComparisonResultsGUI  # Fixed class name
+    from comparison_gui import ComparisonResultsGUI
     from folder_comparison_gui import FolderComparisonGUI
     from visualizer_gui import VisualizerGUI
 except ImportError as e:
@@ -25,7 +24,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_tool.py
+class ReqIFToolNative:
     """Main application controller with updated functionality"""
     
     def __init__(self):
@@ -33,7 +32,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         self.root.title("ReqIF Comparison Tool Suite - v2.0")
         self.root.geometry("800x600")
         
-        # Application state
         self.current_mode = None
         self.active_window = None
         
@@ -44,13 +42,11 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         """Setup application styles"""
         style = ttk.Style()
         
-        # Configure modern theme
         try:
             style.theme_use('clam')
         except:
             pass
             
-        # Custom button styles
         style.configure("Accent.TButton", 
                        foreground="white",
                        font=('TkDefaultFont', 10, 'bold'))
@@ -61,11 +57,9 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         
     def setup_ui(self):
         """Setup main application UI"""
-        # Main container
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        # Title
         title_label = ttk.Label(main_frame, 
                                text="ReqIF Comparison Tool Suite",
                                font=('TkDefaultFont', 16, 'bold'))
@@ -76,13 +70,8 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
                                   font=('TkDefaultFont', 10, 'italic'))
         subtitle_label.pack(pady=(0, 30))
         
-        # Mode selection
         self.setup_mode_selection(main_frame)
-        
-        # Feature highlights
         self.setup_feature_highlights(main_frame)
-        
-        # Status and help
         self.setup_status_section(main_frame)
         
     def setup_mode_selection(self, parent):
@@ -90,7 +79,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         mode_frame = ttk.LabelFrame(parent, text="Select Comparison Mode", padding=20)
         mode_frame.pack(fill=tk.X, pady=(0, 20))
         
-        # Single file comparison
         file_frame = ttk.Frame(mode_frame)
         file_frame.pack(fill=tk.X, pady=(0, 15))
         
@@ -103,7 +91,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
                              text="Compare two individual ReqIF files")
         file_desc.pack(side=tk.LEFT, padx=(20, 0))
         
-        # Single file analysis
         analysis_frame = ttk.Frame(mode_frame)
         analysis_frame.pack(fill=tk.X, pady=(0, 15))
         
@@ -116,7 +103,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
                                  text="Analyze and visualize a single ReqIF file")
         analysis_desc.pack(side=tk.LEFT, padx=(20, 0))
         
-        # Folder comparison
         folder_frame = ttk.Frame(mode_frame)
         folder_frame.pack(fill=tk.X)
         
@@ -162,15 +148,12 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         status_frame = ttk.Frame(parent)
         status_frame.pack(fill=tk.X)
         
-        # Help button
         ttk.Button(status_frame, text="Help & Guide", 
                   command=self.show_help).pack(side=tk.LEFT)
         
-        # About button
         ttk.Button(status_frame, text="About", 
                   command=self.show_about).pack(side=tk.LEFT, padx=(10, 0))
         
-        # Status label
         self.status_var = tk.StringVar()
         self.status_var.set("Ready - Select a comparison mode to begin")
         status_label = ttk.Label(status_frame, textvariable=self.status_var)
@@ -181,17 +164,14 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         try:
             self.update_status("Opening file comparison...")
             
-            # Create new window for file comparison
             comparison_window = tk.Toplevel(self.root)
             comparison_window.title("Single File Comparison - v2.0")
             comparison_window.geometry("1200x800")
             
-            # Create comparison GUI - FIXED: Use the correct class
             from comparison_gui import ComparisonGUI
             self.active_window = ComparisonGUI(comparison_window)
             self.current_mode = "file"
             
-            # Handle window close
             comparison_window.protocol("WM_DELETE_WINDOW", 
                                      lambda: self.close_comparison_window(comparison_window))
             
@@ -206,7 +186,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         try:
             self.update_status("Opening file analysis...")
             
-            # File selection dialog
             file_path = filedialog.askopenfilename(
                 title="Select ReqIF file to analyze",
                 filetypes=[
@@ -221,7 +200,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
                 self.update_status("File analysis cancelled")
                 return
             
-            # Parse the file
             from reqif_parser import ReqIFParser
             parser = ReqIFParser()
             
@@ -235,7 +213,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
                     self.update_status("No requirements found")
                     return
                 
-                # Create visualizer window
                 self.active_window = VisualizerGUI(self.root, requirements, file_path)
                 self.current_mode = "analysis"
                 
@@ -255,16 +232,13 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         try:
             self.update_status("Opening folder comparison...")
             
-            # Create new window for folder comparison
             comparison_window = tk.Toplevel(self.root)
             comparison_window.title("Folder Comparison - v2.0")
             comparison_window.geometry("1400x900")
             
-            # Create folder comparison GUI
             self.active_window = FolderComparisonGUI(comparison_window)
             self.current_mode = "folder"
             
-            # Handle window close
             comparison_window.protocol("WM_DELETE_WINDOW", 
                                      lambda: self.close_comparison_window(comparison_window))
             
@@ -290,7 +264,6 @@ class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_
         help_window.title("Help & Usage Guide")
         help_window.geometry("700x600")
         
-        # Create scrollable text area
         text_frame = ttk.Frame(help_window)
         text_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
@@ -360,9 +333,8 @@ For additional support or to report issues, please contact the development team.
         """
         
         text_widget.insert(1.0, help_content.strip())
-        text_widget.configure(state=tk.DISABLED)
+        text_widget.config(state=tk.DISABLED)
         
-        # Close button
         ttk.Button(help_window, text="Close", command=help_window.destroy).pack(pady=10)
         
     def show_about(self):
@@ -406,10 +378,8 @@ Developed for requirements engineering and change management.
         try:
             self.update_status("Running quick functionality test...")
             
-            # Test basic comparison function
             from reqif_comparator import ReqIFComparator
             
-            # Create sample data for testing
             sample_req1 = {
                 'id': 'REQ-001',
                 'attributes': {'Object Text': 'Original requirement text'},
@@ -422,11 +392,9 @@ Developed for requirements engineering and change management.
                 'type': 'Functional'
             }
             
-            # Test comparison
             comparator = ReqIFComparator()
             result = comparator.compare_requirements([sample_req1], [sample_req2])
             
-            # Check result structure
             expected_keys = ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged', 'statistics']
             
             success = all(key in result for key in expected_keys)
@@ -453,7 +421,6 @@ Developed for requirements engineering and change management.
     def run(self):
         """Run the main application"""
         try:
-            # Start the application
             self.root.mainloop()
         except KeyboardInterrupt:
             print("\nApplication interrupted by user")
@@ -469,21 +436,17 @@ Developed for requirements engineering and change management.
                 pass
 
 
-# Compatibility alias for the old class name
 MainApplication = ReqIFToolNative
 
 
 def setup_application():
     """Setup and configure the main application"""
-    # Create root window
     root = tk.Tk()
     
-    # Set window properties
     root.title("ReqIF Comparison Tool Suite")
     root.geometry("800x600")
     root.minsize(600, 400)
     
-    # Center window on screen
     try:
         root.update_idletasks()
         width = root.winfo_width()
@@ -502,14 +465,11 @@ def main():
     try:
         print("Starting ReqIF Comparison Tool Suite v2.0...")
         
-        # Create application instance
         app = ReqIFToolNative()
         
-        # Add menu bar
         menubar = tk.Menu(app.root)
         app.root.config(menu=menubar)
         
-        # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Single File Comparison", command=app.open_file_comparison)
@@ -518,12 +478,10 @@ def main():
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=app.root.quit)
         
-        # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Tools", menu=tools_menu)
         tools_menu.add_command(label="Quick Test", command=app.run_quick_test)
         
-        # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="User Guide", command=app.show_help)
@@ -531,7 +489,6 @@ def main():
         
         print("Application setup complete")
         
-        # Start the application
         print("Starting GUI main loop...")
         app.run()
         
@@ -577,7 +534,6 @@ def check_dependencies():
             print(f"  - {module}")
         return False
         
-    # Check for custom modules
     custom_modules = [
         'reqif_comparator',
         'folder_comparator', 
@@ -626,10 +582,8 @@ Starting application...
 
 if __name__ == "__main__":
     try:
-        # Show startup message
         show_startup_message()
         
-        # Check dependencies
         print("Checking dependencies...")
         if not check_dependencies():
             print("❌ Dependency check failed")
@@ -638,7 +592,6 @@ if __name__ == "__main__":
             sys.exit(1)
         print("✅ All dependencies found")
         
-        # Run main application
         exit_code = main()
         sys.exit(exit_code)
         

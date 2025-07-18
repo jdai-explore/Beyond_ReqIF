@@ -1,7 +1,7 @@
-# folder_comparison_gui.py - Fixed imports
+#!/usr/bin/env python3
 """
-Folder Comparison GUI - Updated for new comparison categories
-Now handles: Added, Deleted, Content Changed, Structural Changes, Unchanged
+Folder Comparison GUI - Fixed Version
+Handles: Added, Deleted, Content Changed, Structural Changes, Unchanged
 """
 
 import os
@@ -12,7 +12,6 @@ import threading
 from datetime import datetime
 import json
 
-# FIXED IMPORTS
 from reqif_comparator import ReqIFComparator
 from folder_comparator import FolderComparator
 
@@ -25,14 +24,21 @@ class FolderComparisonGUI:
         self.root.title("ReqIF Folder Comparison Tool - Updated")
         self.root.geometry("1400x900")
         
-        # Data storage
         self.folder_results: Dict[str, Any] = {}
         self.current_comparison = None
         self.folder_comparator = FolderComparator()
         
-        # UI state
         self.is_comparing = False
         self.selected_file = None
+        
+        # Define colors for change types
+        self.change_colors = {
+            'added': '#2E7D32',
+            'deleted': '#C62828',
+            'content_modified': '#FF8F00',
+            'structural_only': '#1976D2',
+            'unchanged': '#424242'
+        }
         
         self.setup_ui()
         self.setup_styles()
@@ -41,16 +47,6 @@ class FolderComparisonGUI:
         """Setup custom styles for the updated interface"""
         style = ttk.Style()
         
-        # Define colors for new change types
-        self.change_colors = {
-            'added': '#2E7D32',          # Green for added
-            'deleted': '#C62828',        # Red for deleted  
-            'content_modified': '#FF8F00', # Orange for content changes
-            'structural_only': '#1976D2', # Blue for structural changes
-            'unchanged': '#424242'        # Gray for unchanged
-        }
-        
-        # Configure treeview tags
         style.configure("Added.Treeview", foreground=self.change_colors['added'])
         style.configure("Deleted.Treeview", foreground=self.change_colors['deleted'])
         style.configure("ContentModified.Treeview", foreground=self.change_colors['content_modified'])
@@ -59,11 +55,9 @@ class FolderComparisonGUI:
         
     def setup_ui(self):
         """Setup the main UI with updated layout"""
-        # Main container
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Setup components
         self.setup_folder_selection(main_frame)
         self.setup_progress_section(main_frame)
         self.setup_results_section(main_frame)
@@ -74,31 +68,29 @@ class FolderComparisonGUI:
         selection_frame = ttk.LabelFrame(parent, text="Folder Selection", padding=10)
         selection_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Folder 1
         ttk.Label(selection_frame, text="Original Folder:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
         self.folder1_var = tk.StringVar()
         ttk.Entry(selection_frame, textvariable=self.folder1_var, width=60).grid(row=0, column=1, padx=(0, 10))
         ttk.Button(selection_frame, text="Browse", 
                   command=lambda: self.browse_folder(self.folder1_var)).grid(row=0, column=2)
         
-        # Folder 2
         ttk.Label(selection_frame, text="Modified Folder:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=(10, 0))
         self.folder2_var = tk.StringVar()
         ttk.Entry(selection_frame, textvariable=self.folder2_var, width=60).grid(row=1, column=1, padx=(0, 10), pady=(10, 0))
         ttk.Button(selection_frame, text="Browse", 
                   command=lambda: self.browse_folder(self.folder2_var)).grid(row=1, column=2, pady=(10, 0))
         
-        # Control buttons
         button_frame = ttk.Frame(selection_frame)
         button_frame.grid(row=2, column=0, columnspan=3, pady=(20, 0))
         
         self.compare_btn = ttk.Button(button_frame, text="Start Comparison", 
-                                    command=self.start_comparison, style="Accent.TButton")
+                                    command=self.start_comparison)
         self.compare_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         self.stop_btn = ttk.Button(button_frame, text="Stop", 
-                                 command=self.stop_comparison, state=tk.DISABLED)
+                                 command=self.stop_comparison)
         self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.stop_btn.config(state=tk.DISABLED)
         
         ttk.Button(button_frame, text="Export Results", 
                   command=self.export_results).pack(side=tk.LEFT, padx=(0, 10))
@@ -111,13 +103,11 @@ class FolderComparisonGUI:
         progress_frame = ttk.LabelFrame(parent, text="Progress", padding=10)
         progress_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Progress bar
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, 
                                           length=400, mode='determinate')
         self.progress_bar.pack(pady=(0, 10))
         
-        # Progress labels
         label_frame = ttk.Frame(progress_frame)
         label_frame.pack(fill=tk.X)
         
@@ -132,22 +122,17 @@ class FolderComparisonGUI:
         results_frame = ttk.LabelFrame(parent, text="Comparison Results", padding=10)
         results_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Create paned window for resizable layout
         paned = ttk.PanedWindow(results_frame, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True)
         
-        # Left panel - File tree and statistics
         left_frame = ttk.Frame(paned)
         paned.add(left_frame, weight=1)
         
-        # Updated statistics panel
         self.setup_statistics_panel(left_frame)
         
-        # File tree
         tree_frame = ttk.LabelFrame(left_frame, text="Files with Changes", padding=5)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
         
-        # File tree with scrollbar
         tree_container = ttk.Frame(tree_frame)
         tree_container.pack(fill=tk.BOTH, expand=True)
         
@@ -161,7 +146,6 @@ class FolderComparisonGUI:
         self.file_tree.column('status', width=120)
         self.file_tree.column('changes', width=100)
         
-        # Scrollbars for tree
         tree_scroll_y = ttk.Scrollbar(tree_container, orient=tk.VERTICAL, command=self.file_tree.yview)
         tree_scroll_x = ttk.Scrollbar(tree_container, orient=tk.HORIZONTAL, command=self.file_tree.xview)
         self.file_tree.configure(yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
@@ -173,18 +157,15 @@ class FolderComparisonGUI:
         tree_container.grid_rowconfigure(0, weight=1)
         tree_container.grid_columnconfigure(0, weight=1)
         
-        # Bind tree selection
         self.file_tree.bind('<<TreeviewSelect>>', self.on_file_select)
         self.file_tree.bind('<Double-1>', self.on_file_double_click)
         
-        # Right panel - Detailed comparison view
         right_frame = ttk.Frame(paned)
         paned.add(right_frame, weight=2)
         
         detail_label = ttk.Label(right_frame, text="Detailed Comparison", font=('TkDefaultFont', 10, 'bold'))
         detail_label.pack(anchor=tk.W, pady=(0, 10))
         
-        # Updated notebook with new tabs
         self.detail_notebook = ttk.Notebook(right_frame)
         self.detail_notebook.pack(fill=tk.BOTH, expand=True)
         
@@ -195,10 +176,8 @@ class FolderComparisonGUI:
         stats_frame = ttk.LabelFrame(parent, text="Summary Statistics", padding=10)
         stats_frame.pack(fill=tk.X)
         
-        # Create grid for statistics
         self.stats_labels = {}
         
-        # Row 0: File counts
         ttk.Label(stats_frame, text="Total Files:", font=('TkDefaultFont', 9, 'bold')).grid(row=0, column=0, sticky=tk.W)
         self.stats_labels['total_files'] = ttk.Label(stats_frame, text="0")
         self.stats_labels['total_files'].grid(row=0, column=1, sticky=tk.W, padx=(10, 20))
@@ -207,7 +186,6 @@ class FolderComparisonGUI:
         self.stats_labels['files_changed'] = ttk.Label(stats_frame, text="0")
         self.stats_labels['files_changed'].grid(row=0, column=3, sticky=tk.W, padx=(10, 0))
         
-        # Row 1: Requirement changes (Updated categories)
         ttk.Label(stats_frame, text="Requirements Added:", 
                  foreground=self.change_colors['added']).grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
         self.stats_labels['added'] = ttk.Label(stats_frame, text="0", 
@@ -220,7 +198,6 @@ class FolderComparisonGUI:
                                                 foreground=self.change_colors['deleted'])
         self.stats_labels['deleted'].grid(row=1, column=3, sticky=tk.W, padx=(10, 0), pady=(10, 0))
         
-        # Row 2: Content and structural changes
         ttk.Label(stats_frame, text="Content Modified:", 
                  foreground=self.change_colors['content_modified']).grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
         self.stats_labels['content_modified'] = ttk.Label(stats_frame, text="0", 
@@ -233,20 +210,17 @@ class FolderComparisonGUI:
                                                         foreground=self.change_colors['structural_only'])
         self.stats_labels['structural_only'].grid(row=2, column=3, sticky=tk.W, padx=(10, 0), pady=(5, 0))
         
-        # Row 3: Unchanged
         ttk.Label(stats_frame, text="Unchanged:", 
                  foreground=self.change_colors['unchanged']).grid(row=3, column=0, sticky=tk.W, pady=(5, 0))
         self.stats_labels['unchanged'] = ttk.Label(stats_frame, text="0", 
                                                   foreground=self.change_colors['unchanged'])
         self.stats_labels['unchanged'].grid(row=3, column=1, sticky=tk.W, padx=(10, 20), pady=(5, 0))
         
-        # Configure column weights
         for i in range(4):
             stats_frame.grid_columnconfigure(i, weight=1)
             
     def setup_detail_tabs(self):
         """Setup updated detail tabs for new comparison structure"""
-        # Summary tab with detailed statistics
         self.summary_frame = ttk.Frame(self.detail_notebook)
         self.detail_notebook.add(self.summary_frame, text="Summary")
         self.setup_summary_tab()
@@ -256,13 +230,13 @@ class FolderComparisonGUI:
         summary_container = ttk.Frame(self.summary_frame)
         summary_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Summary text area
-        self.summary_text = tk.Text(summary_container, wrap=tk.WORD, font=('Consolas', 10), state=tk.DISABLED)
+        self.summary_text = tk.Text(summary_container, wrap=tk.WORD, font=('Consolas', 10))
         summary_scroll = ttk.Scrollbar(summary_container, orient=tk.VERTICAL, command=self.summary_text.yview)
         self.summary_text.configure(yscrollcommand=summary_scroll.set)
         
         self.summary_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         summary_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.summary_text.config(state=tk.DISABLED)
         
     def setup_status_bar(self):
         """Setup status bar"""
@@ -290,15 +264,12 @@ class FolderComparisonGUI:
             messagebox.showerror("Error", "One or both folders do not exist")
             return
             
-        # Clear previous results
         self.clear_results()
         
-        # Update UI state
         self.is_comparing = True
-        self.compare_btn.configure(state=tk.DISABLED)
-        self.stop_btn.configure(state=tk.NORMAL)
+        self.compare_btn.config(state=tk.DISABLED)
+        self.stop_btn.config(state=tk.NORMAL)
         
-        # Start comparison in separate thread
         self.comparison_thread = threading.Thread(
             target=self.run_comparison,
             args=(folder1, folder2),
@@ -312,16 +283,15 @@ class FolderComparisonGUI:
             self.update_status("Starting comparison...")
             
             def progress_callback(current: int, total: int, filename: str):
-                if self.is_comparing:  # Check if we should continue
+                if self.is_comparing:
                     progress = (current / total) * 100 if total > 0 else 0
                     self.root.after(0, self.update_progress, progress, f"Processing: {filename}", current, total)
             
-            # Run comparison
             self.folder_results = self.folder_comparator.compare_folders(
                 folder1, folder2
             )
             
-            if self.is_comparing:  # Only update if not stopped
+            if self.is_comparing:
                 self.root.after(0, self.comparison_complete)
                 
         except Exception as e:
@@ -331,26 +301,24 @@ class FolderComparisonGUI:
     def update_progress(self, progress: float, message: str, current: int, total: int):
         """Update progress display"""
         self.progress_var.set(progress)
-        self.current_file_label.configure(text=message)
-        self.progress_label.configure(text=f"{current}/{total} files")
+        self.current_file_label.config(text=message)
+        self.progress_label.config(text=f"{current}/{total} files")
         self.root.update_idletasks()
         
     def comparison_complete(self):
         """Handle comparison completion with updated statistics"""
         self.is_comparing = False
-        self.compare_btn.configure(state=tk.NORMAL)
-        self.stop_btn.configure(state=tk.DISABLED)
+        self.compare_btn.config(state=tk.NORMAL)
+        self.stop_btn.config(state=tk.DISABLED)
         
         self.update_status("Comparison completed")
-        self.current_file_label.configure(text="Comparison completed")
+        self.current_file_label.config(text="Comparison completed")
         self.progress_var.set(100)
         
-        # Update all displays
         self.update_statistics()
         self.update_file_tree()
         self.update_summary()
         
-        # Show completion message
         stats = self.folder_results.get('aggregated_statistics', {})
         total_changes = (stats.get('total_requirements_added', 0) + 
                         stats.get('total_requirements_deleted', 0) + 
@@ -368,8 +336,8 @@ class FolderComparisonGUI:
     def comparison_error(self, error_msg: str):
         """Handle comparison error"""
         self.is_comparing = False
-        self.compare_btn.configure(state=tk.NORMAL)
-        self.stop_btn.configure(state=tk.DISABLED)
+        self.compare_btn.config(state=tk.NORMAL)
+        self.stop_btn.config(state=tk.DISABLED)
         
         self.update_status(f"Comparison failed: {error_msg}")
         messagebox.showerror("Comparison Error", f"An error occurred during comparison:\n\n{error_msg}")
@@ -377,8 +345,8 @@ class FolderComparisonGUI:
     def stop_comparison(self):
         """Stop ongoing comparison"""
         self.is_comparing = False
-        self.compare_btn.configure(state=tk.NORMAL)
-        self.stop_btn.configure(state=tk.DISABLED)
+        self.compare_btn.config(state=tk.NORMAL)
+        self.stop_btn.config(state=tk.DISABLED)
         self.update_status("Comparison stopped by user")
         
     def update_statistics(self):
@@ -389,27 +357,23 @@ class FolderComparisonGUI:
         folder_stats = self.folder_results.get('folder_statistics', {})
         req_stats = self.folder_results.get('aggregated_statistics', {})
         
-        # Update basic file statistics
-        self.stats_labels['total_files'].configure(text=str(folder_stats.get('total_matched_files', 0)))
-        self.stats_labels['files_changed'].configure(text=str(folder_stats.get('files_with_content_changes', 0)))
+        self.stats_labels['total_files'].config(text=str(folder_stats.get('total_matched_files', 0)))
+        self.stats_labels['files_changed'].config(text=str(folder_stats.get('files_with_content_changes', 0)))
         
-        # Update requirement change statistics (new categories)
-        self.stats_labels['added'].configure(text=str(req_stats.get('total_requirements_added', 0)))
-        self.stats_labels['deleted'].configure(text=str(req_stats.get('total_requirements_deleted', 0)))
-        self.stats_labels['content_modified'].configure(text=str(req_stats.get('total_requirements_content_modified', 0)))
-        self.stats_labels['structural_only'].configure(text=str(req_stats.get('total_requirements_structural_only', 0)))
-        self.stats_labels['unchanged'].configure(text=str(req_stats.get('total_requirements_unchanged', 0)))
+        self.stats_labels['added'].config(text=str(req_stats.get('total_requirements_added', 0)))
+        self.stats_labels['deleted'].config(text=str(req_stats.get('total_requirements_deleted', 0)))
+        self.stats_labels['content_modified'].config(text=str(req_stats.get('total_requirements_content_modified', 0)))
+        self.stats_labels['structural_only'].config(text=str(req_stats.get('total_requirements_structural_only', 0)))
+        self.stats_labels['unchanged'].config(text=str(req_stats.get('total_requirements_unchanged', 0)))
         
     def update_file_tree(self):
         """Update file tree with clearer change indicators"""
-        # Clear existing items
         for item in self.file_tree.get_children():
             self.file_tree.delete(item)
             
         if not self.folder_results:
             return
             
-        # Add files with changes from individual file statistics
         individual_stats = self.folder_results.get('individual_file_statistics', {})
         matched_files = individual_stats.get('matched_files', {})
         
@@ -417,7 +381,6 @@ class FolderComparisonGUI:
             try:
                 comparison_stats = file_data.get('comparison_stats', {})
                 
-                # Count different types of changes
                 added_count = comparison_stats.get('added_count', 0)
                 deleted_count = comparison_stats.get('deleted_count', 0)
                 content_count = comparison_stats.get('content_modified_count', 0)
@@ -426,9 +389,8 @@ class FolderComparisonGUI:
                 total_changes = added_count + deleted_count + content_count + structural_count
                 
                 if total_changes == 0:
-                    continue  # Skip files with no changes
+                    continue
                     
-                # Determine status and change summary
                 if added_count > 0 and deleted_count == 0 and content_count == 0 and structural_count == 0:
                     status = "Added Only"
                     tag = "added"
@@ -443,9 +405,8 @@ class FolderComparisonGUI:
                     tag = "structural_only"
                 else:
                     status = "Mixed Changes"
-                    tag = "content_modified"  # Default to content modified color
+                    tag = "content_modified"
                     
-                # Create change summary
                 change_parts = []
                 if added_count > 0:
                     change_parts.append(f"+{added_count}")
@@ -458,19 +419,16 @@ class FolderComparisonGUI:
                     
                 change_summary = " ".join(change_parts)
                 
-                # Insert into tree
                 item_id = self.file_tree.insert('', 'end', text=file_path, 
                                               values=(status, change_summary),
                                               tags=(tag,))
                 
-                # Configure tag colors
                 self.file_tree.tag_configure(tag, foreground=self.change_colors[tag])
                 
             except Exception as e:
                 print(f"Error processing file {file_path}: {e}")
                 continue
                 
-        # Add files that were added or deleted entirely
         added_files = individual_stats.get('added_files', {})
         for file_path, file_data in added_files.items():
             req_count = file_data.get('requirement_count', 0)
@@ -492,15 +450,13 @@ class FolderComparisonGUI:
         if not self.folder_results:
             return
             
-        self.summary_text.configure(state=tk.NORMAL)
+        self.summary_text.config(state=tk.NORMAL)
         self.summary_text.delete(1.0, tk.END)
         
-        # Generate enhanced summary using folder comparator's method
         try:
             summary_content = self.folder_comparator.export_folder_summary_enhanced(self.folder_results)
             self.summary_text.insert(1.0, summary_content)
         except Exception as e:
-            # Fallback to basic summary
             folder_stats = self.folder_results.get('folder_statistics', {})
             req_stats = self.folder_results.get('aggregated_statistics', {})
             
@@ -531,7 +487,7 @@ class FolderComparisonGUI:
             summary_text = "\n".join(summary_lines)
             self.summary_text.insert(1.0, summary_text)
         
-        self.summary_text.configure(state=tk.DISABLED)
+        self.summary_text.config(state=tk.DISABLED)
         
     def on_file_select(self, event):
         """Handle file selection in tree"""
@@ -543,7 +499,6 @@ class FolderComparisonGUI:
         file_path = self.file_tree.item(item_id, 'text')
         
         self.selected_file = file_path
-        # Could add detailed view updates here
         
     def on_file_double_click(self, event):
         """Handle double-click on file tree item"""
@@ -554,7 +509,6 @@ class FolderComparisonGUI:
         item_id = selection[0]
         file_path = self.file_tree.item(item_id, 'text')
         
-        # Show detailed comparison in popup window
         self.show_detailed_comparison(file_path)
         
     def show_detailed_comparison(self, file_path: str):
@@ -569,7 +523,6 @@ class FolderComparisonGUI:
         file_data = matched_files[file_path]
         comparison_stats = file_data.get('comparison_stats', {})
         
-        # Create popup window
         popup = tk.Toplevel(self.root)
         popup.title(f"File Comparison - {os.path.basename(file_path)}")
         popup.geometry("800x600")
@@ -578,11 +531,9 @@ class FolderComparisonGUI:
         main_frame = tk.Frame(popup, padx=20, pady=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Title
         tk.Label(main_frame, text=f"Detailed Comparison: {os.path.basename(file_path)}", 
                 font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
         
-        # File info
         file1_info = file_data.get('file1_info', {})
         file2_info = file_data.get('file2_info', {})
         match_type = file_data.get('match_type', 'unknown')
@@ -595,7 +546,6 @@ class FolderComparisonGUI:
         
         tk.Label(main_frame, text=info_text, font=('Arial', 11), justify=tk.LEFT).pack(anchor=tk.W, pady=(0, 15))
         
-        # Statistics
         stats_frame = tk.LabelFrame(main_frame, text="Change Statistics", font=('Arial', 12, 'bold'), padx=15, pady=15)
         stats_frame.pack(fill=tk.X, pady=(0, 20))
         
@@ -617,7 +567,6 @@ class FolderComparisonGUI:
             tk.Label(frame, text=label, font=('Arial', 10, 'bold')).pack()
             tk.Label(frame, text=str(count), font=('Arial', 14, 'bold'), fg=color).pack()
         
-        # Change details
         details_frame = tk.LabelFrame(main_frame, text="Change Details", font=('Arial', 12, 'bold'), padx=15, pady=15)
         details_frame.pack(fill=tk.BOTH, expand=True)
         
@@ -628,7 +577,6 @@ class FolderComparisonGUI:
         details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         details_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Populate details
         details_content = []
         
         if comparison_stats.get('content_change_percentage', 0) > 0:
@@ -644,9 +592,8 @@ class FolderComparisonGUI:
             details_content.append("No additional change details available.")
             
         details_text.insert(1.0, "\n\n".join(details_content))
-        details_text.configure(state=tk.DISABLED)
+        details_text.config(state=tk.DISABLED)
         
-        # Close button
         tk.Button(main_frame, text="Close", command=popup.destroy,
                  font=('Arial', 11), relief='raised', bd=2, padx=20, pady=6,
                  cursor='hand2').pack(pady=(20, 0))
@@ -657,7 +604,6 @@ class FolderComparisonGUI:
             messagebox.showwarning("Export", "No comparison results to export")
             return
             
-        # Ask user for export file
         filename = filedialog.asksaveasfilename(
             defaultextension=".txt",
             filetypes=[
@@ -687,7 +633,6 @@ class FolderComparisonGUI:
             
     def export_as_json(self, filename: str):
         """Export results as JSON"""
-        # Create export data with metadata
         export_data = {
             'metadata': {
                 'export_time': datetime.now().isoformat(),
@@ -711,10 +656,8 @@ class FolderComparisonGUI:
         with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             
-            # Write header
             writer.writerow(['File Path', 'Status', 'Added', 'Deleted', 'Content Modified', 'Structural Only', 'Unchanged'])
             
-            # Write individual file data
             individual_stats = self.folder_results.get('individual_file_statistics', {})
             matched_files = individual_stats.get('matched_files', {})
             
@@ -732,13 +675,11 @@ class FolderComparisonGUI:
                 
                 writer.writerow([file_path, status, added, deleted, content_mod, structural, unchanged])
                 
-            # Write added files
             added_files = individual_stats.get('added_files', {})
             for file_path, file_data in added_files.items():
                 req_count = file_data.get('requirement_count', 0)
                 writer.writerow([file_path, "File Added", req_count, 0, 0, 0, 0])
                 
-            # Write deleted files
             deleted_files = individual_stats.get('deleted_files', {})
             for file_path, file_data in deleted_files.items():
                 req_count = file_data.get('requirement_count', 0)
@@ -747,14 +688,12 @@ class FolderComparisonGUI:
     def export_as_text(self, filename: str):
         """Export results as formatted text"""
         try:
-            # Use the enhanced summary from folder comparator
             summary_content = self.folder_comparator.export_folder_summary_enhanced(self.folder_results)
             
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(summary_content)
                 
         except Exception as e:
-            # Fallback to basic export
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write("REQIF FOLDER COMPARISON RESULTS\n")
                 f.write("=" * 50 + "\n\n")
@@ -763,7 +702,6 @@ class FolderComparisonGUI:
                 f.write(f"Original Folder: {self.folder1_var.get()}\n")
                 f.write(f"Modified Folder: {self.folder2_var.get()}\n\n")
                 
-                # Basic statistics
                 folder_stats = self.folder_results.get('folder_statistics', {})
                 req_stats = self.folder_results.get('aggregated_statistics', {})
                 
@@ -782,24 +720,20 @@ class FolderComparisonGUI:
         self.folder_results = {}
         self.selected_file = None
         
-        # Clear statistics
         for label in self.stats_labels.values():
-            label.configure(text="0")
+            label.config(text="0")
             
-        # Clear file tree
         for item in self.file_tree.get_children():
             self.file_tree.delete(item)
             
-        # Clear summary
         if hasattr(self, 'summary_text'):
-            self.summary_text.configure(state=tk.NORMAL)
+            self.summary_text.config(state=tk.NORMAL)
             self.summary_text.delete(1.0, tk.END)
-            self.summary_text.configure(state=tk.DISABLED)
+            self.summary_text.config(state=tk.DISABLED)
             
-        # Reset progress
         self.progress_var.set(0)
-        self.current_file_label.configure(text="Ready to compare")
-        self.progress_label.configure(text="")
+        self.current_file_label.config(text="Ready to compare")
+        self.progress_label.config(text="")
         
         self.update_status("Results cleared")
         
