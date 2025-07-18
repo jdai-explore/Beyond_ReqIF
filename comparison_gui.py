@@ -1287,31 +1287,327 @@ class DiffViewerWindow:
            messagebox.showerror("Error", f"Failed to copy content:\n{str(e)}")
    
    def _export_diff_report(self):
-       """Export detailed diff report"""
-       try:
-           filename = filedialog.asksaveasfilename(
-               title="Export Diff Report",
-               defaultextension=".txt",
-               filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-               initialfile=f"diff_report_{self.req_id}.txt"
-           )
-           
-           if not filename:
-               return
-           
-           with open(filename, 'w', encoding='utf-8') as f:
-               f.write(f"Content Difference Report for Requirement: {self.req_id}\n")
-               f.write("=" * 60 + "\n\n")
-               
-               for field_key, field_info in self.field_data.items():
-                   f.write(f"Field: {field_info['display_name']}\n")
-                   f.write("-" * 30 + "\n")
-                   f.write("Status: CONTENT MODIFIED\n\n")
-                   f.write(f"Original:\n{field_info['old_value']}\n\n")
-                   f.write(f"Modified:\n{field_info['new_value']}\n\n")
-                   f.write("\n" + "="*60 + "\n\n")
-           
-           messagebox.showinfo("Export Complete", f"Diff report exported to:\n{filename}")
-           
-       except Exception as e:
-           messagebox.showerror("Export Error", f"Failed to
+        """Export detailed difference report with new categories"""
+        if not self.comparison_result:
+            messagebox.showwarning("Export", "No comparison results to export")
+            return
+            
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[
+                ("Text files", "*.txt"),
+                ("JSON files", "*.json"),
+                ("All files", "*.*")
+            ],
+            title="Export Difference Report"
+        )
+        
+        if not filename:
+            return
+            
+        try:
+            if filename.endswith('.json'):
+                self._export_json_report(filename)
+            else:
+                self._export_text_report(filename)
+                
+            messagebox.showinfo("Export", f"Report exported successfully to:\n{filename}")
+            
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export report:\n{str(e)}")
+            
+    def _export_json_report(self, filename: str):
+        """Export comparison results as JSON"""
+        import json
+        from datetime import datetime
+        
+        export_data = {
+            'metadata': {
+                'export_time': datetime.now().isoformat(),
+                'original_file': self.file1_var.get(),
+                'modified_file': self.file2_var.get(),
+                'comparison_version': '2.0'
+            },
+            'statistics': self.comparison_result.get('statistics', {}),
+            'results': {
+                'added': self.comparison_result.get('added', []),
+                'deleted': self.comparison_result.get('deleted', []),
+                'content_modified': self.comparison_result.get('content_modified', []),
+                'structural_only': self.comparison_result.get('structural_only', []),
+                'unchanged': self.comparison_result.get('unchanged', [])
+            }
+        }
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(export_data, f, indent=2, default=str)
+            
+    def _export_text_report(self, filename: str):
+        """Export comparison results as formatted text"""
+        from datetime import datetime
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write("REQIF FILE COMPARISON REPORT - V2.0\n")
+            f.write("=" * 50 + "\n\n")
+            
+            f.write(f"Export Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Original File: {self.file1_var.get()}\n")
+            f.write(f"Modified File: {self.file2_var.get()}\n\n")
+            
+            # Write statistics
+            stats = self.comparison_result.get('statistics', {})
+            f.write("SUMMARY STATISTICS:\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"Requirements Added: {len(self.comparison_result.get('added', []))}\n")
+            f.write(f"Requirements Deleted: {len(self.comparison_result.get('deleted', []))}\n")
+            f.write(f"Content Modified: {len(self.comparison_result.get('content_modified', []))}\n")
+            f.write(f"Structural Changes: {len(self.comparison_result.get('structural_only', []))}\n")
+            f.write(f"Unchanged: {len(self.comparison_result.get('unchanged', []))}\n\n")
+            
+            # Write detailed sections
+            self._write_section_to_file(f, "ADDED REQUIREMENTS", self.comparison_result.get('added', []))
+            self._write_section_to_file(f, "DELETED REQUIREMENTS", self.comparison_result.get('deleted', []))
+            self._write_section_to_file(f, "CONTENT MODIFIED REQUIREMENTS", self.comparison_result.get('content_modified', []))
+            self._write_section_to_file(f, "STRUCTURAL CHANGES ONLY", self.comparison_result.get('structural_only', []))
+            
+    def _write_section_to_file(self, file_handle, section_title: str, requirements: List[Dict]):
+        """Write a section of requirements to file"""
+        file_handle.write(f"{section_title}:\n")
+        file_handle.write("-" * len(section_title) + "\n")
+        
+        if not requirements:
+            file_handle.write("None\n\n")
+            return
+            
+        for i, req in enumerate(requirements, 1):
+            file_handle.write(f"{i}. ID: {req.get('identifier', 'Unknown')}\n")
+            
+            if section_title == "CONTENT MODIFIED REQUIREMENTS":
+                # Show changes for content modified
+                if 'changes' in req:
+                    file_handle.write("   Changes:\n")
+                    for field, change_info in req['changes'].items():
+                        if isinstance(change_info, dict) and 'old' in change_info and 'new' in change_info:
+                            file_handle.write(f"     {field}:\n")
+                            file_handle.write(f"       Old: {change_info['old']}\n")
+                            file_handle.write(f"       New: {change_info['new']}\n")
+                        else:
+                            file_handle.write(f"     {field}: {change_info}\n")
+            elif section_title == "STRUCTURAL CHANGES ONLY":
+                # Show structural changes
+                if 'structural_changes' in req:
+                    struct_changes = req['structural_changes']
+                    if 'added_attributes' in struct_changes:
+                        added_attrs = struct_changes['added_attributes']
+                        if added_attrs:
+                            file_handle.write("   Added attributes:\n")
+                            for attr, value in added_attrs.items():
+                                file_handle.write(f"     + {attr}: {value}\n")
+                    
+                    if 'removed_attributes' in struct_changes:
+                        removed_attrs = struct_changes['removed_attributes']
+                        if removed_attrs:
+                            file_handle.write("   Removed attributes:\n")
+                            for attr, value in removed_attrs.items():
+                                file_handle.write(f"     - {attr}: {value}\n")
+            else:
+                # For added/deleted/unchanged, show basic info
+                if 'the_value' in req:
+                    value = req['the_value']
+                    if len(value) > 100:
+                        value = value[:100] + "..."
+                    file_handle.write(f"   Content: {value}\n")
+                    
+            file_handle.write("\n")
+            
+        file_handle.write("\n")
+        
+    def _clear_results(self):
+        """Clear all comparison results and reset UI"""
+        self.comparison_result = None
+        
+        # Clear all text widgets
+        for tab_type in ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged']:
+            text_widget = getattr(self, f"{tab_type}_text", None)
+            if text_widget:
+                text_widget.delete(1.0, tk.END)
+                
+        # Clear summary
+        if hasattr(self, 'summary_text'):
+            self.summary_text.delete(1.0, tk.END)
+            
+        # Reset statistics
+        for label in self.stats_labels.values():
+            label.configure(text="0")
+            
+        # Reset progress
+        self.progress_var.set(0)
+        self.progress_label.configure(text="Ready to compare")
+        
+        # Enable compare button
+        self.compare_btn.configure(state=tk.NORMAL)
+        
+        self._update_status("Results cleared")
+        
+    def _update_status(self, message: str):
+        """Update status bar message"""
+        self.status_var.set(message)
+        self.root.update_idletasks()
+        
+    def _show_detailed_comparison(self, req1: Dict, req2: Dict):
+        """Show detailed side-by-side comparison of two requirements"""
+        detail_window = tk.Toplevel(self.root)
+        detail_window.title("Detailed Requirement Comparison")
+        detail_window.geometry("1000x700")
+        
+        # Create main frame
+        main_frame = ttk.Frame(detail_window)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Title
+        title_label = ttk.Label(main_frame, 
+                               text=f"Comparing Requirement: {req1.get('identifier', 'Unknown')}",
+                               font=('TkDefaultFont', 12, 'bold'))
+        title_label.pack(pady=(0, 10))
+        
+        # Create paned window for side-by-side view
+        paned = ttk.PanedWindow(main_frame, orient=tk.HORIZONTAL)
+        paned.pack(fill=tk.BOTH, expand=True)
+        
+        # Original version (left)
+        left_frame = ttk.LabelFrame(paned, text="Original Version", padding=10)
+        paned.add(left_frame, weight=1)
+        
+        left_text = tk.Text(left_frame, wrap=tk.WORD, font=('Consolas', 10))
+        left_scroll = ttk.Scrollbar(left_frame, orient=tk.VERTICAL, command=left_text.yview)
+        left_text.configure(yscrollcommand=left_scroll.set)
+        
+        left_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        left_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Modified version (right)
+        right_frame = ttk.LabelFrame(paned, text="Modified Version", padding=10)
+        paned.add(right_frame, weight=1)
+        
+        right_text = tk.Text(right_frame, wrap=tk.WORD, font=('Consolas', 10))
+        right_scroll = ttk.Scrollbar(right_frame, orient=tk.VERTICAL, command=right_text.yview)
+        right_text.configure(yscrollcommand=right_scroll.set)
+        
+        right_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        right_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Populate content
+        self._populate_comparison_text(left_text, req1, "Original")
+        self._populate_comparison_text(right_text, req2, "Modified")
+        
+        # Make read-only
+        left_text.configure(state=tk.DISABLED)
+        right_text.configure(state=tk.DISABLED)
+        
+        # Close button
+        ttk.Button(detail_window, text="Close", command=detail_window.destroy).pack(pady=10)
+        
+    def _populate_comparison_text(self, text_widget: tk.Text, req_data: Dict, version_label: str):
+        """Populate text widget with requirement data"""
+        if not req_data:
+            text_widget.insert(1.0, f"No {version_label.lower()} version available")
+            return
+            
+        content_lines = []
+        
+        # Basic information
+        content_lines.append(f"REQUIREMENT DETAILS ({version_label}):")
+        content_lines.append("=" * 40)
+        content_lines.append("")
+        
+        # Key fields
+        key_fields = ['identifier', 'the_value', 'req_type', 'last_change', 'spec_hierarchy']
+        for field in key_fields:
+            if field in req_data:
+                value = req_data[field]
+                if field == 'the_value' and len(str(value)) > 200:
+                    value = str(value)[:200] + "..."
+                content_lines.append(f"{field.replace('_', ' ').title()}: {value}")
+                
+        content_lines.append("")
+        content_lines.append("ALL ATTRIBUTES:")
+        content_lines.append("-" * 20)
+        
+        # All attributes
+        for key, value in sorted(req_data.items()):
+            if key not in key_fields:  # Don't repeat key fields
+                if len(str(value)) > 100:
+                    value = str(value)[:100] + "..."
+                content_lines.append(f"{key}: {value}")
+                
+        text_widget.insert(1.0, "\n".join(content_lines))
+        
+    def _get_change_summary(self) -> str:
+        """Get a summary of changes for status display"""
+        if not self.comparison_result:
+            return "No comparison performed"
+            
+        added = len(self.comparison_result.get('added', []))
+        deleted = len(self.comparison_result.get('deleted', []))
+        content_modified = len(self.comparison_result.get('content_modified', []))
+        structural_only = len(self.comparison_result.get('structural_only', []))
+        unchanged = len(self.comparison_result.get('unchanged', []))
+        
+        total_changes = added + deleted + content_modified + structural_only
+        
+        if total_changes == 0:
+            return f"Files identical ({unchanged} requirements)"
+        else:
+            change_parts = []
+            if added > 0:
+                change_parts.append(f"+{added}")
+            if deleted > 0:
+                change_parts.append(f"-{deleted}")
+            if content_modified > 0:
+                change_parts.append(f"~{content_modified}")
+            if structural_only > 0:
+                change_parts.append(f"#{structural_only}")
+                
+            return f"Changes: {' '.join(change_parts)} | Unchanged: {unchanged}"
+            
+    def _validate_files(self) -> bool:
+        """Validate selected files before comparison"""
+        file1 = self.file1_var.get().strip()
+        file2 = self.file2_var.get().strip()
+        
+        if not file1 or not file2:
+            messagebox.showerror("Error", "Please select both files for comparison")
+            return False
+            
+        if not os.path.exists(file1):
+            messagebox.showerror("Error", f"Original file not found:\n{file1}")
+            return False
+            
+        if not os.path.exists(file2):
+            messagebox.showerror("Error", f"Modified file not found:\n{file2}")
+            return False
+            
+        # Check file extensions
+        if not (file1.lower().endswith('.reqif') or file1.lower().endswith('.xml')):
+            result = messagebox.askyesno("Warning", 
+                f"Original file may not be a ReqIF file:\n{file1}\n\nContinue anyway?")
+            if not result:
+                return False
+                
+        if not (file2.lower().endswith('.reqif') or file2.lower().endswith('.xml')):
+            result = messagebox.askyesno("Warning", 
+                f"Modified file may not be a ReqIF file:\n{file2}\n\nContinue anyway?")
+            if not result:
+                return False
+                
+        return True
+
+
+def main():
+    """Main function to run the comparison GUI"""
+    root = tk.Tk()
+    app = ComparisonGUI(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
