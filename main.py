@@ -1,6 +1,6 @@
-# main.py - Updated for new comparison structure
+# main.py - Fixed imports and usage
 """
-Main Application Entry Point - Updated for new comparison categories
+Main Application Entry Point - Fixed import issues
 Now handles: Added, Deleted, Content Modified, Structural Changes, Unchanged
 """
 
@@ -12,23 +12,24 @@ from typing import Dict, List, Optional, Any
 import threading
 from datetime import datetime
 
-# Import comparison modules
+# Import comparison modules - FIXED IMPORTS
 try:
-    from reqif_comparator import compare_requirements
+    from reqif_comparator import ReqIFComparator  # Import the class, not a function
     from folder_comparator import FolderComparator
-    from comparison_gui import ComparisonGUI
+    from comparison_gui import ComparisonResultsGUI  # Fixed class name
     from folder_comparison_gui import FolderComparisonGUI
+    from visualizer_gui import VisualizerGUI
 except ImportError as e:
     print(f"Error importing modules: {e}")
     print("Please ensure all required modules are in the same directory.")
     sys.exit(1)
 
 
-class MainApplication:
+class ReqIFToolNative:  # Changed class name to match the one used in run_reqif_tool.py
     """Main application controller with updated functionality"""
     
-    def __init__(self, root):
-        self.root = root
+    def __init__(self):
+        self.root = tk.Tk()
         self.root.title("ReqIF Comparison Tool Suite - v2.0")
         self.root.geometry("800x600")
         
@@ -102,6 +103,19 @@ class MainApplication:
                              text="Compare two individual ReqIF files")
         file_desc.pack(side=tk.LEFT, padx=(20, 0))
         
+        # Single file analysis
+        analysis_frame = ttk.Frame(mode_frame)
+        analysis_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        ttk.Button(analysis_frame, 
+                  text="Single File Analysis",
+                  command=self.open_file_analysis,
+                  style="Large.TButton").pack(side=tk.LEFT)
+        
+        analysis_desc = ttk.Label(analysis_frame, 
+                                 text="Analyze and visualize a single ReqIF file")
+        analysis_desc.pack(side=tk.LEFT, padx=(20, 0))
+        
         # Folder comparison
         folder_frame = ttk.Frame(mode_frame)
         folder_frame.pack(fill=tk.X)
@@ -172,7 +186,8 @@ class MainApplication:
             comparison_window.title("Single File Comparison - v2.0")
             comparison_window.geometry("1200x800")
             
-            # Create comparison GUI
+            # Create comparison GUI - FIXED: Use the correct class
+            from comparison_gui import ComparisonGUI
             self.active_window = ComparisonGUI(comparison_window)
             self.current_mode = "file"
             
@@ -185,6 +200,55 @@ class MainApplication:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open file comparison:\n{str(e)}")
             self.update_status("Error opening file comparison")
+    
+    def open_file_analysis(self):
+        """Open single file analysis window"""
+        try:
+            self.update_status("Opening file analysis...")
+            
+            # File selection dialog
+            file_path = filedialog.askopenfilename(
+                title="Select ReqIF file to analyze",
+                filetypes=[
+                    ("ReqIF files", "*.reqif"),
+                    ("ReqIF archives", "*.reqifz"),
+                    ("XML files", "*.xml"),
+                    ("All files", "*.*")
+                ]
+            )
+            
+            if not file_path:
+                self.update_status("File analysis cancelled")
+                return
+            
+            # Parse the file
+            from reqif_parser import ReqIFParser
+            parser = ReqIFParser()
+            
+            try:
+                requirements = parser.parse_file(file_path)
+                
+                if not requirements:
+                    messagebox.showwarning("No Data", 
+                        f"No requirements found in file:\n{file_path}\n\n"
+                        "Please check that this is a valid ReqIF file.")
+                    self.update_status("No requirements found")
+                    return
+                
+                # Create visualizer window
+                self.active_window = VisualizerGUI(self.root, requirements, file_path)
+                self.current_mode = "analysis"
+                
+                self.update_status(f"Analyzing {len(requirements)} requirements from {os.path.basename(file_path)}")
+                
+            except Exception as e:
+                messagebox.showerror("Parsing Error", 
+                    f"Failed to parse ReqIF file:\n{file_path}\n\nError: {str(e)}")
+                self.update_status("File parsing failed")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open file analysis:\n{str(e)}")
+            self.update_status("Error opening file analysis")
             
     def open_folder_comparison(self):
         """Open folder comparison window"""
@@ -280,6 +344,12 @@ SINGLE FILE COMPARISON:
 - Export specific change reports
 - Best for detailed analysis of specific files
 
+SINGLE FILE ANALYSIS:
+- Analyze a single ReqIF file
+- View requirements in a structured format
+- Search and filter capabilities
+- Export to CSV for further analysis
+
 FOLDER COMPARISON:
 - Compare entire folders containing ReqIF files
 - Process multiple files automatically
@@ -296,6 +366,14 @@ Single File Comparison:
 4. Click "Compare Files"
 5. Review results in categorized tabs
 6. Export results if needed
+
+Single File Analysis:
+1. Click "Single File Analysis"
+2. Select ReqIF file to analyze
+3. Browse requirements in the table
+4. Use search to find specific content
+5. View detailed statistics
+6. Export filtered data to CSV
 
 Folder Comparison:
 1. Click "Folder Comparison"
@@ -333,6 +411,7 @@ EXPORT OPTIONS
 --------------
 - JSON format: Machine-readable detailed results
 - Text format: Human-readable summary reports
+- CSV format: Spreadsheet-compatible data
 - Include full comparison details and statistics
 
 TIPS FOR EFFECTIVE USE
@@ -369,6 +448,7 @@ A comprehensive tool for comparing ReqIF (Requirements Interchange Format) files
 
 Key Features:
 • Single file and folder comparison modes
+• Single file analysis and visualization
 • Clear categorization of changes
 • Detailed analysis and reporting
 • Export capabilities
@@ -380,6 +460,7 @@ Updates in Version 2.0:
 • Improved user interface
 • Better performance and reliability
 • Enhanced reporting capabilities
+• Added single file analysis mode
 
 Developed for requirements engineering and change management.
 
@@ -399,25 +480,24 @@ Developed for requirements engineering and change management.
             self.update_status("Running quick functionality test...")
             
             # Test basic comparison function
-            from reqif_comparator import compare_requirements
+            from reqif_comparator import ReqIFComparator
             
             # Create sample data for testing
             sample_req1 = {
-                'identifier': 'REQ-001',
-                'the_value': 'Original requirement text',
-                'req_type': 'Functional',
-                'last_change': '2024-01-01'
+                'id': 'REQ-001',
+                'attributes': {'Object Text': 'Original requirement text'},
+                'type': 'Functional'
             }
             
             sample_req2 = {
-                'identifier': 'REQ-001', 
-                'the_value': 'Modified requirement text',
-                'req_type': 'Functional',
-                'last_change': '2024-01-02'
+                'id': 'REQ-001', 
+                'attributes': {'Object Text': 'Modified requirement text'},
+                'type': 'Functional'
             }
             
             # Test comparison
-            result = compare_requirements([sample_req1], [sample_req2])
+            comparator = ReqIFComparator()
+            result = comparator.compare_requirements([sample_req1], [sample_req2])
             
             # Check result structure
             expected_keys = ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged', 'statistics']
@@ -442,6 +522,28 @@ Developed for requirements engineering and change management.
             messagebox.showerror("Test Error", 
                 f"Quick test failed with error:\n\n{str(e)}\n\n"
                 "Please check the installation and try again.")
+    
+    def run(self):
+        """Run the main application"""
+        try:
+            # Start the application
+            self.root.mainloop()
+        except KeyboardInterrupt:
+            print("\nApplication interrupted by user")
+        except Exception as e:
+            print(f"Application error: {str(e)}")
+            messagebox.showerror("Application Error", 
+                f"A critical error occurred:\n\n{str(e)}\n\n"
+                "The application will now exit.")
+        finally:
+            try:
+                self.root.quit()
+            except:
+                pass
+
+
+# Compatibility alias for the old class name
+MainApplication = ReqIFToolNative
 
 
 def setup_application():
@@ -473,21 +575,21 @@ def main():
     try:
         print("Starting ReqIF Comparison Tool Suite v2.0...")
         
-        # Setup application
-        root = setup_application()
-        app = MainApplication(root)
+        # Create application instance
+        app = ReqIFToolNative()
         
         # Add menu bar
-        menubar = tk.Menu(root)
-        root.config(menu=menubar)
+        menubar = tk.Menu(app.root)
+        app.root.config(menu=menubar)
         
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Single File Comparison", command=app.open_file_comparison)
+        file_menu.add_command(label="Single File Analysis", command=app.open_file_analysis)
         file_menu.add_command(label="Folder Comparison", command=app.open_folder_comparison)
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=root.quit)
+        file_menu.add_command(label="Exit", command=app.root.quit)
         
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
@@ -504,7 +606,7 @@ def main():
         
         # Start the application
         print("Starting GUI main loop...")
-        root.mainloop()
+        app.run()
         
     except KeyboardInterrupt:
         print("\nApplication interrupted by user")
@@ -553,7 +655,8 @@ def check_dependencies():
         'reqif_comparator',
         'folder_comparator', 
         'comparison_gui',
-        'folder_comparison_gui'
+        'folder_comparison_gui',
+        'visualizer_gui'
     ]
     
     missing_custom = []
@@ -584,6 +687,7 @@ ReqIF Comparison Tool Suite v2.0
 New Features in v2.0:
 ✓ Clearer change categorization
 ✓ Separate content vs structural changes
+✓ Single file analysis mode
 ✓ Improved user interface
 ✓ Better performance and reliability
 ✓ Enhanced reporting capabilities

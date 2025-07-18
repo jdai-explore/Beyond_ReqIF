@@ -1,4 +1,4 @@
-# folder_comparison_gui.py - Updated for new comparison structure
+# folder_comparison_gui.py - Fixed imports
 """
 Folder Comparison GUI - Updated for new comparison categories
 Now handles: Added, Deleted, Content Changed, Structural Changes, Unchanged
@@ -12,7 +12,8 @@ import threading
 from datetime import datetime
 import json
 
-from reqif_comparator import compare_requirements
+# FIXED IMPORTS
+from reqif_comparator import ReqIFComparator
 from folder_comparator import FolderComparator
 
 
@@ -245,51 +246,10 @@ class FolderComparisonGUI:
             
     def setup_detail_tabs(self):
         """Setup updated detail tabs for new comparison structure"""
-        # Added Requirements tab
-        self.added_frame = ttk.Frame(self.detail_notebook)
-        self.detail_notebook.add(self.added_frame, text="Added Requirements")
-        self.setup_change_tab(self.added_frame, "added")
-        
-        # Deleted Requirements tab  
-        self.deleted_frame = ttk.Frame(self.detail_notebook)
-        self.detail_notebook.add(self.deleted_frame, text="Deleted Requirements")
-        self.setup_change_tab(self.deleted_frame, "deleted")
-        
-        # Content Changes tab (NEW - replaces old Modified tab)
-        self.content_frame = ttk.Frame(self.detail_notebook)
-        self.detail_notebook.add(self.content_frame, text="Content Changes")
-        self.setup_change_tab(self.content_frame, "content_modified")
-        
-        # Structural Changes tab (NEW)
-        self.structural_frame = ttk.Frame(self.detail_notebook)
-        self.detail_notebook.add(self.structural_frame, text="Structural Changes")
-        self.setup_change_tab(self.structural_frame, "structural_only")
-        
-        # Unchanged Requirements tab
-        self.unchanged_frame = ttk.Frame(self.detail_notebook)
-        self.detail_notebook.add(self.unchanged_frame, text="Unchanged")
-        self.setup_change_tab(self.unchanged_frame, "unchanged")
-        
         # Summary tab with detailed statistics
         self.summary_frame = ttk.Frame(self.detail_notebook)
         self.detail_notebook.add(self.summary_frame, text="Summary")
         self.setup_summary_tab()
-        
-    def setup_change_tab(self, parent, change_type):
-        """Setup individual change type tab"""
-        # Create text widget with scrollbar
-        text_frame = ttk.Frame(parent)
-        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        text_widget = tk.Text(text_frame, wrap=tk.WORD, font=('Consolas', 10))
-        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
-        text_widget.configure(yscrollcommand=scrollbar.set)
-        
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Store reference for later updates
-        setattr(self, f"{change_type}_text", text_widget)
         
     def setup_summary_tab(self):
         """Setup summary tab with detailed statistics"""
@@ -358,7 +318,7 @@ class FolderComparisonGUI:
             
             # Run comparison
             self.folder_results = self.folder_comparator.compare_folders(
-                folder1, folder2, progress_callback
+                folder1, folder2
             )
             
             if self.is_comparing:  # Only update if not stopped
@@ -391,15 +351,17 @@ class FolderComparisonGUI:
         self.update_summary()
         
         # Show completion message
-        stats = self.folder_results.get('statistics', {})
-        total_changes = (stats.get('total_added', 0) + stats.get('total_deleted', 0) + 
-                        stats.get('total_content_modified', 0) + stats.get('total_structural_only', 0))
+        stats = self.folder_results.get('aggregated_statistics', {})
+        total_changes = (stats.get('total_requirements_added', 0) + 
+                        stats.get('total_requirements_deleted', 0) + 
+                        stats.get('total_requirements_content_modified', 0) + 
+                        stats.get('total_requirements_structural_only', 0))
         
         messagebox.showinfo(
             "Comparison Complete", 
             f"Comparison completed successfully!\n\n"
-            f"Files processed: {stats.get('total_files', 0)}\n"
-            f"Files with changes: {stats.get('files_with_changes', 0)}\n"
+            f"Files processed: {self.folder_results.get('folder_statistics', {}).get('total_matched_files', 0)}\n"
+            f"Files with changes: {self.folder_results.get('folder_statistics', {}).get('files_with_content_changes', 0)}\n"
             f"Total requirement changes: {total_changes}"
         )
         
@@ -424,18 +386,19 @@ class FolderComparisonGUI:
         if not self.folder_results:
             return
             
-        stats = self.folder_results.get('statistics', {})
+        folder_stats = self.folder_results.get('folder_statistics', {})
+        req_stats = self.folder_results.get('aggregated_statistics', {})
         
         # Update basic file statistics
-        self.stats_labels['total_files'].configure(text=str(stats.get('total_files', 0)))
-        self.stats_labels['files_changed'].configure(text=str(stats.get('files_with_changes', 0)))
+        self.stats_labels['total_files'].configure(text=str(folder_stats.get('total_matched_files', 0)))
+        self.stats_labels['files_changed'].configure(text=str(folder_stats.get('files_with_content_changes', 0)))
         
         # Update requirement change statistics (new categories)
-        self.stats_labels['added'].configure(text=str(stats.get('total_added', 0)))
-        self.stats_labels['deleted'].configure(text=str(stats.get('total_deleted', 0)))
-        self.stats_labels['content_modified'].configure(text=str(stats.get('total_content_modified', 0)))
-        self.stats_labels['structural_only'].configure(text=str(stats.get('total_structural_only', 0)))
-        self.stats_labels['unchanged'].configure(text=str(stats.get('total_unchanged', 0)))
+        self.stats_labels['added'].configure(text=str(req_stats.get('total_requirements_added', 0)))
+        self.stats_labels['deleted'].configure(text=str(req_stats.get('total_requirements_deleted', 0)))
+        self.stats_labels['content_modified'].configure(text=str(req_stats.get('total_requirements_content_modified', 0)))
+        self.stats_labels['structural_only'].configure(text=str(req_stats.get('total_requirements_structural_only', 0)))
+        self.stats_labels['unchanged'].configure(text=str(req_stats.get('total_requirements_unchanged', 0)))
         
     def update_file_tree(self):
         """Update file tree with clearer change indicators"""
@@ -446,59 +409,83 @@ class FolderComparisonGUI:
         if not self.folder_results:
             return
             
-        # Add files with changes
-        for file_path, file_result in self.folder_results.get('file_results', {}).items():
-            # Determine primary change type for display
-            changes = file_result.get('comparison', {})
-            
-            # Count different types of changes
-            added_count = len(changes.get('added', []))
-            deleted_count = len(changes.get('deleted', []))
-            content_count = len(changes.get('content_modified', []))
-            structural_count = len(changes.get('structural_only', []))
-            
-            total_changes = added_count + deleted_count + content_count + structural_count
-            
-            if total_changes == 0:
-                continue  # Skip files with no changes
+        # Add files with changes from individual file statistics
+        individual_stats = self.folder_results.get('individual_file_statistics', {})
+        matched_files = individual_stats.get('matched_files', {})
+        
+        for file_path, file_data in matched_files.items():
+            try:
+                comparison_stats = file_data.get('comparison_stats', {})
                 
-            # Determine status and change summary
-            if added_count > 0 and deleted_count == 0 and content_count == 0 and structural_count == 0:
-                status = "Added Only"
-                tag = "added"
-            elif deleted_count > 0 and added_count == 0 and content_count == 0 and structural_count == 0:
-                status = "Deleted Only"
-                tag = "deleted"
-            elif content_count > 0 and structural_count == 0:
-                status = "Content Changes"
-                tag = "content_modified"
-            elif structural_count > 0 and content_count == 0:
-                status = "Structural Only"
-                tag = "structural_only"
-            else:
-                status = "Mixed Changes"
-                tag = "content_modified"  # Default to content modified color
+                # Count different types of changes
+                added_count = comparison_stats.get('added_count', 0)
+                deleted_count = comparison_stats.get('deleted_count', 0)
+                content_count = comparison_stats.get('content_modified_count', 0)
+                structural_count = comparison_stats.get('structural_only_count', 0)
                 
-            # Create change summary
-            change_parts = []
-            if added_count > 0:
-                change_parts.append(f"+{added_count}")
-            if deleted_count > 0:
-                change_parts.append(f"-{deleted_count}")
-            if content_count > 0:
-                change_parts.append(f"~{content_count}")
-            if structural_count > 0:
-                change_parts.append(f"#{structural_count}")
+                total_changes = added_count + deleted_count + content_count + structural_count
                 
-            change_summary = " ".join(change_parts)
+                if total_changes == 0:
+                    continue  # Skip files with no changes
+                    
+                # Determine status and change summary
+                if added_count > 0 and deleted_count == 0 and content_count == 0 and structural_count == 0:
+                    status = "Added Only"
+                    tag = "added"
+                elif deleted_count > 0 and added_count == 0 and content_count == 0 and structural_count == 0:
+                    status = "Deleted Only"
+                    tag = "deleted"
+                elif content_count > 0 and structural_count == 0:
+                    status = "Content Changes"
+                    tag = "content_modified"
+                elif structural_count > 0 and content_count == 0:
+                    status = "Structural Only"
+                    tag = "structural_only"
+                else:
+                    status = "Mixed Changes"
+                    tag = "content_modified"  # Default to content modified color
+                    
+                # Create change summary
+                change_parts = []
+                if added_count > 0:
+                    change_parts.append(f"+{added_count}")
+                if deleted_count > 0:
+                    change_parts.append(f"-{deleted_count}")
+                if content_count > 0:
+                    change_parts.append(f"~{content_count}")
+                if structural_count > 0:
+                    change_parts.append(f"#{structural_count}")
+                    
+                change_summary = " ".join(change_parts)
+                
+                # Insert into tree
+                item_id = self.file_tree.insert('', 'end', text=file_path, 
+                                              values=(status, change_summary),
+                                              tags=(tag,))
+                
+                # Configure tag colors
+                self.file_tree.tag_configure(tag, foreground=self.change_colors[tag])
+                
+            except Exception as e:
+                print(f"Error processing file {file_path}: {e}")
+                continue
+                
+        # Add files that were added or deleted entirely
+        added_files = individual_stats.get('added_files', {})
+        for file_path, file_data in added_files.items():
+            req_count = file_data.get('requirement_count', 0)
+            self.file_tree.insert('', 'end', text=file_path,
+                                 values=("File Added", f"+{req_count} reqs"),
+                                 tags=("added",))
+            self.file_tree.tag_configure("added", foreground=self.change_colors['added'])
             
-            # Insert into tree
-            item_id = self.file_tree.insert('', 'end', text=file_path, 
-                                          values=(status, change_summary),
-                                          tags=(tag,))
-            
-            # Configure tag colors
-            self.file_tree.tag_configure(tag, foreground=self.change_colors[tag])
+        deleted_files = individual_stats.get('deleted_files', {})
+        for file_path, file_data in deleted_files.items():
+            req_count = file_data.get('requirement_count', 0)
+            self.file_tree.insert('', 'end', text=file_path,
+                                 values=("File Deleted", f"-{req_count} reqs"),
+                                 tags=("deleted",))
+            self.file_tree.tag_configure("deleted", foreground=self.change_colors['deleted'])
             
     def update_summary(self):
         """Update summary tab with detailed analysis"""
@@ -508,49 +495,42 @@ class FolderComparisonGUI:
         self.summary_text.configure(state=tk.NORMAL)
         self.summary_text.delete(1.0, tk.END)
         
-        stats = self.folder_results.get('statistics', {})
-        
-        # Generate detailed summary
-        summary_lines = [
-            "FOLDER COMPARISON SUMMARY",
-            "=" * 50,
-            "",
-            f"Comparison completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Original folder: {self.folder1_var.get()}",
-            f"Modified folder: {self.folder2_var.get()}",
-            "",
-            "FILE STATISTICS:",
-            f"  Total files processed: {stats.get('total_files', 0)}",
-            f"  Files with changes: {stats.get('files_with_changes', 0)}",
-            f"  Files unchanged: {stats.get('total_files', 0) - stats.get('files_with_changes', 0)}",
-            "",
-            "REQUIREMENT CHANGES:",
-            f"  Added requirements: {stats.get('total_added', 0)}",
-            f"  Deleted requirements: {stats.get('total_deleted', 0)}",
-            f"  Content modified: {stats.get('total_content_modified', 0)}",
-            f"  Structural changes only: {stats.get('total_structural_only', 0)}",
-            f"  Unchanged requirements: {stats.get('total_unchanged', 0)}",
-            "",
-            "CHANGE ANALYSIS:",
-            f"  Files with only additions: {stats.get('files_added_only', 0)}",
-            f"  Files with only deletions: {stats.get('files_deleted_only', 0)}",
-            f"  Files with content changes: {stats.get('files_content_modified', 0)}",
-            f"  Files with structural changes: {stats.get('files_structural_only', 0)}",
-            f"  Files with mixed changes: {stats.get('files_mixed_changes', 0)}",
-        ]
-        
-        # Add attribute analysis if available
-        if 'attribute_analysis' in stats:
-            attr_analysis = stats['attribute_analysis']
-            summary_lines.extend([
+        # Generate enhanced summary using folder comparator's method
+        try:
+            summary_content = self.folder_comparator.export_folder_summary_enhanced(self.folder_results)
+            self.summary_text.insert(1.0, summary_content)
+        except Exception as e:
+            # Fallback to basic summary
+            folder_stats = self.folder_results.get('folder_statistics', {})
+            req_stats = self.folder_results.get('aggregated_statistics', {})
+            
+            summary_lines = [
+                "FOLDER COMPARISON SUMMARY",
+                "=" * 50,
                 "",
-                "ATTRIBUTE ANALYSIS:",
-                f"  Commonly added attributes: {', '.join(attr_analysis.get('added_attributes', [])) or 'None'}",
-                f"  Commonly removed attributes: {', '.join(attr_analysis.get('removed_attributes', [])) or 'None'}",
-            ])
+                f"Comparison completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"Original folder: {self.folder1_var.get()}",
+                f"Modified folder: {self.folder2_var.get()}",
+                "",
+                "FILE STATISTICS:",
+                f"  Total files processed: {folder_stats.get('total_matched_files', 0)}",
+                f"  Files with changes: {folder_stats.get('files_with_content_changes', 0)}",
+                f"  Files unchanged: {folder_stats.get('files_unchanged', 0)}",
+                "",
+                "REQUIREMENT CHANGES:",
+                f"  Added requirements: {req_stats.get('total_requirements_added', 0)}",
+                f"  Deleted requirements: {req_stats.get('total_requirements_deleted', 0)}",
+                f"  Content modified: {req_stats.get('total_requirements_content_modified', 0)}",
+                f"  Structural changes only: {req_stats.get('total_requirements_structural_only', 0)}",
+                f"  Unchanged requirements: {req_stats.get('total_requirements_unchanged', 0)}",
+                "",
+                f"Content Change Rate: {req_stats.get('content_change_percentage', 0)}%",
+                f"Overall Change Rate: {req_stats.get('overall_change_percentage', 0)}%",
+            ]
+            
+            summary_text = "\n".join(summary_lines)
+            self.summary_text.insert(1.0, summary_text)
         
-        summary_text = "\n".join(summary_lines)
-        self.summary_text.insert(1.0, summary_text)
         self.summary_text.configure(state=tk.DISABLED)
         
     def on_file_select(self, event):
@@ -563,7 +543,7 @@ class FolderComparisonGUI:
         file_path = self.file_tree.item(item_id, 'text')
         
         self.selected_file = file_path
-        self.update_detail_view(file_path)
+        # Could add detailed view updates here
         
     def on_file_double_click(self, event):
         """Handle double-click on file tree item"""
@@ -577,183 +557,99 @@ class FolderComparisonGUI:
         # Show detailed comparison in popup window
         self.show_detailed_comparison(file_path)
         
-    def update_detail_view(self, file_path: str):
-        """Update detail view for selected file with new categories"""
-        if not self.folder_results or file_path not in self.folder_results.get('file_results', {}):
-            return
-            
-        file_result = self.folder_results['file_results'][file_path]
-        comparison = file_result.get('comparison', {})
-        
-        # Update each tab with appropriate content
-        self.update_tab_content('added', comparison.get('added', []))
-        self.update_tab_content('deleted', comparison.get('deleted', []))
-        self.update_tab_content('content_modified', comparison.get('content_modified', []))
-        self.update_tab_content('structural_only', comparison.get('structural_only', []))
-        self.update_tab_content('unchanged', comparison.get('unchanged', []))
-        
-    def update_tab_content(self, tab_type: str, requirements: List[Dict]):
-        """Update content for specific tab type"""
-        text_widget = getattr(self, f"{tab_type}_text", None)
-        if not text_widget:
-            return
-            
-        text_widget.delete(1.0, tk.END)
-        
-        if not requirements:
-            text_widget.insert(1.0, f"No {tab_type.replace('_', ' ')} requirements found.")
-            return
-            
-        # Format content based on tab type
-        if tab_type == 'content_modified':
-            content = self.format_content_modified_requirements(requirements)
-        elif tab_type == 'structural_only':
-            content = self.format_structural_only_requirements(requirements)
-        else:
-            content = self.format_basic_requirements(requirements, tab_type)
-            
-        text_widget.insert(1.0, content)
-        
-    def format_content_modified_requirements(self, requirements: List[Dict]) -> str:
-        """Format content modified requirements showing actual changes"""
-        lines = [f"Content Modified Requirements ({len(requirements)} total):", "=" * 60, ""]
-        
-        for i, req in enumerate(requirements, 1):
-            lines.append(f"{i}. Requirement ID: {req.get('identifier', 'Unknown')}")
-            
-            # Show what changed in content
-            if 'changes' in req:
-                changes = req['changes']
-                lines.append("   Content Changes:")
-                for field, change_info in changes.items():
-                    if isinstance(change_info, dict) and 'old' in change_info and 'new' in change_info:
-                        lines.append(f"     {field}:")
-                        lines.append(f"       Old: {change_info['old']}")
-                        lines.append(f"       New: {change_info['new']}")
-                    else:
-                        lines.append(f"     {field}: {change_info}")
-            
-            # Show common attributes (unchanged)
-            if 'common_attributes' in req:
-                common_attrs = req['common_attributes']
-                if common_attrs:
-                    lines.append("   Common attributes: " + ", ".join(common_attrs.keys()))
-            
-            lines.append("")  # Empty line between requirements
-            
-        return "\n".join(lines)
-        
-    def format_structural_only_requirements(self, requirements: List[Dict]) -> str:
-        """Format structural-only requirements showing attribute differences"""
-        lines = [f"Structural Changes Only ({len(requirements)} total):", "=" * 60, ""]
-        
-        for i, req in enumerate(requirements, 1):
-            lines.append(f"{i}. Requirement ID: {req.get('identifier', 'Unknown')}")
-            
-            # Show structural differences
-            if 'structural_changes' in req:
-                struct_changes = req['structural_changes']
-                
-                if 'added_attributes' in struct_changes:
-                    added_attrs = struct_changes['added_attributes']
-                    if added_attrs:
-                        lines.append("   Added attributes:")
-                        for attr, value in added_attrs.items():
-                            lines.append(f"     + {attr}: {value}")
-                
-                if 'removed_attributes' in struct_changes:
-                    removed_attrs = struct_changes['removed_attributes']
-                    if removed_attrs:
-                        lines.append("   Removed attributes:")
-                        for attr, value in removed_attrs.items():
-                            lines.append(f"     - {attr}: {value}")
-            
-            # Show that content is identical
-            lines.append("   Content: Identical in both versions")
-            lines.append("")  # Empty line between requirements
-            
-        return "\n".join(lines)
-        
-    def format_basic_requirements(self, requirements: List[Dict], tab_type: str) -> str:
-        """Format basic requirements for added/deleted/unchanged tabs"""
-        title_map = {
-            'added': 'Added Requirements',
-            'deleted': 'Deleted Requirements', 
-            'unchanged': 'Unchanged Requirements'
-        }
-        
-        title = title_map.get(tab_type, tab_type.replace('_', ' ').title())
-        lines = [f"{title} ({len(requirements)} total):", "=" * 60, ""]
-        
-        for i, req in enumerate(requirements, 1):
-            lines.append(f"{i}. Requirement ID: {req.get('identifier', 'Unknown')}")
-            
-            # Show basic requirement info
-            if 'the_value' in req:
-                value = req['the_value']
-                if len(value) > 100:
-                    value = value[:100] + "..."
-                lines.append(f"   Content: {value}")
-            
-            # Show key attributes
-            key_attrs = ['req_type', 'last_change', 'spec_hierarchy']
-            for attr in key_attrs:
-                if attr in req:
-                    lines.append(f"   {attr.replace('_', ' ').title()}: {req[attr]}")
-            
-            lines.append("")  # Empty line between requirements
-            
-        return "\n".join(lines)
-        
     def show_detailed_comparison(self, file_path: str):
-        """Show detailed comparison in popup window"""
-        if not self.folder_results or file_path not in self.folder_results.get('file_results', {}):
+        """Show detailed comparison for selected file"""
+        individual_stats = self.folder_results.get('individual_file_statistics', {})
+        matched_files = individual_stats.get('matched_files', {})
+        
+        if file_path not in matched_files:
+            messagebox.showinfo("File Details", f"No detailed comparison data available for:\n{file_path}")
             return
             
+        file_data = matched_files[file_path]
+        comparison_stats = file_data.get('comparison_stats', {})
+        
         # Create popup window
         popup = tk.Toplevel(self.root)
-        popup.title(f"Detailed Comparison - {os.path.basename(file_path)}")
-        popup.geometry("900x700")
+        popup.title(f"File Comparison - {os.path.basename(file_path)}")
+        popup.geometry("800x600")
+        popup.transient(self.root)
         
-        # Create notebook for detailed view
-        notebook = ttk.Notebook(popup)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        main_frame = tk.Frame(popup, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        file_result = self.folder_results['file_results'][file_path]
-        comparison = file_result.get('comparison', {})
+        # Title
+        tk.Label(main_frame, text=f"Detailed Comparison: {os.path.basename(file_path)}", 
+                font=('Arial', 16, 'bold')).pack(anchor=tk.W, pady=(0, 20))
         
-        # Add tabs for each change type that has content
-        for change_type in ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged']:
-            requirements = comparison.get(change_type, [])
-            if requirements:  # Only add tab if there are requirements
-                tab_frame = ttk.Frame(notebook)
-                notebook.add(tab_frame, text=f"{change_type.replace('_', ' ').title()} ({len(requirements)})")
-                
-                # Add text widget with scrollbar
-                text_frame = ttk.Frame(tab_frame)
-                text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-                
-                text_widget = tk.Text(text_frame, wrap=tk.WORD, font=('Consolas', 9))
-                scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
-                text_widget.configure(yscrollcommand=scrollbar.set)
-                
-                text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-                scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-                
-                # Format and insert content
-                if change_type == 'content_modified':
-                    content = self.format_content_modified_requirements(requirements)
-                elif change_type == 'structural_only':
-                    content = self.format_structural_only_requirements(requirements)
-                else:
-                    content = self.format_basic_requirements(requirements, change_type)
-                    
-                text_widget.insert(1.0, content)
-                text_widget.configure(state=tk.DISABLED)
+        # File info
+        file1_info = file_data.get('file1_info', {})
+        file2_info = file_data.get('file2_info', {})
+        match_type = file_data.get('match_type', 'unknown')
         
-        # Add close button
-        close_btn = ttk.Button(popup, text="Close", command=popup.destroy)
-        close_btn.pack(pady=10)
+        info_text = f"Match Type: {match_type.title()}\n"
+        if file1_info.get('size') and file2_info.get('size'):
+            file1_size = round(file1_info['size'] / (1024 * 1024), 2)
+            file2_size = round(file2_info['size'] / (1024 * 1024), 2)
+            info_text += f"File Sizes: {file1_size}MB → {file2_size}MB\n"
+        
+        tk.Label(main_frame, text=info_text, font=('Arial', 11), justify=tk.LEFT).pack(anchor=tk.W, pady=(0, 15))
+        
+        # Statistics
+        stats_frame = tk.LabelFrame(main_frame, text="Change Statistics", font=('Arial', 12, 'bold'), padx=15, pady=15)
+        stats_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        stats_data = [
+            ("Added", comparison_stats.get('added_count', 0), self.change_colors['added']),
+            ("Deleted", comparison_stats.get('deleted_count', 0), self.change_colors['deleted']),
+            ("Content Modified", comparison_stats.get('content_modified_count', 0), self.change_colors['content_modified']),
+            ("Structural Only", comparison_stats.get('structural_only_count', 0), self.change_colors['structural_only']),
+            ("Unchanged", comparison_stats.get('unchanged_count', 0), self.change_colors['unchanged'])
+        ]
+        
+        stats_container = tk.Frame(stats_frame)
+        stats_container.pack()
+        
+        for col, (label, count, color) in enumerate(stats_data):
+            frame = tk.Frame(stats_container)
+            frame.grid(row=0, column=col, padx=15, pady=5)
+            
+            tk.Label(frame, text=label, font=('Arial', 10, 'bold')).pack()
+            tk.Label(frame, text=str(count), font=('Arial', 14, 'bold'), fg=color).pack()
+        
+        # Change details
+        details_frame = tk.LabelFrame(main_frame, text="Change Details", font=('Arial', 12, 'bold'), padx=15, pady=15)
+        details_frame.pack(fill=tk.BOTH, expand=True)
+        
+        details_text = tk.Text(details_frame, wrap=tk.WORD, font=('Arial', 10))
+        details_scroll = ttk.Scrollbar(details_frame, orient=tk.VERTICAL, command=details_text.yview)
+        details_text.configure(yscrollcommand=details_scroll.set)
+        
+        details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        details_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Populate details
+        details_content = []
+        
+        if comparison_stats.get('content_change_percentage', 0) > 0:
+            details_content.append(f"Content Change Rate: {comparison_stats.get('content_change_percentage', 0)}%")
+        
+        if comparison_stats.get('added_fields'):
+            details_content.append(f"Added Fields: {', '.join(comparison_stats['added_fields'])}")
+            
+        if comparison_stats.get('removed_fields'):
+            details_content.append(f"Removed Fields: {', '.join(comparison_stats['removed_fields'])}")
+            
+        if not details_content:
+            details_content.append("No additional change details available.")
+            
+        details_text.insert(1.0, "\n\n".join(details_content))
+        details_text.configure(state=tk.DISABLED)
+        
+        # Close button
+        tk.Button(main_frame, text="Close", command=popup.destroy,
+                 font=('Arial', 11), relief='raised', bd=2, padx=20, pady=6,
+                 cursor='hand2').pack(pady=(20, 0))
         
     def export_results(self):
         """Export comparison results with updated format"""
@@ -763,23 +659,26 @@ class FolderComparisonGUI:
             
         # Ask user for export file
         filename = filedialog.asksaveasfilename(
-            defaultextension=".json",
+            defaultextension=".txt",
             filetypes=[
-                ("JSON files", "*.json"),
                 ("Text files", "*.txt"),
+                ("JSON files", "*.json"),
+                ("CSV files", "*.csv"),
                 ("All files", "*.*")
             ],
-            title="Export Comparison Results"
+            title="Export Folder Comparison Results"
         )
         
         if not filename:
             return
             
         try:
-            if filename.endswith('.txt'):
-                self.export_as_text(filename)
-            else:
+            if filename.endswith('.json'):
                 self.export_as_json(filename)
+            elif filename.endswith('.csv'):
+                self.export_as_csv(filename)
+            else:
+                self.export_as_text(filename)
                 
             messagebox.showinfo("Export", f"Results exported successfully to:\n{filename}")
             
@@ -794,59 +693,90 @@ class FolderComparisonGUI:
                 'export_time': datetime.now().isoformat(),
                 'original_folder': self.folder1_var.get(),
                 'modified_folder': self.folder2_var.get(),
-                'comparison_version': '2.0'  # Updated version
+                'comparison_version': '2.0'
             },
-            'statistics': self.folder_results.get('statistics', {}),
-            'file_results': self.folder_results.get('file_results', {})
+            'folder_statistics': self.folder_results.get('folder_statistics', {}),
+            'aggregated_statistics': self.folder_results.get('aggregated_statistics', {}),
+            'individual_file_statistics': self.folder_results.get('individual_file_statistics', {}),
+            'threading_statistics': self.folder_results.get('threading_statistics', {})
         }
         
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(export_data, f, indent=2, default=str)
             
+    def export_as_csv(self, filename: str):
+        """Export results as CSV"""
+        import csv
+        
+        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            
+            # Write header
+            writer.writerow(['File Path', 'Status', 'Added', 'Deleted', 'Content Modified', 'Structural Only', 'Unchanged'])
+            
+            # Write individual file data
+            individual_stats = self.folder_results.get('individual_file_statistics', {})
+            matched_files = individual_stats.get('matched_files', {})
+            
+            for file_path, file_data in matched_files.items():
+                comparison_stats = file_data.get('comparison_stats', {})
+                
+                added = comparison_stats.get('added_count', 0)
+                deleted = comparison_stats.get('deleted_count', 0)
+                content_mod = comparison_stats.get('content_modified_count', 0)
+                structural = comparison_stats.get('structural_only_count', 0)
+                unchanged = comparison_stats.get('unchanged_count', 0)
+                
+                total_changes = added + deleted + content_mod + structural
+                status = "Changed" if total_changes > 0 else "Unchanged"
+                
+                writer.writerow([file_path, status, added, deleted, content_mod, structural, unchanged])
+                
+            # Write added files
+            added_files = individual_stats.get('added_files', {})
+            for file_path, file_data in added_files.items():
+                req_count = file_data.get('requirement_count', 0)
+                writer.writerow([file_path, "File Added", req_count, 0, 0, 0, 0])
+                
+            # Write deleted files
+            deleted_files = individual_stats.get('deleted_files', {})
+            for file_path, file_data in deleted_files.items():
+                req_count = file_data.get('requirement_count', 0)
+                writer.writerow([file_path, "File Deleted", 0, req_count, 0, 0, 0])
+                
     def export_as_text(self, filename: str):
         """Export results as formatted text"""
-        with open(filename, 'w', encoding='utf-8') as f:
-            f.write("REQIF FOLDER COMPARISON RESULTS\n")
-            f.write("=" * 50 + "\n\n")
+        try:
+            # Use the enhanced summary from folder comparator
+            summary_content = self.folder_comparator.export_folder_summary_enhanced(self.folder_results)
             
-            f.write(f"Export Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Original Folder: {self.folder1_var.get()}\n")
-            f.write(f"Modified Folder: {self.folder2_var.get()}\n\n")
-            
-            # Write statistics
-            stats = self.folder_results.get('statistics', {})
-            f.write("SUMMARY STATISTICS:\n")
-            f.write("-" * 30 + "\n")
-            f.write(f"Total Files: {stats.get('total_files', 0)}\n")
-            f.write(f"Files with Changes: {stats.get('files_with_changes', 0)}\n")
-            f.write(f"Requirements Added: {stats.get('total_added', 0)}\n")
-            f.write(f"Requirements Deleted: {stats.get('total_deleted', 0)}\n")
-            f.write(f"Content Modified: {stats.get('total_content_modified', 0)}\n")
-            f.write(f"Structural Changes: {stats.get('total_structural_only', 0)}\n")
-            f.write(f"Unchanged: {stats.get('total_unchanged', 0)}\n\n")
-            
-            # Write file details
-            f.write("FILE DETAILS:\n")
-            f.write("-" * 30 + "\n")
-            
-            for file_path, file_result in self.folder_results.get('file_results', {}).items():
-                comparison = file_result.get('comparison', {})
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(summary_content)
                 
-                # Count changes
-                added_count = len(comparison.get('added', []))
-                deleted_count = len(comparison.get('deleted', []))
-                content_count = len(comparison.get('content_modified', []))
-                structural_count = len(comparison.get('structural_only', []))
+        except Exception as e:
+            # Fallback to basic export
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("REQIF FOLDER COMPARISON RESULTS\n")
+                f.write("=" * 50 + "\n\n")
                 
-                total_changes = added_count + deleted_count + content_count + structural_count
+                f.write(f"Export Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Original Folder: {self.folder1_var.get()}\n")
+                f.write(f"Modified Folder: {self.folder2_var.get()}\n\n")
                 
-                if total_changes > 0:
-                    f.write(f"\nFile: {file_path}\n")
-                    f.write(f"  Added: {added_count}\n")
-                    f.write(f"  Deleted: {deleted_count}\n")
-                    f.write(f"  Content Modified: {content_count}\n")
-                    f.write(f"  Structural Changes: {structural_count}\n")
-                    
+                # Basic statistics
+                folder_stats = self.folder_results.get('folder_statistics', {})
+                req_stats = self.folder_results.get('aggregated_statistics', {})
+                
+                f.write("SUMMARY STATISTICS:\n")
+                f.write("-" * 30 + "\n")
+                f.write(f"Total Files: {folder_stats.get('total_matched_files', 0)}\n")
+                f.write(f"Files with Changes: {folder_stats.get('files_with_content_changes', 0)}\n")
+                f.write(f"Requirements Added: {req_stats.get('total_requirements_added', 0)}\n")
+                f.write(f"Requirements Deleted: {req_stats.get('total_requirements_deleted', 0)}\n")
+                f.write(f"Content Modified: {req_stats.get('total_requirements_content_modified', 0)}\n")
+                f.write(f"Structural Changes: {req_stats.get('total_requirements_structural_only', 0)}\n")
+                f.write(f"Unchanged: {req_stats.get('total_requirements_unchanged', 0)}\n")
+                
     def clear_results(self):
         """Clear all comparison results"""
         self.folder_results = {}
@@ -860,12 +790,6 @@ class FolderComparisonGUI:
         for item in self.file_tree.get_children():
             self.file_tree.delete(item)
             
-        # Clear detail tabs
-        for tab_type in ['added', 'deleted', 'content_modified', 'structural_only', 'unchanged']:
-            text_widget = getattr(self, f"{tab_type}_text", None)
-            if text_widget:
-                text_widget.delete(1.0, tk.END)
-                
         # Clear summary
         if hasattr(self, 'summary_text'):
             self.summary_text.configure(state=tk.NORMAL)
