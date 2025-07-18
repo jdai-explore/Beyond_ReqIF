@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 ReqIF Comparator Module - Updated Version
-Handles comparison logic between two sets of requirements with dynamic field detection.
-Enhanced with dynamic field comparison - no hardcoded field assumptions.
+Handles comparison logic between two sets of requirements with clear separation
+between content modifications and structural differences.
 """
 
 from typing import List, Dict, Any, Tuple, Set
@@ -11,7 +11,7 @@ import os
 
 
 class ReqIFComparator:
-    """Compares two sets of ReqIF requirements with dynamic field detection"""
+    """Compares two sets of ReqIF requirements with content/structural separation"""
     
     def __init__(self):
         self.similarity_threshold = 0.8  # For fuzzy matching (future use)
@@ -26,7 +26,8 @@ class ReqIFComparator:
             file2_reqs: Requirements from the second file (modified)
             
         Returns:
-            Dictionary with categorized results: added, deleted, modified, unchanged
+            Dictionary with categorized results: added, deleted, content_modified, 
+            structural_only, unchanged
         """
         print(f"Starting comparison: {len(file1_reqs)} vs {len(file2_reqs)} requirements")
         
@@ -82,21 +83,37 @@ class ReqIFComparator:
             added = [file2_dict[req_id] for req_id in added_ids]
             deleted = [file1_dict[req_id] for req_id in deleted_ids]
             
-            modified = []
+            content_modified = []
+            structural_only = []
             unchanged = []
+            
+            # Track structural changes across all files
+            all_added_fields = set()
+            all_removed_fields = set()
             
             for req_id in common_ids:
                 try:
                     req1 = file1_dict[req_id]
                     req2 = file2_dict[req_id]
                     
-                    if self._requirements_differ(req1, req2):
-                        # Create a GUI-friendly modified entry
-                        modified_entry = self._create_modified_entry(req_id, req1, req2)
-                        if modified_entry:  # Only add if creation was successful
-                            modified.append(modified_entry)
+                    # Analyze changes
+                    comparison_result = self._analyze_requirement_changes(req1, req2)
+                    
+                    if comparison_result['has_content_changes']:
+                        # Create entry for content modifications
+                        modified_entry = self._create_content_modified_entry(req_id, req1, req2, comparison_result)
+                        content_modified.append(modified_entry)
+                    elif comparison_result['has_structural_changes']:
+                        # Create entry for structural-only changes
+                        structural_entry = self._create_structural_entry(req_id, req1, req2, comparison_result)
+                        structural_only.append(structural_entry)
                     else:
-                        unchanged.append(req2)  # Use the newer version
+                        # Completely identical
+                        unchanged.append(req2)
+                    
+                    # Track field changes for statistics
+                    all_added_fields.update(comparison_result['added_fields'])
+                    all_removed_fields.update(comparison_result['removed_fields'])
                         
                 except Exception as e:
                     print(f"Error processing common requirement {req_id}: {e}")
@@ -107,7 +124,9 @@ class ReqIFComparator:
                         pass
                     continue
             
-            print(f"Final counts: Added={len(added)}, Deleted={len(deleted)}, Modified={len(modified)}, Unchanged={len(unchanged)}")
+            print(f"Final counts: Added={len(added)}, Deleted={len(deleted)}, "
+                  f"Content Modified={len(content_modified)}, Structural Only={len(structural_only)}, "
+                  f"Unchanged={len(unchanged)}")
             
             # Calculate statistics
             total_reqs = len(file1_reqs) + len(added)
@@ -117,15 +136,20 @@ class ReqIFComparator:
                 'total_unique': total_reqs,
                 'added_count': len(added),
                 'deleted_count': len(deleted),
-                'modified_count': len(modified),
+                'content_modified_count': len(content_modified),
+                'structural_only_count': len(structural_only),
                 'unchanged_count': len(unchanged),
-                'change_percentage': round((len(added) + len(deleted) + len(modified)) / max(total_reqs, 1) * 100, 2)
+                'content_change_percentage': round((len(content_modified)) / max(total_reqs, 1) * 100, 2),
+                'total_change_percentage': round((len(added) + len(deleted) + len(content_modified)) / max(total_reqs, 1) * 100, 2),
+                'added_fields': sorted(list(all_added_fields)),
+                'removed_fields': sorted(list(all_removed_fields))
             }
             
             return {
                 'added': added,
                 'deleted': deleted,
-                'modified': modified,
+                'content_modified': content_modified,
+                'structural_only': structural_only,
                 'unchanged': unchanged,
                 'statistics': stats
             }
@@ -139,7 +163,8 @@ class ReqIFComparator:
             return {
                 'added': [],
                 'deleted': [],
-                'modified': [],
+                'content_modified': [],
+                'structural_only': [],
                 'unchanged': [],
                 'statistics': {
                     'total_file1': len(file1_reqs) if isinstance(file1_reqs, list) else 0,
@@ -147,176 +172,181 @@ class ReqIFComparator:
                     'total_unique': 0,
                     'added_count': 0,
                     'deleted_count': 0,
-                    'modified_count': 0,
+                    'content_modified_count': 0,
+                    'structural_only_count': 0,
                     'unchanged_count': 0,
-                    'change_percentage': 0.0
+                    'content_change_percentage': 0.0,
+                    'total_change_percentage': 0.0,
+                    'added_fields': [],
+                    'removed_fields': []
                 }
             }
     
-    def _get_comparable_fields(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> Set[str]:
-        """Dynamically detect which fields can be compared between two requirements"""
-        fields1 = set(req1.keys()) if isinstance(req1, dict) else set()
-        fields2 = set(req2.keys()) if isinstance(req2, dict) else set()
+    def _analyze_requirement_changes(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze changes between two requirements, separating content and structural changes
         
-        # Get all fields present in either requirement
-        all_fields = fields1 | fields2
+        Returns:
+            Dict with analysis results including:
+            - has_content_changes: bool
+            - has_structural_changes: bool
+            - content_changes: list of changes in common fields
+            - added_fields: set of fields only in req2
+            - removed_fields: set of fields only in req1
+            - common_fields: set of fields in both
+        """
+        # Get fields from both requirements
+        fields1 = self._get_requirement_fields(req1)
+        fields2 = self._get_requirement_fields(req2)
         
-        # Exclude internal/meta fields
+        # Categorize fields
+        common_fields = fields1 & fields2
+        added_fields = fields2 - fields1
+        removed_fields = fields1 - fields2
+        
+        # Check for content changes in common fields
+        content_changes = []
+        for field in common_fields:
+            value1 = self._get_field_value(req1, field)
+            value2 = self._get_field_value(req2, field)
+            
+            # Normalize and compare values
+            norm_value1 = str(value1).strip() if value1 is not None else ''
+            norm_value2 = str(value2).strip() if value2 is not None else ''
+            
+            if norm_value1 != norm_value2:
+                content_changes.append({
+                    'field': field,
+                    'old_value': norm_value1,
+                    'new_value': norm_value2,
+                    'change_type': 'modified'
+                })
+        
+        return {
+            'has_content_changes': len(content_changes) > 0,
+            'has_structural_changes': len(added_fields) > 0 or len(removed_fields) > 0,
+            'content_changes': content_changes,
+            'added_fields': added_fields,
+            'removed_fields': removed_fields,
+            'common_fields': common_fields
+        }
+    
+    def _get_requirement_fields(self, req: Dict[str, Any]) -> Set[str]:
+        """Get all comparable fields from a requirement"""
+        fields = set()
+        
+        if not isinstance(req, dict):
+            return fields
+        
+        # Add regular fields (excluding internal ones)
         excluded_fields = {'content', 'raw_attributes', '_comparison_data'}
-        comparable_fields = all_fields - excluded_fields
+        for field in req.keys():
+            if field not in excluded_fields and not field.startswith('_'):
+                fields.add(field)
         
-        return comparable_fields
+        # Add attribute fields with special prefix
+        attributes = req.get('attributes', {})
+        if isinstance(attributes, dict):
+            for attr_name in attributes.keys():
+                fields.add(f'attribute.{attr_name}')
+        
+        return fields
     
-    def _requirements_differ(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> bool:
-        """Check if two requirements are different using dynamic field detection"""
-        try:
-            # Ensure we have dictionaries
-            if not isinstance(req1, dict) or not isinstance(req2, dict):
-                return True  # Consider different if not both dicts
-            
-            # Get fields that can be compared
-            comparable_fields = self._get_comparable_fields(req1, req2)
-            
-            # Compare each comparable field
-            for field in comparable_fields:
-                if field == 'attributes':
-                    # Special handling for attributes
-                    if self._attributes_differ(req1.get('attributes', {}), req2.get('attributes', {})):
-                        return True
-                else:
-                    # Compare regular fields
-                    val1 = str(req1.get(field, '') or '').strip()
-                    val2 = str(req2.get(field, '') or '').strip()
-                    if val1 != val2:
-                        return True
-            
-            return False
-            
-        except Exception as e:
-            print(f"Error in _requirements_differ: {e}")
-            return True
+    def _get_field_value(self, req: Dict[str, Any], field: str) -> Any:
+        """Get value for a field, handling both regular and attribute fields"""
+        if field.startswith('attribute.'):
+            # Extract attribute name and get from attributes dict
+            attr_name = field[10:]  # Remove 'attribute.' prefix
+            attributes = req.get('attributes', {})
+            if isinstance(attributes, dict):
+                return attributes.get(attr_name, None)
+            return None
+        else:
+            # Regular field
+            return req.get(field, None)
     
-    def _attributes_differ(self, attrs1: Dict[str, Any], attrs2: Dict[str, Any]) -> bool:
-        """Compare attributes dictionaries"""
+    def _create_content_modified_entry(self, req_id: str, req1: Dict[str, Any], 
+                                     req2: Dict[str, Any], analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Create entry for content-modified requirement"""
         try:
-            # Ensure attributes are dictionaries
-            if not isinstance(attrs1, dict):
-                attrs1 = {}
-            if not isinstance(attrs2, dict):
-                attrs2 = {}
+            # Get changed field names for summary
+            changed_fields = [change['field'] for change in analysis['content_changes']]
+            changes_summary = ', '.join(changed_fields) if changed_fields else 'Unknown changes'
             
-            # Check if attribute sets are different
-            if set(attrs1.keys()) != set(attrs2.keys()):
-                return True
-                
-            # Check if any attribute values differ
-            for key in attrs1.keys():
-                try:
-                    val1 = str(attrs1.get(key, '') or '').strip()
-                    val2 = str(attrs2.get(key, '') or '').strip()
-                    if val1 != val2:
-                        return True
-                except Exception as e:
-                    print(f"Error comparing attribute {key}: {e}")
-                    continue
-                    
-            return False
-            
-        except Exception as e:
-            print(f"Error comparing attributes: {e}")
-            return True
-    
-    def _create_modified_entry(self, req_id: str, req1: Dict[str, Any], req2: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a GUI-friendly modified entry that shows the new version with change metadata
-        """
-        try:
-            print(f"Creating modified entry for {req_id}")
-            
-            # Ensure we have valid dictionaries
-            if not isinstance(req1, dict):
-                print(f"Warning: req1 for {req_id} is not a dict: {type(req1)}")
-                req1 = {}
-            if not isinstance(req2, dict):
-                print(f"Warning: req2 for {req_id} is not a dict: {type(req2)}")
-                req2 = {}
-            
-            # Identify detailed changes
-            changes = self._identify_changes(req1, req2)
-            print(f"Changes identified for {req_id}: {len(changes) if isinstance(changes, list) else 'ERROR'}")
-            
-            # Extract field names from changes LIST
-            change_fields = []
-            if isinstance(changes, list):
-                for change in changes:
-                    if isinstance(change, dict) and 'field' in change:
-                        field_name = change['field']
-                        if field_name and field_name not in change_fields:
-                            change_fields.append(field_name)
-            
-            changes_summary = ', '.join(change_fields) if change_fields else 'Unknown changes'
-            print(f"Change summary for {req_id}: {changes_summary}")
-            
-            # Safely extract values with comprehensive defaults
-            def safe_get(req_dict, key, default=''):
-                try:
-                    if not isinstance(req_dict, dict):
-                        return str(default)
-                    value = req_dict.get(key, default)
-                    return str(value if value is not None else default)
-                except Exception as e:
-                    print(f"Error getting {key}: {e}")
-                    return str(default)
-            
-            # Create the modified entry using the NEW version as base (for tree display)
-            # Start with all fields from the new requirement
+            # Create the modified entry using the NEW version as base
             modified_entry = {}
             
             # Copy all actual fields from req2
             for field_name, field_value in req2.items():
-                if field_name not in ['_comparison_data']:  # Exclude internal fields
+                if field_name not in ['_comparison_data']:
                     modified_entry[field_name] = field_value
             
             # Ensure we have an ID
             modified_entry['id'] = req_id
             
-            # Add change-specific metadata
+            # Add change metadata
             modified_entry.update({
                 'changes_summary': changes_summary,
-                'changed_fields': change_fields,
-                'change_count': len(change_fields),
+                'changed_fields': changed_fields,
+                'change_count': len(changed_fields),
                 
                 # Comparison data for diff viewer
                 '_comparison_data': {
                     'old': self._safe_copy_dict(req1),
                     'new': self._safe_copy_dict(req2),
-                    'changes': changes if isinstance(changes, list) else [],
-                    'detailed_changes': self._create_detailed_changes(req1, req2, changes)
+                    'changes': analysis['content_changes'],
+                    'detailed_changes': self._create_detailed_changes(req1, req2, analysis['content_changes'])
                 }
             })
             
-            print(f"Successfully created modified entry for {req_id}")
             return modified_entry
             
         except Exception as e:
-            print(f"Error creating modified entry for {req_id}: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            # Return a basic fallback entry
+            print(f"Error creating content modified entry for {req_id}: {e}")
+            # Return basic fallback
             return {
                 'id': req_id,
                 'attributes': req2.get('attributes', {}) if isinstance(req2, dict) else {},
                 'changes_summary': 'Error processing changes',
                 'changed_fields': [],
-                'change_count': 0,
+                'change_count': 0
+            }
+    
+    def _create_structural_entry(self, req_id: str, req1: Dict[str, Any], 
+                               req2: Dict[str, Any], analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Create entry for structural-only changes"""
+        try:
+            # Create entry using req2 as base
+            structural_entry = {}
+            
+            # Copy all fields from req2
+            for field_name, field_value in req2.items():
+                if field_name not in ['_comparison_data']:
+                    structural_entry[field_name] = field_value
+            
+            # Ensure we have an ID
+            structural_entry['id'] = req_id
+            
+            # Add structural change metadata
+            structural_entry.update({
+                'added_fields': sorted(list(analysis['added_fields'])),
+                'removed_fields': sorted(list(analysis['removed_fields'])),
+                'structural_changes_only': True,
+                
+                # Include comparison data for viewing
                 '_comparison_data': {
                     'old': self._safe_copy_dict(req1),
                     'new': self._safe_copy_dict(req2),
-                    'changes': [],
-                    'detailed_changes': {}
+                    'added_fields': analysis['added_fields'],
+                    'removed_fields': analysis['removed_fields']
                 }
-            }
+            })
+            
+            return structural_entry
+            
+        except Exception as e:
+            print(f"Error creating structural entry for {req_id}: {e}")
+            return req2  # Return req2 as fallback
     
     def _safe_copy_dict(self, source_dict):
         """Safely copy a dictionary, handling non-dict inputs"""
@@ -328,102 +358,15 @@ class ReqIFComparator:
         except:
             return {}
     
-    def _identify_changes(self, req1: Dict[str, Any], req2: Dict[str, Any]) -> List[Dict[str, str]]:
-        """Identify specific changes between two requirements using dynamic field detection"""
-        changes = []
-        
-        try:
-            # Ensure we have valid dictionaries
-            if not isinstance(req1, dict) or not isinstance(req2, dict):
-                return []
-            
-            # Get all comparable fields
-            comparable_fields = self._get_comparable_fields(req1, req2)
-            
-            # Check changes in regular fields (excluding attributes)
-            regular_fields = comparable_fields - {'attributes'}
-            
-            for field in regular_fields:
-                try:
-                    old_val = str(req1.get(field, '') or '').strip()
-                    new_val = str(req2.get(field, '') or '').strip()
-                    
-                    if old_val != new_val:
-                        change_type = 'modified'
-                        if not old_val:
-                            change_type = 'added'
-                        elif not new_val:
-                            change_type = 'deleted'
-                        
-                        changes.append({
-                            'field': field,
-                            'old_value': old_val,
-                            'new_value': new_val,
-                            'change_type': change_type
-                        })
-                except Exception as e:
-                    print(f"Error processing field {field}: {e}")
-                    continue
-            
-            # Check attribute changes with robust error handling
-            try:
-                attrs1 = req1.get('attributes', {})
-                attrs2 = req2.get('attributes', {})
-                
-                # Ensure attributes are dictionaries
-                if not isinstance(attrs1, dict):
-                    attrs1 = {}
-                if not isinstance(attrs2, dict):
-                    attrs2 = {}
-                
-                all_attr_keys = set(attrs1.keys()) | set(attrs2.keys())
-                
-                for attr_key in all_attr_keys:
-                    try:
-                        val1 = str(attrs1.get(attr_key, '') or '').strip()
-                        val2 = str(attrs2.get(attr_key, '') or '').strip()
-                        
-                        if val1 != val2:
-                            change_type = 'modified'
-                            if not val1:
-                                change_type = 'added'
-                            elif not val2:
-                                change_type = 'deleted'
-                            
-                            changes.append({
-                                'field': f'attribute.{attr_key}',
-                                'old_value': val1,
-                                'new_value': val2,
-                                'change_type': change_type
-                            })
-                    except Exception as e:
-                        print(f"Error processing attribute {attr_key}: {e}")
-                        continue
-                        
-            except Exception as e:
-                print(f"Error processing attributes: {e}")
-        
-        except Exception as e:
-            print(f"Error in _identify_changes: {e}")
-        
-        return changes
-    
-    def _create_detailed_changes(self, req1: Dict[str, Any], req2: Dict[str, Any], changes: List[Dict[str, str]]) -> Dict[str, Dict]:
+    def _create_detailed_changes(self, req1: Dict[str, Any], req2: Dict[str, Any], 
+                               changes: List[Dict[str, str]]) -> Dict[str, Dict]:
         """Create detailed change information for diff viewer"""
         detailed_changes = {}
         
         try:
-            # Ensure we have a valid list of changes
-            if not isinstance(changes, list):
-                return {}
-            
             for change in changes:
                 try:
-                    if not isinstance(change, dict):
-                        continue
-                    
                     field = change.get('field', '')
-                    change_type = change.get('change_type', 'modified')
                     old_value = str(change.get('old_value', '') or '')
                     new_value = str(change.get('new_value', '') or '')
                     
@@ -440,7 +383,7 @@ class ReqIFComparator:
                         diff_lines = []
                     
                     detailed_changes[field] = {
-                        'change_type': change_type,
+                        'change_type': 'modified',
                         'old_value': old_value,
                         'new_value': new_value,
                         'diff_lines': diff_lines,
@@ -501,26 +444,18 @@ class ReqIFComparator:
             text1_parts = []
             text2_parts = []
             
-            # Get comparable fields
-            comparable_fields = self._get_comparable_fields(req1, req2)
+            # Get common fields only for similarity calculation
+            fields1 = self._get_requirement_fields(req1)
+            fields2 = self._get_requirement_fields(req2)
+            common_fields = fields1 & fields2
             
-            for field in comparable_fields:
-                if field == 'attributes':
-                    # Handle attributes specially
-                    attrs1 = req1.get('attributes', {})
-                    attrs2 = req2.get('attributes', {})
-                    if isinstance(attrs1, dict):
-                        text1_parts.extend(str(v) for v in attrs1.values() if v)
-                    if isinstance(attrs2, dict):
-                        text2_parts.extend(str(v) for v in attrs2.values() if v)
-                else:
-                    # Handle regular fields
-                    val1 = req1.get(field, '')
-                    val2 = req2.get(field, '')
-                    if val1:
-                        text1_parts.append(str(val1))
-                    if val2:
-                        text2_parts.append(str(val2))
+            for field in common_fields:
+                val1 = self._get_field_value(req1, field)
+                val2 = self._get_field_value(req2, field)
+                if val1:
+                    text1_parts.append(str(val1))
+                if val2:
+                    text2_parts.append(str(val2))
             
             # Combine texts
             text1 = ' '.join(text1_parts).lower().strip()
@@ -604,14 +539,14 @@ class ReqIFComparator:
             return 0.0
     
     def export_comparison_summary(self, comparison_results: Dict[str, Any]) -> str:
-        """Generate a text summary of the comparison results with dynamic field detection"""
+        """Generate a text summary of the comparison results"""
         try:
             if not isinstance(comparison_results, dict):
                 return "Error: Invalid comparison results"
             
             stats = comparison_results.get('statistics', {})
             
-            # Build summary string step by step
+            # Build summary string
             summary_lines = [
                 "ReqIF Comparison Summary",
                 "========================",
@@ -624,36 +559,60 @@ class ReqIFComparator:
                 "Changes Detected:",
                 f"- Added: {stats.get('added_count', 0)} requirements",
                 f"- Deleted: {stats.get('deleted_count', 0)} requirements",
-                f"- Modified: {stats.get('modified_count', 0)} requirements",
+                f"- Content Modified: {stats.get('content_modified_count', 0)} requirements",
+                f"- Structure Only Changes: {stats.get('structural_only_count', 0)} requirements",
                 f"- Unchanged: {stats.get('unchanged_count', 0)} requirements",
                 "",
-                f"Overall Change Rate: {stats.get('change_percentage', 0)}%",
+                f"Content Change Rate: {stats.get('content_change_percentage', 0)}%",
+                f"Overall Change Rate: {stats.get('total_change_percentage', 0)}%",
                 "",
-                "Detailed Changes:",
+                "Structural Changes:"
             ]
             
-            # Add details for each category safely
-            for category in ['added', 'deleted', 'modified']:
+            # Add field changes
+            added_fields = stats.get('added_fields', [])
+            removed_fields = stats.get('removed_fields', [])
+            
+            if added_fields:
+                summary_lines.append(f"- Added Fields: {', '.join(added_fields[:5])}")
+                if len(added_fields) > 5:
+                    summary_lines.append(f"  ... and {len(added_fields) - 5} more")
+            else:
+                summary_lines.append("- No fields added")
+                
+            if removed_fields:
+                summary_lines.append(f"- Removed Fields: {', '.join(removed_fields[:5])}")
+                if len(removed_fields) > 5:
+                    summary_lines.append(f"  ... and {len(removed_fields) - 5} more")
+            else:
+                summary_lines.append("- No fields removed")
+            
+            summary_lines.append("")
+            summary_lines.append("Detailed Changes:")
+            
+            # Add details for each category
+            for category in ['added', 'deleted', 'content_modified', 'structural_only']:
                 try:
                     requirements = comparison_results.get(category, [])
                     if requirements and isinstance(requirements, list):
                         summary_lines.append("")
-                        summary_lines.append(f"{category.title()} Requirements ({len(requirements)}):")
+                        summary_lines.append(f"{category.replace('_', ' ').title()} Requirements ({len(requirements)}):")
                         
                         for req in requirements[:5]:  # Show first 5
                             if isinstance(req, dict):
                                 req_id = req.get('id', 'No ID')
                                 
-                                # Get display text dynamically
-                                display_text = self._get_requirement_display_text(req)
-                                
-                                if category == 'modified':
+                                if category == 'content_modified':
                                     change_count = req.get('change_count', 0)
                                     changes_summary = req.get('changes_summary', 'Unknown changes')
-                                    summary_lines.append(f"  ~ {req_id}: {display_text}")
-                                    summary_lines.append(f"    Changes: {changes_summary} ({change_count} field(s))")
+                                    summary_lines.append(f"  ~ {req_id}: {changes_summary} ({change_count} field(s))")
+                                elif category == 'structural_only':
+                                    added = len(req.get('added_fields', []))
+                                    removed = len(req.get('removed_fields', []))
+                                    summary_lines.append(f"  ~ {req_id}: +{added} fields, -{removed} fields")
                                 else:
                                     prefix = "+" if category == 'added' else "-"
+                                    display_text = self._get_requirement_display_text(req)
                                     summary_lines.append(f"  {prefix} {req_id}: {display_text}")
                         
                         if len(requirements) > 5:
@@ -670,13 +629,12 @@ class ReqIFComparator:
             return f"Error generating summary: {str(e)}"
     
     def _get_requirement_display_text(self, req: Dict[str, Any]) -> str:
-        """Get appropriate display text for a requirement using dynamic field detection"""
+        """Get appropriate display text for a requirement"""
         try:
             if not isinstance(req, dict):
                 return "Invalid requirement"
             
             # Try to find the best field for display
-            # Priority order: identifier, type, first attribute, id
             display_candidates = []
             
             # Check for identifier
@@ -695,14 +653,20 @@ class ReqIFComparator:
                 
                 for attr_name in priority_attrs:
                     if attr_name in attributes and attributes[attr_name]:
-                        display_candidates.append(str(attributes[attr_name])[:50] + "..." if len(str(attributes[attr_name])) > 50 else str(attributes[attr_name]))
+                        display_text = str(attributes[attr_name])
+                        if len(display_text) > 50:
+                            display_text = display_text[:50] + "..."
+                        display_candidates.append(display_text)
                         break
                 
                 # If no priority attributes found, use first attribute
-                if not any(attr in attributes for attr in priority_attrs):
+                if not any(attr in attributes for attr in priority_attrs) and attributes:
                     first_attr = next(iter(attributes.values()))
                     if first_attr:
-                        display_candidates.append(str(first_attr)[:50] + "..." if len(str(first_attr)) > 50 else str(first_attr))
+                        display_text = str(first_attr)
+                        if len(display_text) > 50:
+                            display_text = display_text[:50] + "..."
+                        display_candidates.append(display_text)
             
             # Return best candidate or fallback to ID
             return display_candidates[0] if display_candidates else req.get('id', 'Unknown')
@@ -714,33 +678,40 @@ class ReqIFComparator:
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("ReqIF Comparator - Enhanced Version with Dynamic Field Detection")
-    print("Features: Dynamic field comparison, no hardcoded field assumptions")
+    print("ReqIF Comparator - Updated Version with Content/Structural Separation")
+    print("Features: Clear distinction between content changes and structural differences")
     
     comparator = ReqIFComparator()
     
-    # Test filename similarity
-    print("\nTesting filename similarity:")
-    files = [
-        ("requirements_v1.reqif", "requirements_v2.reqif"),
-        ("system_specs.reqif", "system_specifications.reqif"),
-        ("old_file.reqif", "completely_different.reqif")
+    # Test with sample requirements
+    req1_list = [
+        {
+            'id': 'REQ-001',
+            'type': 'Functional',
+            'attributes': {
+                'Title': 'Login Feature',
+                'Description': 'User authentication',
+                'Priority': 'High'
+            }
+        }
     ]
     
-    for file1, file2 in files:
-        similarity = comparator.calculate_filename_similarity(file1, file2)
-        print(f"'{file1}' vs '{file2}': {similarity:.2f}")
-    
-    # Test path similarity
-    print("\nTesting path similarity:")
-    paths = [
-        ("folder1/subfolder/file.reqif", "folder1/subfolder/file.reqif"),
-        ("folder1/subfolder/file.reqif", "folder2/subfolder/file.reqif"),
-        ("project/specs/requirements.reqif", "project/requirements/specs.reqif")
+    req2_list = [
+        {
+            'id': 'REQ-001',
+            'type': 'Functional',
+            'attributes': {
+                'Title': 'Login Feature',
+                'Description': 'User authentication with SSO',  # Content change
+                'Priority': 'High',
+                'Status': 'Approved'  # New field (structural change)
+            }
+        }
     ]
     
-    for path1, path2 in paths:
-        similarity = comparator.calculate_path_similarity(path1, path2)
-        print(f"'{path1}' vs '{path2}': {similarity:.2f}")
+    results = comparator.compare_requirements(req1_list, req2_list)
+    print(f"\nContent Modified: {results['statistics']['content_modified_count']}")
+    print(f"Structural Only: {results['statistics']['structural_only_count']}")
+    print(f"Added Fields: {results['statistics']['added_fields']}")
     
-    print("\nReqIF Comparator with dynamic field detection ready!")
+    print("\nReqIF Comparator ready!")
